@@ -2,8 +2,6 @@
 
 Application web interne pour un cabinet d’orthodontie / pédogodontie : **Next.js** (App Router), **TypeScript**, **Tailwind**, **Prisma** + **SQLite** en local.
 
-Fonctionnalités prévues / en cours : patients (hub, filtres), tâches, règlements, emails, journaux d’activité, authentification par session, rôles, notifications internes, présence équipe ; évolutions prévues : calendrier, messages internes, etc.
-
 ## Prérequis
 
 - Node.js **20+** (recommandé)

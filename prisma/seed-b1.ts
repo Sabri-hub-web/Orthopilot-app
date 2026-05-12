@@ -1,7 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import type { Patient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
+import { prisma } from "../server/db/client";
 
 /** Référence démo pour RDV relatifs (C.4 filtres, démo cabinet). */
 const DEMO_TODAY = new Date("2026-05-12T12:00:00.000Z");
@@ -316,7 +315,7 @@ async function main() {
   );
 
   const byName = (first: string, last: string) => {
-    const found = patients.find((x) => x.firstName === first && x.lastName === last);
+    const found = patients.find((x: Patient) => x.firstName === first && x.lastName === last);
     if (!found) throw new Error(`Patient introuvable: ${first} ${last}`);
     return found;
   };

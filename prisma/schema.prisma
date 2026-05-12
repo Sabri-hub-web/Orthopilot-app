@@ -1,0 +1,232 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum ReglementStatus {
+  EN_ATTENTE
+  EN_RETARD
+  RELANCE_ENVOYEE
+  PARTIEL
+  REGLE
+}
+
+enum EmailCategory {
+  URGENT
+  ADMINISTRATIF
+  SUIVI_CLINIQUE
+}
+
+enum EmailStatus {
+  A_TRAITER
+  EN_COURS
+  TRAITE
+  ARCHIVE
+}
+
+enum TaskPriority {
+  FAIBLE
+  NORMALE
+  IMPORTANTE
+  URGENTE
+}
+
+enum TaskStatus {
+  A_FAIRE
+  EN_COURS
+  BLOQUEE
+  EN_ATTENTE
+  TERMINEE
+}
+
+enum PatientHubStatus {
+  ACTIF
+  ATTENTION_ADMIN
+  ARCHIVE
+}
+
+enum UserRole {
+  ADMIN
+  RESPONSABLE
+  SECRETAIRE
+  PRATICIEN
+  ASSISTANTE
+}
+
+enum PresenceStatus {
+  DISPONIBLE
+  EN_CONSULTATION
+  EN_REUNION
+  ABSENT
+}
+
+enum CalendarEventType {
+  CONSULTATION
+  REUNION
+  ABSENCE
+  AUTRE
+}
+
+model User {
+  id           String    @id @default(cuid())
+  fullName     String
+  email        String    @unique
+  passwordHash String    @default("")
+  role         UserRole  @default(SECRETAIRE)
+  presenceStatus PresenceStatus @default(DISPONIBLE)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  assignedTasks Task[]
+  assignedEmails Email[]
+  sessions       Session[]
+  notifications  Notification[]
+  calendarEventsAssigned CalendarEvent[] @relation("CalendarEventAssignee")
+  calendarEventsCreated  CalendarEvent[] @relation("CalendarEventCreator")
+  messagesSent     InternalMessage[] @relation("MessageSent")
+  messagesReceived InternalMessage[] @relation("MessageReceived")
+}
+
+model Patient {
+  id                 String           @id @default(cuid())
+  firstName          String
+  lastName           String
+  email              String?
+  phone              String?
+  legalGuardian      String?
+  nextAppointmentAt  DateTime?
+  mutuelle           String?
+  internalComment    String?
+  hubStatus          PatientHubStatus @default(ACTIF)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  reglements   Reglement[]
+  emails       Email[]
+  tasks        Task[]
+  activityLogs ActivityLog[]
+  calendarEvents CalendarEvent[]
+}
+
+model Reglement {
+  id             String          @id @default(cuid())
+  amountDue      Float
+  dueDate        DateTime
+  status         ReglementStatus
+  comment        String?
+  relanceCount   Int             @default(0)
+  lastRelanceAt  DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  patientId      String
+  patient        Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model Email {
+  id           String        @id @default(cuid())
+  sender       String
+  subject      String
+  receivedAt   DateTime
+  category     EmailCategory
+  status       EmailStatus   @default(A_TRAITER)
+  comment      String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @default(now()) @updatedAt
+  patientId    String?
+  patient        Patient?      @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  assigneeId     String?
+  assignedUser   User?         @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  comment     String?
+  dueDate     DateTime
+  priority    TaskPriority
+  status      TaskStatus
+  assignee    String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  patientId   String?
+  patient     Patient?     @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  assigneeId  String?
+  assignedUser User?        @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  actor     String
+  message   String
+  createdAt DateTime @default(now())
+  patientId String?
+  patient   Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  tokenHash   String   @unique
+  userId      String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id                String   @id @default(cuid())
+  userId            String
+  title             String
+  message           String
+  type              String
+  isRead            Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  relatedEntityType String?
+  relatedEntityId   String?
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+}
+
+model InternalMessage {
+  id          String    @id @default(cuid())
+  senderId    String
+  recipientId String
+  body        String
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+  sender      User      @relation("MessageSent", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient   User      @relation("MessageReceived", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([recipientId, readAt])
+}
+
+model CalendarEvent {
+  id          String            @id @default(cuid())
+  title       String
+  description String?
+  startAt     DateTime
+  endAt       DateTime
+  type        CalendarEventType @default(AUTRE)
+  patientId   String?
+  patient     Patient?          @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  assigneeId  String?
+  assignee    User?             @relation("CalendarEventAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdById String?
+  createdBy   User?             @relation("CalendarEventCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([startAt])
+}

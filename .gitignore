@@ -32,15 +32,18 @@ yarn-error.log*
 
 # secrets — ne pas pousser ; copier .env.example vers .env en local
 .env
+.env.*
+!.env.example
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 .env*.local
 
-# SQLite local (dev)
+# SQLite local (dev / hors Supabase)
 /dev.db
 /prisma/dev.db
+*.db
 *.db-journal
 
 # vercel

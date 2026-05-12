@@ -67,11 +67,10 @@ export function MessagesView() {
     };
   }, []);
 
+  const threadToShow = peerId ? thread : null;
+
   useEffect(() => {
-    if (!peerId) {
-      setThread(null);
-      return;
-    }
+    if (!peerId) return;
     let cancelled = false;
     (async () => {
       try {
@@ -91,7 +90,7 @@ export function MessagesView() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [thread?.messages.length]);
+  }, [threadToShow?.messages.length]);
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -180,17 +179,17 @@ export function MessagesView() {
           <div className="flex flex-1 items-center justify-center p-6 text-sm text-slate-500">
             Chargement...
           </div>
-        ) : thread ? (
+        ) : threadToShow ? (
           <>
             <div className="border-b border-slate-200 px-4 py-3">
-              <h3 className="text-base font-semibold text-slate-900">{thread.peer.fullName}</h3>
+              <h3 className="text-base font-semibold text-slate-900">{threadToShow.peer.fullName}</h3>
               <p className="text-xs text-slate-500">Messages internes — visibles uniquement par vous et ce contact.</p>
             </div>
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-              {thread.messages.length === 0 ? (
+              {threadToShow.messages.length === 0 ? (
                 <p className="text-sm text-slate-500">Aucun message. Envoyez le premier ci-dessous.</p>
               ) : (
-                thread.messages.map((m) => (
+                threadToShow.messages.map((m) => (
                   <div
                     key={m.id}
                     className={`flex ${m.isMine ? "justify-end" : "justify-start"}`}

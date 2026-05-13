@@ -255,8 +255,10 @@ export interface PresenceTeamResponse {
 
 export type CalendarEventTypeApi =
   | "CONSULTATION"
+  | "RDV_PATIENT"
   | "REUNION"
-  | "ABSENCE"
+  | "TACHE"
+  | "PAUSE"
   | "AUTRE";
 
 export interface CalendarEventItem {

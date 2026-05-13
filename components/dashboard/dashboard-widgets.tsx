@@ -106,9 +106,9 @@ export function DashboardWidgets({ payments, emails, tasks, patientsSummary }: D
   const activity = buildActivityFeed(summaryPayload, 5);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden lg:gap-2.5">
+    <div className="flex flex-col gap-2.5 lg:gap-3">
       {/* Milieu : 3 colonnes — règlements en retard | tâches | emails */}
-      <div className="grid min-h-0 shrink-0 grid-cols-1 gap-2 overflow-hidden lg:h-[300px] lg:grid-cols-3 lg:gap-3">
+      <div className="grid shrink-0 grid-cols-1 gap-2 lg:min-h-[280px] lg:grid-cols-3 lg:gap-3">
         <SectionPanel title="Règlements en retard" href="/reglements" className="min-h-0">
           {latePayments.length ? (
             <ul className="flex h-full min-h-0 flex-col justify-start gap-1.5 overflow-hidden">
@@ -224,8 +224,8 @@ export function DashboardWidgets({ payments, emails, tasks, patientsSummary }: D
       </div>
 
       {/* Bas : activité | donut | accès rapides */}
-      <div className="grid min-h-0 shrink-0 grid-cols-1 gap-2 overflow-hidden lg:h-[260px] lg:grid-cols-3 lg:gap-3">
-        <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+      <div className="grid shrink-0 grid-cols-1 gap-2 lg:min-h-[260px] lg:grid-cols-3 lg:gap-3">
+        <section className="flex min-h-[220px] flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)] lg:min-h-[260px]">
           <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-2.5">
             <h3 className="text-sm font-semibold tracking-tight text-slate-900">Activité récente</h3>
             <Link href="/logs" className="text-xs font-semibold text-sky-600 hover:text-sky-700">
@@ -237,7 +237,7 @@ export function DashboardWidgets({ payments, emails, tasks, patientsSummary }: D
           </div>
         </section>
 
-        <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+        <section className="flex min-h-[220px] flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)] lg:min-h-[260px]">
           <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-2.5">
             <h3 className="text-sm font-semibold tracking-tight text-slate-900">Répartition règlements</h3>
             <Link href="/reglements" className="text-xs font-semibold text-sky-600 hover:text-sky-700">
@@ -249,7 +249,7 @@ export function DashboardWidgets({ payments, emails, tasks, patientsSummary }: D
           </div>
         </section>
 
-        <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+        <section className="flex min-h-[220px] flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)] lg:min-h-[260px]">
           <div className="shrink-0 border-b border-slate-100 px-4 py-2.5">
             <h3 className="text-sm font-semibold tracking-tight text-slate-900">Accès rapides</h3>
           </div>

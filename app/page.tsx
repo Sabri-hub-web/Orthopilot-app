@@ -20,12 +20,7 @@ export default async function Home() {
       currentUserRole={roleLabel(user.role)}
       currentUserRoleKey={user.role}
     >
-      <HomeView
-        greetingName={greetingName}
-        currentDateLabel={currentDateLabel}
-        userDisplayName={user.fullName}
-        userRoleLabel={roleLabel(user.role)}
-      />
+      <HomeView greetingName={greetingName} currentDateLabel={currentDateLabel} />
     </DashboardLayout>
   );
 }

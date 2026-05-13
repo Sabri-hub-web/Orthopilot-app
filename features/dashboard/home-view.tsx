@@ -17,9 +17,14 @@ function DashboardSkeleton() {
         ))}
       </div>
       <div className="grid gap-3 lg:grid-cols-3">
-        <div className="h-[300px] rounded-2xl bg-slate-200/50" />
-        <div className="h-[300px] rounded-2xl bg-slate-200/50" />
-        <div className="h-[300px] rounded-2xl bg-slate-200/50" />
+        <div className="h-[280px] rounded-2xl bg-slate-200/50" />
+        <div className="h-[280px] rounded-2xl bg-slate-200/50" />
+        <div className="h-[280px] rounded-2xl bg-slate-200/50" />
+      </div>
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div className="h-[240px] rounded-2xl bg-slate-200/45" />
+        <div className="h-[240px] rounded-2xl bg-slate-200/45" />
+        <div className="h-[240px] rounded-2xl bg-slate-200/45" />
       </div>
     </div>
   );
@@ -28,13 +33,9 @@ function DashboardSkeleton() {
 export function HomeView({
   greetingName,
   currentDateLabel,
-  userDisplayName,
-  userRoleLabel,
 }: {
   greetingName: string;
   currentDateLabel: string;
-  userDisplayName: string;
-  userRoleLabel: string;
 }) {
   const [data, setData] = useState<DashboardSummaryResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,13 +68,8 @@ export function HomeView({
   const kpis = useMemo(() => (data ? computeDashboardKpis(data) : null), [data]);
 
   return (
-    <div className="mx-auto flex w-full max-w-[1680px] min-h-0 flex-col gap-2 px-0 lg:max-h-[calc(100dvh-4.75rem)] lg:overflow-hidden">
-      <DashboardPageHeader
-        greetingName={greetingName}
-        currentDateLabel={currentDateLabel}
-        userDisplayName={userDisplayName}
-        userRoleLabel={userRoleLabel}
-      />
+    <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-2 px-0 pb-4">
+      <DashboardPageHeader greetingName={greetingName} currentDateLabel={currentDateLabel} />
 
       {loading ? <DashboardSkeleton /> : null}
 
@@ -87,7 +83,7 @@ export function HomeView({
       ) : null}
 
       {data && kpis ? (
-        <div className="animate-dashboard-in flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden">
+        <div className="animate-dashboard-in flex flex-col gap-2.5">
           <DashboardKpiRow kpis={kpis} />
           <DashboardWidgets
             payments={data.payments}

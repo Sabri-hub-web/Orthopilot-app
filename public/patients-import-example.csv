@@ -1,3 +1,3 @@
 firstName;lastName;email;phone;legalGuardian;nextAppointmentAt;mutuelle;internalComment;hubStatus
-Jean;Dupont;jean.dupont@example.com;06 12 34 56 78;;2026-06-01 09:30;;;
-Marie;Martin;;;06 98 76 54 32;Mme Martin;;;;ACTIF
+Jean;Dupont;jean.dupont@example.com;06 12 34 56 78;;2026-06-01 09:30;;Exemple fiche complete;ACTIF
+Marie;Martin;marie.martin@example.com;06 98 76 54 32;Mme Martin;;;;Exemple avec representant;ACTIF

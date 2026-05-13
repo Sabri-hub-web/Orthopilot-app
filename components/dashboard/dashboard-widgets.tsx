@@ -28,18 +28,18 @@ function SectionPanel({
 }) {
   return (
     <section
-      className={`flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm shadow-slate-900/5 ${className}`}
+      className={`flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)] ${className}`}
     >
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-3 py-2">
-        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">{title}</h3>
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-4 py-2.5">
+        <h3 className="text-sm font-semibold tracking-tight text-slate-900">{title}</h3>
         <Link
           href={href}
-          className="text-[10px] font-semibold text-sky-600 transition hover:text-sky-700"
+          className="text-xs font-semibold text-sky-600 transition hover:text-sky-700"
         >
           Voir tout
         </Link>
       </div>
-      <div className="min-h-0 flex-1 overflow-hidden px-2.5 py-2">{children}</div>
+      <div className="min-h-0 flex-1 overflow-hidden px-3 py-2">{children}</div>
     </section>
   );
 }
@@ -71,186 +71,189 @@ const taskPriorityStyles: Record<string, string> = {
   faible: "bg-sky-50 text-sky-800 ring-sky-100/80",
 };
 
+function isLatePayment(p: PaymentFollowUp) {
+  if (p.status === "Regle") return false;
+  return p.daysLate > 0 || p.status === "En retard";
+}
+
+function EmptyHint({ message }: { message: string }) {
+  return (
+    <p className="flex h-full min-h-[4rem] items-center justify-center px-2 text-center text-xs leading-snug text-slate-500">
+      {message}
+    </p>
+  );
+}
+
 export function DashboardWidgets({ payments, emails, tasks, patientsSummary }: DashboardWidgetsProps) {
-  const visiblePayments = payments.slice(0, 6);
+  const latePayments = payments.filter(isLatePayment).slice(0, 5);
+
+  const openTasks = tasks.filter((t) =>
+    ["A faire", "En cours", "En attente"].includes(t.status),
+  );
+  const topTasks = openTasks.slice(0, 5);
+
   const prioritizedEmails = [...emails].sort((a, b) => {
     if (a.category === "Urgent" && b.category !== "Urgent") return -1;
     if (a.category !== "Urgent" && b.category === "Urgent") return 1;
     return 0;
   });
-  const topEmails = prioritizedEmails.slice(0, 6);
-  const topTasks = tasks.slice(0, 6);
+  const openEmails = prioritizedEmails.filter((e) => ["A traiter", "En cours"].includes(e.status));
+  const topEmails = openEmails.slice(0, 5);
 
   const summaryPayload = { payments, emails, tasks, patientsSummary };
   const distribution = computePaymentDistribution(payments);
   const distributionTotal = distribution.reduce((s, x) => s + x.amount, 0);
-  const activity = buildActivityFeed(summaryPayload, 6);
+  const activity = buildActivityFeed(summaryPayload, 5);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden lg:gap-2">
-      <section className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-white/95 px-3 py-1.5 text-[11px] text-slate-600 shadow-sm shadow-slate-900/5">
-        <div className="flex flex-wrap gap-x-4 gap-y-0.5">
-          <span>
-            Patients :{" "}
-            <strong className="font-semibold text-slate-900 tabular-nums">{patientsSummary.total}</strong>
-          </span>
-          <span>
-            Attention admin :{" "}
-            <strong className="font-semibold text-amber-700 tabular-nums">
-              {patientsSummary.attentionAdminCount}
-            </strong>
-          </span>
-        </div>
-        <Link
-          href="/patients"
-          className="inline-flex shrink-0 items-center rounded-lg bg-slate-900 px-2.5 py-1 text-[10px] font-semibold text-white shadow-sm transition hover:bg-slate-800"
-        >
-          Hub patients
-        </Link>
-      </section>
-
-      {/* Milieu : 3 colonnes — règlements | tâches | emails */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-1.5 overflow-hidden lg:grid-cols-3 lg:gap-2">
-        <SectionPanel title="Suivi des règlements" href="/reglements" className="min-h-0">
-          <div className="h-full min-h-0 overflow-x-auto overflow-y-hidden">
-            <table className="w-full min-w-[280px] text-left text-[11px] leading-tight">
-              <thead>
-                <tr className="border-b border-slate-100 text-[9px] font-semibold uppercase tracking-wide text-slate-400">
-                  <th className="pb-1 pr-1 font-medium">Patient</th>
-                  <th className="pb-1 pr-1 font-medium">Mont.</th>
-                  <th className="pb-1 pr-1 font-medium">Éch.</th>
-                  <th className="pb-1 pr-1 font-medium">Ret.</th>
-                  <th className="pb-1 pr-1 font-medium max-w-[4rem] truncate">St.</th>
-                  <th className="pb-1 text-right font-medium"> </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {visiblePayments.map((payment) => (
-                  <tr key={payment.id} className="text-slate-700">
-                    <td className="py-1 pr-1 font-medium text-slate-900">
+    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden lg:gap-2.5">
+      {/* Milieu : 3 colonnes — règlements en retard | tâches | emails */}
+      <div className="grid min-h-0 shrink-0 grid-cols-1 gap-2 overflow-hidden lg:h-[300px] lg:grid-cols-3 lg:gap-3">
+        <SectionPanel title="Règlements en retard" href="/reglements" className="min-h-0">
+          {latePayments.length ? (
+            <ul className="flex h-full min-h-0 flex-col justify-start gap-1.5 overflow-hidden">
+              {latePayments.map((payment) => (
+                <li
+                  key={payment.id}
+                  className="shrink-0 rounded-xl border border-slate-100 bg-slate-50/80 px-2.5 py-2"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
                       <Link
                         href={`/patients/${payment.patientId}`}
-                        className="line-clamp-1 text-sky-700 hover:underline"
+                        className="line-clamp-1 text-xs font-semibold text-sky-700 hover:underline"
                       >
                         {payment.patientName}
                       </Link>
-                    </td>
-                    <td className="py-1 pr-1 tabular-nums font-semibold text-slate-900">{payment.amountDue}</td>
-                    <td className="py-1 pr-1 tabular-nums text-slate-600">{payment.dueDate.slice(5)}</td>
-                    <td className="py-1 pr-1">
-                      {payment.daysLate > 0 ? (
-                        <span className="font-medium text-rose-600">{payment.daysLate}j</span>
-                      ) : (
-                        <span className="text-slate-400">—</span>
-                      )}
-                    </td>
-                    <td className="max-w-[3.5rem] truncate py-1 pr-1 text-slate-600" title={payment.status}>
-                      {payment.status}
-                    </td>
-                    <td className="py-1 text-right">
-                      <Link
-                        href="/reglements"
-                        className="inline-flex rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-semibold text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
-                      >
-                        Relancer
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      <p className="mt-0.5 text-[11px] tabular-nums text-slate-600">
+                        <span className="font-semibold text-slate-900">{payment.amountDue}</span> EUR · éch.{" "}
+                        {payment.dueDate.slice(5)}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-rose-700 ring-1 ring-rose-100">
+                      {payment.daysLate > 0 ? `+${payment.daysLate}j` : "Retard"}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between gap-2">
+                    <span className="truncate text-[10px] text-slate-500">{payment.status}</span>
+                    <Link
+                      href="/reglements"
+                      className="shrink-0 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
+                    >
+                      Relancer
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyHint message="Aucun règlement en retard. Bonne nouvelle." />
+          )}
         </SectionPanel>
 
         <SectionPanel title="Tâches à traiter" href="/tasks" className="min-h-0">
-          <ul className="flex min-h-0 flex-col gap-1 overflow-hidden">
-            {topTasks.map((task) => (
-              <li
-                key={task.id}
-                className="shrink-0 rounded-lg border border-slate-100 bg-slate-50/70 px-2 py-1.5"
-              >
-                <div className="flex items-start justify-between gap-1">
-                  <p className="min-w-0 flex-1 line-clamp-2 text-[11px] font-medium leading-snug text-slate-900">
-                    {task.title}
-                  </p>
-                  <span
-                    className={`shrink-0 rounded px-1 py-0.5 text-[8px] font-semibold capitalize leading-none ring-1 ${taskPriorityStyles[task.priority] ?? "bg-slate-100 text-slate-600 ring-slate-200"}`}
-                  >
-                    {task.priority}
-                  </span>
-                </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[9px] text-slate-500">
-                  <span className="truncate">{task.assignee}</span>
-                  <span className="text-slate-300">·</span>
-                  <span className="tabular-nums">{task.dueDate}</span>
-                  <span
-                    className={`ml-auto rounded px-1 py-0.5 text-[8px] font-medium ring-1 ${taskStatusStyles[task.status]}`}
-                  >
-                    {task.status}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {topTasks.length ? (
+            <ul className="flex h-full min-h-0 flex-col gap-1.5 overflow-hidden">
+              {topTasks.map((task) => (
+                <li
+                  key={task.id}
+                  className="shrink-0 rounded-xl border border-slate-100 bg-slate-50/80 px-2.5 py-2"
+                >
+                  <div className="flex items-start justify-between gap-1.5">
+                    <p className="min-w-0 flex-1 line-clamp-2 text-xs font-medium leading-snug text-slate-900">
+                      {task.title}
+                    </p>
+                    <span
+                      className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold capitalize leading-none ring-1 ${taskPriorityStyles[task.priority] ?? "bg-slate-100 text-slate-600 ring-slate-200"}`}
+                    >
+                      {task.priority}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
+                    <span className="truncate">{task.assignee}</span>
+                    <span className="text-slate-300">·</span>
+                    <span className="tabular-nums">{task.dueDate}</span>
+                    <span
+                      className={`ml-auto rounded px-1.5 py-0.5 text-[9px] font-medium ring-1 ${taskStatusStyles[task.status]}`}
+                    >
+                      {task.status}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyHint message="Aucune tâche ouverte pour le moment." />
+          )}
         </SectionPanel>
 
         <SectionPanel title="Emails non traités" href="/emails" className="min-h-0">
-          <ul className="flex min-h-0 flex-col gap-1 overflow-hidden">
-            {topEmails.map((email) => (
-              <li key={email.id} className="shrink-0 rounded-lg border border-slate-100 bg-slate-50/70 px-2 py-1.5">
-                <p className="line-clamp-1 text-[11px] font-medium text-slate-900">{email.subject}</p>
-                <p className="mt-0.5 truncate text-[9px] text-slate-500">
-                  {email.from} · {email.assignee}
-                </p>
-                <div className="mt-0.5 flex flex-wrap items-center gap-0.5">
-                  <span
-                    className={`rounded px-1 py-0.5 text-[8px] font-semibold ring-1 ${emailCategoryStyles[email.category]}`}
-                  >
-                    {email.category}
-                  </span>
-                  <span
-                    className={`rounded px-1 py-0.5 text-[8px] font-medium ring-1 ${emailStatusStyles[email.status]}`}
-                  >
-                    {email.status}
-                  </span>
-                  <span className="ml-auto text-[9px] tabular-nums text-slate-400">
-                    {email.receivedDate.slice(5)} {email.receivedAt}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {topEmails.length ? (
+            <ul className="flex h-full min-h-0 flex-col gap-1.5 overflow-hidden">
+              {topEmails.map((email) => (
+                <li
+                  key={email.id}
+                  className="shrink-0 rounded-xl border border-slate-100 bg-slate-50/80 px-2.5 py-2"
+                >
+                  <p className="line-clamp-1 text-xs font-medium text-slate-900">{email.subject}</p>
+                  <p className="mt-0.5 truncate text-[10px] text-slate-500">
+                    {email.from} · {email.assignee}
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-1">
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ring-1 ${emailCategoryStyles[email.category]}`}
+                    >
+                      {email.category}
+                    </span>
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[9px] font-medium ring-1 ${emailStatusStyles[email.status]}`}
+                    >
+                      {email.status}
+                    </span>
+                    <span className="ml-auto text-[10px] tabular-nums text-slate-400">
+                      {email.receivedDate.slice(5)} {email.receivedAt}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyHint message="Aucun email en attente de traitement." />
+          )}
         </SectionPanel>
       </div>
 
       {/* Bas : activité | donut | accès rapides */}
-      <div className="grid min-h-0 shrink-0 grid-cols-1 gap-1.5 overflow-hidden lg:h-[9.5rem] lg:grid-cols-3 lg:gap-2">
-        <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
-          <div className="shrink-0 border-b border-slate-100 px-3 py-1.5">
-            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">Activité récente</h3>
+      <div className="grid min-h-0 shrink-0 grid-cols-1 gap-2 overflow-hidden lg:h-[260px] lg:grid-cols-3 lg:gap-3">
+        <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+          <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-2.5">
+            <h3 className="text-sm font-semibold tracking-tight text-slate-900">Activité récente</h3>
+            <Link href="/logs" className="text-xs font-semibold text-sky-600 hover:text-sky-700">
+              Voir tout
+            </Link>
           </div>
-          <div className="min-h-0 flex-1 overflow-hidden px-1 py-1">
+          <div className="min-h-0 flex-1 overflow-hidden px-2 py-1.5">
             <DashboardActivityFeed items={activity} compact />
           </div>
         </section>
 
-        <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
-          <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-3 py-1.5">
-            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">Répartition</h3>
-            <Link href="/reglements" className="text-[10px] font-semibold text-sky-600 hover:text-sky-700">
-              Détails
+        <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+          <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-2.5">
+            <h3 className="text-sm font-semibold tracking-tight text-slate-900">Répartition règlements</h3>
+            <Link href="/reglements" className="text-xs font-semibold text-sky-600 hover:text-sky-700">
+              Voir tout
             </Link>
           </div>
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden px-1 py-0.5">
+          <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden px-2 py-1">
             <PaymentsDonut compact slices={distribution} total={distributionTotal} />
           </div>
         </section>
 
-        <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
-          <div className="shrink-0 border-b border-slate-100 px-3 py-1.5">
-            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">Accès rapides</h3>
+        <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+          <div className="shrink-0 border-b border-slate-100 px-4 py-2.5">
+            <h3 className="text-sm font-semibold tracking-tight text-slate-900">Accès rapides</h3>
           </div>
-          <div className="min-h-0 flex-1 overflow-hidden p-1.5">
+          <div className="min-h-0 flex-1 overflow-hidden p-2">
             <DashboardQuickAccess compact />
           </div>
         </section>

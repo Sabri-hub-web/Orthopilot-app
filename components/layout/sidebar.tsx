@@ -90,7 +90,7 @@ export function Sidebar({
       ? process.env.NEXT_PUBLIC_CABINET_DISPLAY_NAME.trim()
       : "Cabinet";
 
-  const widthClass = collapsed ? "w-[224px] lg:w-14" : "w-[224px] lg:w-[224px]";
+  const widthClass = collapsed ? "w-[250px] lg:w-14" : "w-[250px] lg:w-[250px]";
 
   return (
     <>

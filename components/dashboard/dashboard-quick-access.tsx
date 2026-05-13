@@ -1,12 +1,12 @@
 "use client";
 
 import {
+  Banknote,
   CreditCard,
   MessageSquare,
   Send,
   Stethoscope,
   UserPlus,
-  Users,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -15,27 +15,29 @@ const shortcuts = [
   { label: "Nouvelle tâche", href: "/tasks", icon: Stethoscope, accent: "from-sky-400/90 to-blue-600" },
   { label: "Relance rapide", href: "/reglements", icon: CreditCard, accent: "from-amber-400/90 to-orange-500" },
   { label: "Envoyer email", href: "/emails", icon: Send, accent: "from-violet-400/90 to-indigo-600" },
-  { label: "Messages", href: "/messages", icon: MessageSquare, accent: "from-slate-500/90 to-slate-700" },
-  { label: "Liste patients", href: "/patients", icon: Users, accent: "from-cyan-400/90 to-sky-600" },
+  { label: "Règlement reçu", href: "/reglements", icon: Banknote, accent: "from-teal-400/90 to-emerald-600" },
+  { label: "Commentaire patient", href: "/messages", icon: MessageSquare, accent: "from-slate-500/90 to-slate-700" },
 ];
 
 export function DashboardQuickAccess({ compact = false }: { compact?: boolean }) {
   if (compact) {
     return (
-      <div className="grid h-full grid-cols-3 gap-1">
+      <div className="grid h-full min-h-0 grid-cols-2 grid-rows-3 gap-1.5">
         {shortcuts.map(({ label, href, icon: Icon, accent }) => (
           <Link
             key={label}
             href={href}
             title={label}
-            className="group flex flex-col items-center justify-center gap-0.5 rounded-lg border border-slate-100 bg-slate-50/80 px-0.5 py-1 text-center transition hover:border-slate-200 hover:bg-white"
+            className="group flex min-h-0 flex-col items-center justify-center gap-1 rounded-xl border border-slate-100 bg-slate-50/80 px-1 py-2 text-center transition hover:border-slate-200 hover:bg-white"
           >
             <span
-              className={`flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br ${accent} text-white shadow-sm`}
+              className={`flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br ${accent} text-white shadow-sm ring-2 ring-white/40`}
             >
-              <Icon className="h-3.5 w-3.5" strokeWidth={1.6} aria-hidden />
+              <Icon className="h-4 w-4" strokeWidth={1.6} aria-hidden />
             </span>
-            <span className="line-clamp-2 text-[8px] font-medium leading-tight text-slate-700">{label}</span>
+            <span className="line-clamp-2 max-w-full px-0.5 text-[10px] font-medium leading-tight text-slate-700">
+              {label}
+            </span>
           </Link>
         ))}
       </div>

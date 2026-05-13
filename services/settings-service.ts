@@ -55,8 +55,8 @@ export async function getSettingsOverview() {
       },
       {
         name: "Parametres avances",
-        status: "En preparation",
-        detail: "Configuration metier editable prevue en phase B.",
+        status: "A venir",
+        detail: "Configuration metier en cours de developpement.",
       },
     ] as const,
   };

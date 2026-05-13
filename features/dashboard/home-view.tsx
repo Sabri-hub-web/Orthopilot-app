@@ -4,32 +4,37 @@ import { useEffect, useMemo, useState } from "react";
 import { DashboardKpiRow } from "@/components/dashboard/dashboard-kpi-row";
 import { DashboardPageHeader } from "@/components/dashboard/dashboard-page-header";
 import { DashboardWidgets } from "@/components/dashboard/dashboard-widgets";
-import { PresenceTeamWidget } from "@/features/dashboard/presence-team-widget";
 import { computeDashboardKpis } from "@/lib/dashboard-ui";
 import type { DashboardSummaryResponse } from "@/types/domain";
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-2 animate-pulse">
-      <div className="h-16 rounded-xl bg-slate-200/70" />
-      <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+    <div className="space-y-3 animate-pulse">
+      <div className="h-14 rounded-2xl bg-slate-200/70" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-24 rounded-xl bg-slate-200/60" />
+          <div key={i} className="h-[150px] rounded-2xl bg-slate-200/60" />
         ))}
       </div>
-      <div className="h-48 rounded-xl bg-slate-200/50" />
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div className="h-[300px] rounded-2xl bg-slate-200/50" />
+        <div className="h-[300px] rounded-2xl bg-slate-200/50" />
+        <div className="h-[300px] rounded-2xl bg-slate-200/50" />
+      </div>
     </div>
   );
 }
 
 export function HomeView({
-  showPresenceTeam,
   greetingName,
   currentDateLabel,
+  userDisplayName,
+  userRoleLabel,
 }: {
-  showPresenceTeam: boolean;
   greetingName: string;
   currentDateLabel: string;
+  userDisplayName: string;
+  userRoleLabel: string;
 }) {
   const [data, setData] = useState<DashboardSummaryResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,23 +67,27 @@ export function HomeView({
   const kpis = useMemo(() => (data ? computeDashboardKpis(data) : null), [data]);
 
   return (
-    <div className="flex min-h-0 flex-col gap-2 lg:max-h-[calc(100dvh-5.25rem)] lg:overflow-hidden">
-      <DashboardPageHeader greetingName={greetingName} currentDateLabel={currentDateLabel} />
+    <div className="mx-auto flex w-full max-w-[1680px] min-h-0 flex-col gap-2 px-0 lg:max-h-[calc(100dvh-4.75rem)] lg:overflow-hidden">
+      <DashboardPageHeader
+        greetingName={greetingName}
+        currentDateLabel={currentDateLabel}
+        userDisplayName={userDisplayName}
+        userRoleLabel={userRoleLabel}
+      />
 
       {loading ? <DashboardSkeleton /> : null}
 
       {error ? (
         <section
           role="alert"
-          className="shrink-0 rounded-xl border border-rose-200/90 bg-rose-50/90 px-3 py-2 text-xs text-rose-900 shadow-sm"
+          className="shrink-0 rounded-2xl border border-rose-200/90 bg-rose-50/90 px-3 py-2 text-xs text-rose-900 shadow-sm"
         >
           Impossible de charger le dashboard : {error}
         </section>
       ) : null}
 
       {data && kpis ? (
-        <div className="animate-dashboard-in flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-          {showPresenceTeam ? <PresenceTeamWidget compact /> : null}
+        <div className="animate-dashboard-in flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden">
           <DashboardKpiRow kpis={kpis} />
           <DashboardWidgets
             payments={data.payments}

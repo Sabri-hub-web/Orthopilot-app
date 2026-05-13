@@ -209,11 +209,11 @@ export function LoginView() {
         aria-hidden
       />
 
-      {/* Panneau gauche — style maquette bleu cabinet + plante + photo */}
+      {/* Panneau gauche — dégradé médical prolongé + plante (sans photo basse qualité) */}
       <aside className="relative z-0 hidden min-h-screen flex-col justify-between overflow-hidden border-sky-200/30 lg:flex lg:border-r">
-        {/* Dégradé vertical médical */}
+        {/* Dégradé vertical : bleu dense en haut → même famille de teintes jusqu’au bas (pas de rupture nette) */}
         <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-sky-600 via-sky-500 to-sky-50"
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,#075985_0%,#0369a1_14%,#0284c7_30%,#0ea5e9_48%,#38bdf8_66%,#7dd3fc_80%,#bae6fd_92%,#e0f2fe_100%)]"
           aria-hidden
         />
         {/* Halo derrière le logo */}
@@ -224,16 +224,6 @@ export function LoginView() {
         {/* Plante floutée (fond) */}
         <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden" aria-hidden>
           <div className="absolute -bottom-6 -right-12 left-[-15%] top-[18%] scale-110 bg-[url('/login-plant-bg.png')] bg-contain bg-[right_bottom] bg-no-repeat opacity-[0.42] mix-blend-soft-light [filter:blur(2px)] sm:opacity-[0.48] sm:[filter:blur(3px)]" />
-        </div>
-        {/* Photo cabinet — bas du panneau, désaturée + teinte */}
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-[min(52%,420px)] min-h-[200px]"
-          aria-hidden
-        >
-          <div className="absolute inset-0 bg-[url('/login-clinic-bg.png')] bg-cover bg-center" />
-          <div className="absolute inset-0 bg-gradient-to-t from-sky-100/95 via-sky-400/55 to-sky-600/50" />
-          <div className="absolute inset-0 bg-sky-700/25 mix-blend-multiply" />
-          <div className="absolute inset-0 backdrop-blur-[0.5px]" />
         </div>
         {/* Grille de points — coin haut droit */}
         <div
@@ -281,7 +271,7 @@ export function LoginView() {
               <div className="flex gap-3">
                 <Shield className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
                 <p className="text-xs font-medium leading-relaxed text-slate-800/90">
-                  Sécurisé. Fiable. 
+                  Sécurisé. Fiable. Conçu pour les cabinets dentaires modernes.
                 </p>
               </div>
             </div>

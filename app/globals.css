@@ -63,3 +63,22 @@ body {
     animation: none;
   }
 }
+
+@keyframes login-orbit-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-login-orbit {
+  animation: login-orbit-spin 42s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-login-orbit {
+    animation: none;
+  }
+}

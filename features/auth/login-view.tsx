@@ -43,7 +43,7 @@ function InteractiveToothLogoButton({
   variant,
 }: {
   size: "lg" | "sm";
-  variant: "on-dark" | "on-light";
+  variant: "on-dark" | "on-light" | "on-glass-blue";
 }) {
   const [wiggle, setWiggle] = useState(false);
   const large = size === "lg";
@@ -72,7 +72,9 @@ function InteractiveToothLogoButton({
   const palette =
     variant === "on-dark"
       ? "bg-white/10 ring-1 ring-white/20 shadow-md shadow-black/25 backdrop-blur-sm hover:bg-white/18 hover:ring-white/35 hover:shadow-lg hover:shadow-cyan-400/10 focus-visible:ring-offset-slate-900"
-      : "bg-slate-900 text-white shadow-lg shadow-indigo-900/30 ring-1 ring-white/10 hover:bg-slate-800 hover:shadow-indigo-500/25 focus-visible:ring-offset-white";
+      : variant === "on-light"
+        ? "bg-slate-900 text-white shadow-lg shadow-indigo-900/30 ring-1 ring-white/10 hover:bg-slate-800 hover:shadow-indigo-500/25 focus-visible:ring-offset-white"
+        : "bg-white/20 ring-1 ring-white/50 shadow-lg shadow-sky-950/25 backdrop-blur-md hover:bg-white/32 hover:ring-white/70 hover:shadow-sky-900/20 focus-visible:ring-offset-sky-700";
 
   const toothMotion =
     "pointer-events-none motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out motion-safe:group-hover:scale-110";
@@ -89,6 +91,34 @@ function InteractiveToothLogoButton({
     >
       <CabinetToothLogo className={`${large ? "h-11 w-11" : "h-7 w-7"} ${toothMotion}`} />
     </button>
+  );
+}
+
+/** Dent + anneau orbital (réf. maquette), le bouton interne garde hover / clic. */
+function BrandToothWithOrbitalRing() {
+  return (
+    <div className="relative mx-auto flex h-[5.5rem] w-[5.5rem] shrink-0 items-center justify-center lg:mx-0">
+      <svg
+        className="pointer-events-none absolute inset-0 h-full w-full origin-center text-white/60 motion-safe:animate-login-orbit motion-reduce:animate-none"
+        viewBox="0 0 88 88"
+        fill="none"
+        aria-hidden
+      >
+        <circle
+          cx="44"
+          cy="44"
+          r="40"
+          stroke="currentColor"
+          strokeWidth="1.35"
+          strokeLinecap="round"
+          strokeDasharray="26 132"
+          opacity="0.92"
+        />
+      </svg>
+      <div className="relative z-10 flex items-center justify-center">
+        <InteractiveToothLogoButton size="lg" variant="on-glass-blue" />
+      </div>
+    </div>
   );
 }
 
@@ -179,36 +209,82 @@ export function LoginView() {
         aria-hidden
       />
 
-      {/* Panneau branding — desktop */}
-      <aside className="relative z-0 hidden flex-col justify-between border-white/10 bg-gradient-to-br from-slate-900/95 via-indigo-950/90 to-slate-900 p-10 text-white lg:flex lg:border-r">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.07]">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
-              backgroundSize: "28px 28px",
-            }}
+      {/* Panneau gauche — style maquette bleu cabinet + plante + photo */}
+      <aside className="relative z-0 hidden min-h-screen flex-col justify-between overflow-hidden border-sky-200/30 lg:flex lg:border-r">
+        {/* Dégradé vertical médical */}
+        <div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-sky-600 via-sky-500 to-sky-50"
+          aria-hidden
+        />
+        {/* Halo derrière le logo */}
+        <div
+          className="pointer-events-none absolute left-1/2 top-28 h-72 w-72 -translate-x-1/2 rounded-full bg-sky-300/35 blur-3xl"
+          aria-hidden
+        />
+        {/* Plante floutée (fond) */}
+        <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden" aria-hidden>
+          <div className="absolute -bottom-6 -right-12 left-[-15%] top-[18%] scale-110 bg-[url('/login-plant-bg.png')] bg-contain bg-[right_bottom] bg-no-repeat opacity-[0.42] mix-blend-soft-light [filter:blur(2px)] sm:opacity-[0.48] sm:[filter:blur(3px)]" />
+        </div>
+        {/* Photo cabinet — bas du panneau, désaturée + teinte */}
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-[min(52%,420px)] min-h-[200px]"
+          aria-hidden
+        >
+          <div className="absolute inset-0 bg-[url('/login-clinic-bg.png')] bg-cover bg-center" />
+          <div className="absolute inset-0 bg-gradient-to-t from-sky-100/95 via-sky-400/55 to-sky-600/50" />
+          <div className="absolute inset-0 bg-sky-700/25 mix-blend-multiply" />
+          <div className="absolute inset-0 backdrop-blur-[0.5px]" />
+        </div>
+        {/* Grille de points — coin haut droit */}
+        <div
+          className="pointer-events-none absolute right-0 top-0 z-[3] h-48 w-56 opacity-[0.18]"
+          aria-hidden
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
+            backgroundSize: "14px 14px",
+          }}
+        />
+        {/* Lignes ondulées discrètes */}
+        <svg
+          className="pointer-events-none absolute bottom-[20%] right-[-5%] z-[3] h-64 w-64 text-white/10"
+          viewBox="0 0 200 200"
+          fill="none"
+          aria-hidden
+        >
+          <path
+            d="M20 160c40-20 60-60 100-50s70 40 90 20"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            opacity="0.6"
           />
-        </div>
-        <div className="relative z-10">
-          <div className="flex items-start gap-4">
-            <InteractiveToothLogoButton size="lg" variant="on-dark" />
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200/90">OrthoPilot</p>
-              <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-white">OrthoPilot</h1>
-            </div>
-          </div>
-          <p className="mt-6 max-w-sm text-sm leading-relaxed text-slate-300">
-            Plateforme de gestion du cabinet dentaire — outils internes, dossiers patients et coordination
-            d&apos;équipe.
-          </p>
-        </div>
-        <div className="relative z-10 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <div className="flex gap-3">
-            <Shield className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden />
-            <p className="text-xs leading-relaxed text-slate-200">
-              Sécurisé. Fiable. Conçu pour les cabinets dentaires modernes.
+          <path
+            d="M0 120c50-30 80-10 120-30s60-40 100-20"
+            stroke="currentColor"
+            strokeWidth="0.9"
+            opacity="0.45"
+          />
+        </svg>
+
+        <div className="relative z-10 flex flex-1 flex-col px-10 pb-10 pt-12">
+          <div className="flex max-w-md flex-col items-center text-center lg:items-start lg:text-left">
+            <BrandToothWithOrbitalRing />
+            <h1 className="mt-8 text-3xl font-bold tracking-tight text-white drop-shadow-sm">OrthoPilot</h1>
+            <p className="mt-3 text-[15px] font-medium leading-relaxed text-white/90">
+              Plateforme de gestion du cabinet dentaire
             </p>
+            <p className="mt-5 text-sm leading-relaxed text-white/75">
+              Outils internes, dossiers patients et coordination d&apos;équipe.
+            </p>
+          </div>
+          <div className="mt-auto w-full max-w-md pt-16">
+            <div className="rounded-2xl border border-white/45 bg-white/25 p-4 shadow-lg shadow-sky-900/15 backdrop-blur-md">
+              <div className="flex gap-3">
+                <Shield className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
+                <p className="text-xs font-medium leading-relaxed text-slate-800/90">
+                  Sécurisé. Fiable. 
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </aside>

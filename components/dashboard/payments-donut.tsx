@@ -9,14 +9,16 @@ function formatEur(n: number) {
 export function PaymentsDonut({
   slices,
   total,
+  compact = false,
 }: {
   slices: PaymentDistributionSlice[];
   total: number;
+  compact?: boolean;
 }) {
   const cx = 80;
   const cy = 80;
-  const rOuter = 52;
-  const rInner = 34;
+  const rOuter = compact ? 44 : 52;
+  const rInner = compact ? 30 : 34;
 
   function polar(ang: number, rad: number) {
     return [cx + rad * Math.cos(ang), cy + rad * Math.sin(ang)] as const;
@@ -46,6 +48,42 @@ export function PaymentsDonut({
       paths.push({ d, fill: slice.color });
       angle = a1;
     }
+  }
+
+  if (compact) {
+    return (
+      <div className="flex h-full w-full max-w-full items-center justify-center gap-2">
+        <div className="relative h-[4.75rem] w-[4.75rem] shrink-0">
+          <svg viewBox="0 0 160 160" className="absolute inset-0 h-full w-full drop-shadow-sm" aria-hidden>
+            {paths.length ? (
+              paths.map((p, i) => <path key={i} d={p.d} fill={p.fill} stroke="white" strokeWidth="0.5" />)
+            ) : (
+              <circle cx={cx} cy={cy} r={(rOuter + rInner) / 2} fill="#e2e8f0" />
+            )}
+          </svg>
+          <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center text-center">
+            <p className="text-[7px] font-medium uppercase tracking-wider text-slate-500">Total</p>
+            <p className="text-[11px] font-bold leading-tight tabular-nums text-slate-900">{formatEur(total)}</p>
+            <p className="text-[7px] text-slate-500">EUR</p>
+          </div>
+        </div>
+        <ul className="min-w-0 flex-1 space-y-0.5 text-[9px] leading-tight">
+          {slices.length ? (
+            slices.map((s) => (
+              <li key={s.status} className="flex items-center justify-between gap-1">
+                <span className="flex min-w-0 items-center gap-1 text-slate-600">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
+                  <span className="truncate">{s.status}</span>
+                </span>
+                <span className="shrink-0 font-medium tabular-nums text-slate-900">{formatEur(s.amount)}</span>
+              </li>
+            ))
+          ) : (
+            <li className="text-slate-500">Aucune donnée.</li>
+          )}
+        </ul>
+      </div>
+    );
   }
 
   return (

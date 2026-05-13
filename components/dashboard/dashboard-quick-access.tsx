@@ -19,7 +19,29 @@ const shortcuts = [
   { label: "Liste patients", href: "/patients", icon: Users, accent: "from-cyan-400/90 to-sky-600" },
 ];
 
-export function DashboardQuickAccess() {
+export function DashboardQuickAccess({ compact = false }: { compact?: boolean }) {
+  if (compact) {
+    return (
+      <div className="grid h-full grid-cols-3 gap-1">
+        {shortcuts.map(({ label, href, icon: Icon, accent }) => (
+          <Link
+            key={label}
+            href={href}
+            title={label}
+            className="group flex flex-col items-center justify-center gap-0.5 rounded-lg border border-slate-100 bg-slate-50/80 px-0.5 py-1 text-center transition hover:border-slate-200 hover:bg-white"
+          >
+            <span
+              className={`flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br ${accent} text-white shadow-sm`}
+            >
+              <Icon className="h-3.5 w-3.5" strokeWidth={1.6} aria-hidden />
+            </span>
+            <span className="line-clamp-2 text-[8px] font-medium leading-tight text-slate-700">{label}</span>
+          </Link>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {shortcuts.map(({ label, href, icon: Icon, accent }) => (

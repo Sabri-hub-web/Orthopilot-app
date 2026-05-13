@@ -52,10 +52,10 @@ export function DashboardLayout({
             currentUserRole={currentUserRole}
             onOpenMobileNav={() => setMobileNavOpen(true)}
           />
-          <main className="min-h-0 flex-1 overflow-x-hidden px-4 py-6 md:px-6 md:py-8 lg:px-8">
+          <main className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-3 py-2 md:px-4 md:py-2 lg:px-5">
             {children}
           </main>
-          <footer className="border-t border-slate-200/80 bg-white/60 px-4 py-3 text-center text-[11px] font-medium text-slate-500 backdrop-blur-sm md:px-6">
+          <footer className="shrink-0 border-t border-slate-200/80 bg-white/60 px-3 py-1.5 text-center text-[10px] font-medium text-slate-500 backdrop-blur-sm md:px-4">
             © {new Date().getFullYear()} ORTHOPILOT — Tous droits réservés.
           </footer>
         </div>

@@ -50,36 +50,37 @@ export function Topbar({
   const crumbs = breadcrumbForPath(pathname);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-900/5 backdrop-blur-md">
-      <div className="flex min-h-[3.25rem] flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:gap-4 lg:px-6">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+    <header className="sticky top-0 z-30 shrink-0 border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-900/5 backdrop-blur-md">
+      <div className="flex flex-col gap-2 px-3 py-2 lg:flex-row lg:items-center lg:gap-3 lg:px-4">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <button
             type="button"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 lg:hidden"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200/90 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 lg:hidden"
             onClick={onOpenMobileNav}
             aria-label="Ouvrir le menu"
           >
-            <Menu className="h-5 w-5" strokeWidth={1.75} />
+            <Menu className="h-4 w-4" strokeWidth={1.75} />
           </button>
           <div className="min-w-0 flex-1">
-            <nav aria-label="Fil d'Ariane" className="mb-0.5 flex flex-wrap items-center gap-1 text-[11px] font-medium text-slate-400">
+            <nav
+              aria-label="Fil d'Ariane"
+              className="mb-0.5 flex flex-wrap items-center gap-0.5 text-[10px] font-medium text-slate-400"
+            >
               {crumbs.map((c, i) => (
-                <span key={`${c}-${i}`} className="flex items-center gap-1">
-                  {i > 0 ? <ChevronRight className="h-3 w-3 opacity-60" aria-hidden /> : null}
+                <span key={`${c}-${i}`} className="flex items-center gap-0.5">
+                  {i > 0 ? <ChevronRight className="h-2.5 w-2.5 opacity-60" aria-hidden /> : null}
                   <span className={i === crumbs.length - 1 ? "text-slate-600" : ""}>{c}</span>
                 </span>
               ))}
             </nav>
-            <h2 className="truncate text-lg font-semibold tracking-tight text-slate-900 lg:text-[1.05rem]">
-              {title}
-            </h2>
+            <h2 className="truncate text-base font-semibold tracking-tight text-slate-900">{title}</h2>
           </div>
         </div>
 
-        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:mx-4 lg:max-w-xl lg:flex-1">
+        <div className="flex w-full flex-col gap-1.5 sm:flex-row sm:items-center lg:mx-2 lg:max-w-md lg:flex-1 xl:max-w-lg">
           <div className="relative flex-1">
             <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
               strokeWidth={1.75}
               aria-hidden
             />
@@ -87,38 +88,38 @@ export function Topbar({
               type="search"
               readOnly
               placeholder="Rechercher patient, email, tâche…"
-              className="w-full cursor-default rounded-xl border border-slate-200/90 bg-slate-50/80 py-2 pl-9 pr-3 text-[13px] text-slate-800 shadow-inner shadow-slate-900/5 outline-none ring-sky-500/20 placeholder:text-slate-400 focus:border-sky-300 focus:bg-white focus:ring-2"
+              className="w-full cursor-default rounded-lg border border-slate-200/90 bg-slate-50/90 py-1.5 pl-8 pr-2 text-xs text-slate-800 shadow-inner outline-none ring-sky-500/20 placeholder:text-slate-400 focus:border-sky-300 focus:bg-white focus:ring-1"
               title="Recherche globale — à connecter"
               aria-label="Recherche (bientôt disponible)"
             />
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
           <PresenceMeSelect compact />
           <button
             type="button"
             onClick={onToggleNotifications}
-            className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+            className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200/90 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
             aria-label="Notifications"
           >
-            <Bell className="h-[18px] w-[18px]" strokeWidth={1.75} />
+            <Bell className="h-4 w-4" strokeWidth={1.75} />
             {unreadNotificationsCount > 0 ? (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-sm">
+              <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[9px] font-bold text-white">
                 {unreadNotificationsCount > 99 ? "99+" : unreadNotificationsCount}
               </span>
             ) : null}
           </button>
           {notificationsOpen ? (
-            <span className="hidden rounded-full bg-sky-50 px-2 py-1 text-[10px] font-semibold text-sky-700 xl:inline">
+            <span className="hidden rounded-full bg-sky-50 px-1.5 py-0.5 text-[9px] font-semibold text-sky-700 xl:inline">
               Panneau ouvert
             </span>
           ) : null}
-          <div className="hidden max-w-[10rem] flex-col rounded-xl border border-slate-200/90 bg-white px-3 py-1.5 text-right shadow-sm sm:flex">
-            <span className="truncate text-xs font-semibold text-slate-800">{currentUserName}</span>
-            <span className="truncate text-[10px] uppercase tracking-wide text-slate-500">{currentUserRole}</span>
+          <div className="hidden max-w-[9rem] flex-col rounded-lg border border-slate-200/90 bg-white px-2 py-1 text-right shadow-sm sm:flex">
+            <span className="truncate text-[11px] font-semibold text-slate-800">{currentUserName}</span>
+            <span className="truncate text-[9px] uppercase tracking-wide text-slate-500">{currentUserRole}</span>
           </div>
-          <LogoutButton className="rounded-xl border border-slate-200/90 bg-white px-3 py-2 text-[11px] font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50" />
+          <LogoutButton className="rounded-lg border border-slate-200/90 bg-white px-2.5 py-1.5 text-[10px] font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50" />
         </div>
       </div>
     </header>

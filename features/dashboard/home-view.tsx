@@ -10,14 +10,14 @@ import type { DashboardSummaryResponse } from "@/types/domain";
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-6 animate-pulse">
-      <div className="h-24 rounded-2xl bg-slate-200/70" />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="space-y-2 animate-pulse">
+      <div className="h-16 rounded-xl bg-slate-200/70" />
+      <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-32 rounded-2xl bg-slate-200/60" />
+          <div key={i} className="h-24 rounded-xl bg-slate-200/60" />
         ))}
       </div>
-      <div className="h-64 rounded-2xl bg-slate-200/50" />
+      <div className="h-48 rounded-xl bg-slate-200/50" />
     </div>
   );
 }
@@ -62,7 +62,7 @@ export function HomeView({
   const kpis = useMemo(() => (data ? computeDashboardKpis(data) : null), [data]);
 
   return (
-    <div className="space-y-8">
+    <div className="flex min-h-0 flex-col gap-2 lg:max-h-[calc(100dvh-5.25rem)] lg:overflow-hidden">
       <DashboardPageHeader greetingName={greetingName} currentDateLabel={currentDateLabel} />
 
       {loading ? <DashboardSkeleton /> : null}
@@ -70,15 +70,15 @@ export function HomeView({
       {error ? (
         <section
           role="alert"
-          className="rounded-2xl border border-rose-200/90 bg-rose-50/90 px-5 py-4 text-sm text-rose-900 shadow-sm"
+          className="shrink-0 rounded-xl border border-rose-200/90 bg-rose-50/90 px-3 py-2 text-xs text-rose-900 shadow-sm"
         >
           Impossible de charger le dashboard : {error}
         </section>
       ) : null}
 
       {data && kpis ? (
-        <div className="animate-dashboard-in space-y-8">
-          {showPresenceTeam ? <PresenceTeamWidget /> : null}
+        <div className="animate-dashboard-in flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+          {showPresenceTeam ? <PresenceTeamWidget compact /> : null}
           <DashboardKpiRow kpis={kpis} />
           <DashboardWidgets
             payments={data.payments}

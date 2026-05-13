@@ -11,7 +11,7 @@ import {
   Mail,
   Shield,
 } from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
+import { type AnimationEvent, FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { errorMessageFromResponse } from "@/lib/validation/client-errors";
 
@@ -37,13 +37,68 @@ function CabinetToothLogo({ className }: { className?: string }) {
   );
 }
 
+/** Logo dent cliquable : léger mouvement au survol, animation au clic (respecte prefers-reduced-motion). */
+function InteractiveToothLogoButton({
+  size,
+  variant,
+}: {
+  size: "lg" | "sm";
+  variant: "on-dark" | "on-light";
+}) {
+  const [wiggle, setWiggle] = useState(false);
+  const large = size === "lg";
+
+  function playWiggle() {
+    setWiggle(false);
+    requestAnimationFrame(() => setWiggle(true));
+  }
+
+  function onWiggleEnd(event: AnimationEvent<HTMLButtonElement>) {
+    if (event.animationName === "tooth-wiggle") {
+      setWiggle(false);
+    }
+  }
+
+  const base =
+    "group relative flex shrink-0 cursor-pointer select-none items-center justify-center overflow-visible outline-none " +
+    "transition-[transform,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] " +
+    "motion-safe:hover:-translate-y-1.5 motion-safe:hover:rotate-[5deg] motion-safe:hover:scale-[1.06] " +
+    "motion-safe:hover:shadow-xl motion-safe:active:translate-y-px motion-safe:active:scale-[0.96] motion-safe:active:rotate-0 " +
+    "motion-reduce:hover:translate-y-0 motion-reduce:hover:rotate-0 motion-reduce:hover:scale-100 " +
+    "focus-visible:ring-2 focus-visible:ring-indigo-400/90 focus-visible:ring-offset-2";
+
+  const sizeBox = large ? "h-16 w-16 rounded-2xl" : "h-11 w-11 rounded-xl";
+
+  const palette =
+    variant === "on-dark"
+      ? "bg-white/10 ring-1 ring-white/20 shadow-md shadow-black/25 backdrop-blur-sm hover:bg-white/18 hover:ring-white/35 hover:shadow-lg hover:shadow-cyan-400/10 focus-visible:ring-offset-slate-900"
+      : "bg-slate-900 text-white shadow-lg shadow-indigo-900/30 ring-1 ring-white/10 hover:bg-slate-800 hover:shadow-indigo-500/25 focus-visible:ring-offset-white";
+
+  const toothMotion =
+    "pointer-events-none motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out motion-safe:group-hover:scale-110";
+
+  return (
+    <button
+      type="button"
+      aria-label="Logo OrthoPilot — dent stylisée"
+      onClick={playWiggle}
+      onAnimationEnd={onWiggleEnd}
+      className={`${base} ${sizeBox} ${palette} ${
+        wiggle ? "animate-tooth-wiggle motion-reduce:animate-none" : ""
+      }`}
+    >
+      <CabinetToothLogo className={`${large ? "h-11 w-11" : "h-7 w-7"} ${toothMotion}`} />
+    </button>
+  );
+}
+
 export function LoginView() {
   const router = useRouter();
   const cabinetName =
     typeof process.env.NEXT_PUBLIC_CABINET_DISPLAY_NAME === "string" &&
     process.env.NEXT_PUBLIC_CABINET_DISPLAY_NAME.trim() !== ""
       ? process.env.NEXT_PUBLIC_CABINET_DISPLAY_NAME.trim()
-      : "Cabinet";
+      : "Cabinet Hippolyte";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -136,10 +191,8 @@ export function LoginView() {
           />
         </div>
         <div className="relative z-10">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20 backdrop-blur-sm">
-              <CabinetToothLogo className="h-9 w-9" />
-            </div>
+          <div className="flex items-start gap-4">
+            <InteractiveToothLogoButton size="lg" variant="on-dark" />
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200/90">OrthoPilot</p>
               <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-white">OrthoPilot</h1>
@@ -164,9 +217,7 @@ export function LoginView() {
       <div className="relative z-10 flex flex-col justify-center px-4 py-10 sm:px-8 lg:px-12 xl:px-16">
         {/* Branding compact mobile / tablette */}
         <div className="mb-8 flex items-center gap-3 lg:hidden">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-lg shadow-indigo-900/20">
-            <CabinetToothLogo className="h-7 w-7" />
-          </div>
+          <InteractiveToothLogoButton size="sm" variant="on-light" />
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">OrthoPilot</p>
             <p className="text-sm font-semibold text-slate-800">Connexion sécurisée</p>
@@ -213,7 +264,7 @@ export function LoginView() {
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     className="w-full rounded-xl border border-slate-200/90 bg-white/90 py-3 pl-11 pr-3 text-sm text-slate-900 shadow-inner shadow-slate-900/5 outline-none ring-0 transition-[border-color,box-shadow] placeholder:text-slate-400 focus:border-indigo-400 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)]"
-                    placeholder="vous@cabinet.fr"
+                    placeholder="Votre email"
                     required
                   />
                 </div>

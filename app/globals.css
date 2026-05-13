@@ -32,3 +32,34 @@ body {
 .animate-login-card-in {
   animation: login-card-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
+
+@keyframes tooth-wiggle {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  20% {
+    transform: rotate(-10deg) scale(1.06);
+  }
+  40% {
+    transform: rotate(9deg) scale(1.06);
+  }
+  60% {
+    transform: rotate(-5deg) scale(1.03);
+  }
+  80% {
+    transform: rotate(3deg) scale(1.01);
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+.animate-tooth-wiggle {
+  animation: tooth-wiggle 0.7s cubic-bezier(0.34, 1.35, 0.64, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-tooth-wiggle {
+    animation: none;
+  }
+}

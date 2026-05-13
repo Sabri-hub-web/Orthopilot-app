@@ -1,21 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f1f5f9;
+  --background: #f6f8fb;
   --foreground: #0f172a;
+  --app-surface: #f6f8fb;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 @keyframes login-card-in {
@@ -79,6 +80,27 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .animate-login-orbit {
+    animation: none;
+  }
+}
+
+@keyframes dashboard-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-dashboard-in {
+  animation: dashboard-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-dashboard-in {
     animation: none;
   }
 }

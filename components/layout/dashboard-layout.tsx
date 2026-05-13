@@ -22,19 +22,24 @@ export function DashboardLayout({
   currentUserRoleKey,
 }: DashboardLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
+    <div className="min-h-screen bg-[var(--app-surface,#f6f8fb)] text-slate-900 antialiased">
       <div className="flex min-h-screen">
         <Sidebar
           collapsed={sidebarCollapsed}
           role={currentUserRoleKey}
           onToggle={() => setSidebarCollapsed((prev) => !prev)}
+          mobileOpen={mobileNavOpen}
+          onMobileClose={() => setMobileNavOpen(false)}
+          currentUserName={currentUserName}
+          currentUserRole={currentUserRole}
         />
         <div
-          className={`flex min-h-screen flex-1 flex-col transition-[padding] duration-300 ${
+          className={`flex min-h-screen min-w-0 flex-1 flex-col transition-[padding] duration-300 ${
             notificationsOpen ? "lg:pr-80" : "pr-0"
           }`}
         >
@@ -45,10 +50,13 @@ export function DashboardLayout({
             unreadNotificationsCount={unreadNotificationsCount}
             currentUserName={currentUserName}
             currentUserRole={currentUserRole}
+            onOpenMobileNav={() => setMobileNavOpen(true)}
           />
-          <main className="min-h-0 flex-1 overflow-hidden p-4 md:p-6">{children}</main>
-          <footer className="border-t border-slate-200 bg-white px-4 py-2 text-center text-xs text-slate-500 md:px-6">
-            © {new Date().getFullYear()} ORTHOPILOT - Tous droits reserves.
+          <main className="min-h-0 flex-1 overflow-x-hidden px-4 py-6 md:px-6 md:py-8 lg:px-8">
+            {children}
+          </main>
+          <footer className="border-t border-slate-200/80 bg-white/60 px-4 py-3 text-center text-[11px] font-medium text-slate-500 backdrop-blur-sm md:px-6">
+            © {new Date().getFullYear()} ORTHOPILOT — Tous droits réservés.
           </footer>
         </div>
         <NotificationsPanel

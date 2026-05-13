@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { PRESENCE_STATUS_VALUES, presenceStatusLabelMap } from "@/lib/presence";
 import type { MyPresenceResponse } from "@/types/domain";
 
-export function PresenceMeSelect() {
+export function PresenceMeSelect({ compact = false }: { compact?: boolean }) {
   const [status, setStatus] = useState<MyPresenceResponse["presenceStatus"]>("DISPONIBLE");
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -44,17 +44,27 @@ export function PresenceMeSelect() {
   }
 
   if (!ready) {
-    return <span className="hidden text-xs text-slate-400 md:inline">...</span>;
+    return (
+      <span
+        className={`inline-block rounded-lg bg-slate-100 ${compact ? "h-8 w-[7.5rem] animate-pulse" : "hidden h-6 w-16 animate-pulse md:inline-block"}`}
+      />
+    );
   }
 
   return (
-    <label className="hidden flex-col gap-0.5 md:flex">
-      <span className="text-[10px] uppercase tracking-wide text-slate-500">Mon statut</span>
+    <label className={`flex flex-col gap-0.5 ${compact ? "" : "hidden md:flex"}`}>
+      {!compact ? (
+        <span className="text-[10px] uppercase tracking-wide text-slate-500">Mon statut</span>
+      ) : null}
       <select
         value={status}
         disabled={saving}
         onChange={(e) => onChange(e.target.value as MyPresenceResponse["presenceStatus"])}
-        className="max-w-[12rem] rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800"
+        className={
+          compact
+            ? "max-w-[9rem] rounded-lg border border-slate-200/90 bg-white px-2 py-1.5 text-[11px] font-medium text-slate-800 shadow-sm"
+            : "max-w-[12rem] rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800"
+        }
       >
         {PRESENCE_STATUS_VALUES.map((v) => (
           <option key={v} value={v}>

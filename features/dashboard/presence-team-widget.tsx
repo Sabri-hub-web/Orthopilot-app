@@ -49,15 +49,15 @@ export function PresenceTeamWidget() {
 
   if (loading && !data && !error) {
     return (
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
-        Chargement presence equipe...
+      <section className="rounded-2xl border border-slate-200/80 bg-white/90 p-5 text-sm text-slate-500 shadow-sm shadow-slate-900/5">
+        Chargement présence équipe…
       </section>
     );
   }
 
   if (error) {
     return (
-      <section className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 shadow-sm">
+      <section className="rounded-2xl border border-rose-200/80 bg-rose-50/90 p-5 text-sm text-rose-900 shadow-sm">
         {error}
       </section>
     );
@@ -68,19 +68,19 @@ export function PresenceTeamWidget() {
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-900/5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-base font-semibold text-slate-900">Presence equipe</h3>
+        <h3 className="text-sm font-semibold tracking-tight text-slate-900">Présence équipe</h3>
         <button
           type="button"
           onClick={() => void load()}
-          className="text-xs font-medium text-emerald-700 hover:underline"
+          className="text-xs font-semibold text-sky-600 transition hover:text-sky-700"
         >
           Actualiser
         </button>
       </div>
-      <p className="mt-1 text-xs text-slate-500">
-        Session active = connecte. Statut manuel choisi par chaque utilisateur (barre du haut).
+      <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+        Session active = connecté. Statut choisi par chaque utilisateur (barre du haut).
       </p>
       <div className="mt-3 overflow-x-auto">
         <table className="min-w-full text-sm">

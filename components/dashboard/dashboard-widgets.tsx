@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { DashboardPatientsSummary, InternalTask, PaymentFollowUp, PriorityEmail } from "@/types/domain";
+import {
+  buildActivityFeed,
+  computePaymentDistribution,
+} from "@/lib/dashboard-ui";
+import { DashboardActivityFeed } from "@/components/dashboard/dashboard-activity-feed";
+import { DashboardQuickAccess } from "@/components/dashboard/dashboard-quick-access";
+import { PaymentsDonut } from "@/components/dashboard/payments-donut";
+import type { DashboardPatientsSummary, InternalTask, PaymentFollowUp, PriorityEmail } from "@/types/domain";
 
 interface DashboardWidgetsProps {
   payments: PaymentFollowUp[];
@@ -8,7 +15,7 @@ interface DashboardWidgetsProps {
   patientsSummary: DashboardPatientsSummary;
 }
 
-function SectionCard({
+function SectionPanel({
   title,
   href,
   children,
@@ -18,159 +25,231 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <Link
-      href={href}
-      className="block h-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-emerald-200 hover:shadow-md"
-    >
-      <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-      <div className="mt-3 h-[calc(100%-32px)]">{children}</div>
-    </Link>
+    <section className="flex h-full min-h-0 flex-col rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-900/5 transition hover:shadow-md">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <h3 className="text-sm font-semibold tracking-tight text-slate-900">{title}</h3>
+        <Link
+          href={href}
+          className="text-xs font-semibold text-sky-600 transition hover:text-sky-700"
+        >
+          Voir tout
+        </Link>
+      </div>
+      <div className="min-h-0 flex-1 overflow-auto px-5 py-4">{children}</div>
+    </section>
   );
 }
 
 const emailCategoryStyles = {
-  Urgent: "bg-red-50 text-red-700 border-red-100",
-  Administratif: "bg-orange-50 text-orange-700 border-orange-100",
-  "Suivi clinique": "bg-emerald-50 text-emerald-700 border-emerald-100",
+  Urgent: "bg-rose-50 text-rose-700 ring-rose-100/80",
+  Administratif: "bg-orange-50 text-orange-800 ring-orange-100/80",
+  "Suivi clinique": "bg-emerald-50 text-emerald-800 ring-emerald-100/80",
 };
 
 const emailStatusStyles = {
-  "A traiter": "bg-amber-50 text-amber-900 border-amber-100",
-  "En cours": "bg-blue-50 text-blue-800 border-blue-100",
-  Traite: "bg-slate-100 text-slate-600 border-slate-200",
-  Archive: "bg-slate-50 text-slate-500 border-slate-100",
+  "A traiter": "bg-amber-50 text-amber-900 ring-amber-100/80",
+  "En cours": "bg-sky-50 text-sky-800 ring-sky-100/80",
+  Traite: "bg-slate-100 text-slate-600 ring-slate-200/80",
+  Archive: "bg-slate-50 text-slate-500 ring-slate-100/80",
 };
 
 const taskStatusStyles = {
-  "A faire": "bg-orange-50 text-orange-700 border-orange-100",
-  "En cours": "bg-emerald-50 text-emerald-700 border-emerald-100",
-  "En attente": "bg-slate-100 text-slate-700 border-slate-200",
-  Terminee: "bg-blue-50 text-blue-700 border-blue-100",
+  "A faire": "bg-orange-50 text-orange-800 ring-orange-100/80",
+  "En cours": "bg-emerald-50 text-emerald-800 ring-emerald-100/80",
+  "En attente": "bg-slate-50 text-slate-700 ring-slate-200/80",
+  Terminee: "bg-sky-50 text-sky-800 ring-sky-100/80",
+};
+
+const taskPriorityStyles: Record<string, string> = {
+  urgente: "bg-rose-50 text-rose-700 ring-rose-100/80",
+  importante: "bg-orange-50 text-orange-800 ring-orange-100/80",
+  normale: "bg-slate-50 text-slate-700 ring-slate-200/80",
+  faible: "bg-sky-50 text-sky-800 ring-sky-100/80",
 };
 
 export function DashboardWidgets({ payments, emails, tasks, patientsSummary }: DashboardWidgetsProps) {
-  const visiblePayments = payments.slice(0, 4);
+  const visiblePayments = payments.slice(0, 5);
   const prioritizedEmails = [...emails].sort((a, b) => {
     if (a.category === "Urgent" && b.category !== "Urgent") return -1;
     if (a.category !== "Urgent" && b.category === "Urgent") return 1;
     return 0;
   });
+  const topEmails = prioritizedEmails.slice(0, 5);
+  const topTasks = tasks.slice(0, 6);
+
+  const summaryPayload = { payments, emails, tasks, patientsSummary };
+  const distribution = computePaymentDistribution(payments);
+  const distributionTotal = distribution.reduce((s, x) => s + x.amount, 0);
+  const activity = buildActivityFeed(summaryPayload, 8);
 
   return (
-    <div className="h-full min-h-0 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
-        <div className="flex flex-wrap gap-4 text-slate-700">
+    <div className="space-y-6">
+      <section className="flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white/90 px-5 py-4 shadow-sm shadow-slate-900/5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-slate-600">
           <span>
-            Patients: <strong className="text-slate-900">{patientsSummary.total}</strong>
+            Patients suivis :{" "}
+            <strong className="font-semibold text-slate-900 tabular-nums">{patientsSummary.total}</strong>
           </span>
           <span>
-            Suivi admin:{" "}
-            <strong className="text-amber-800">{patientsSummary.attentionAdminCount}</strong>
+            Attention admin :{" "}
+            <strong className="font-semibold text-amber-700 tabular-nums">
+              {patientsSummary.attentionAdminCount}
+            </strong>
           </span>
         </div>
-        <Link href="/patients" className="text-xs font-medium text-emerald-700 hover:underline">
+        <Link
+          href="/patients"
+          className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800"
+        >
           Hub patients
         </Link>
-      </div>
-      <div className="min-h-0 gap-4 lg:grid lg:grid-cols-2">
-      <div className="min-h-0 space-y-4 lg:grid lg:grid-rows-2 lg:space-y-0 lg:gap-4">
-        <SectionCard title="Taches a faire / en cours" href="/tasks">
-          <div className="max-h-52 overflow-y-auto overflow-x-auto pr-1">
-            <table className="min-w-full text-sm">
-              <thead className="text-left text-xs text-slate-500">
-                <tr>
-                  <th className="pb-2 font-medium">Tache</th>
-                  <th className="pb-2 font-medium">Responsable</th>
-                  <th className="pb-2 font-medium">Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tasks.map((task) => (
-                  <tr key={task.id} className="border-t border-slate-100">
-                    <td className="max-w-52 py-2 text-slate-800">
-                      <span className="block truncate">{task.title}</span>
-                    </td>
-                    <td className="py-2 text-slate-700">{task.assignee}</td>
-                    <td className="py-2">
+      </section>
+
+      <div className="grid min-h-0 gap-5 xl:grid-cols-3">
+        <div className="flex min-h-0 flex-col gap-5 xl:col-span-2">
+          <div className="grid min-h-[280px] gap-5 lg:grid-cols-2">
+            <SectionPanel title="Tâches à traiter" href="/tasks">
+              <ul className="space-y-2">
+                {topTasks.map((task) => (
+                  <li
+                    key={task.id}
+                    className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 transition hover:border-slate-200 hover:bg-white"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="min-w-0 flex-1 text-sm font-medium leading-snug text-slate-900">
+                        {task.title}
+                      </p>
                       <span
-                        className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${taskStatusStyles[task.status]}`}
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ring-1 ${taskPriorityStyles[task.priority] ?? "bg-slate-100 text-slate-600 ring-slate-200"}`}
+                      >
+                        {task.priority}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <span>{task.assignee}</span>
+                      <span className="text-slate-300">·</span>
+                      <span>Échéance {task.dueDate}</span>
+                      <span
+                        className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${taskStatusStyles[task.status]}`}
                       >
                         {task.status}
                       </span>
-                    </td>
-                  </tr>
+                    </div>
+                  </li>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </SectionCard>
+              </ul>
+            </SectionPanel>
 
-        <SectionCard title="Emails prioritaires (urgent d'abord)" href="/emails">
-          <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
-            {prioritizedEmails.map((email) => (
-              <article
-                key={email.id}
-                className="overflow-hidden rounded-xl border border-slate-100 bg-slate-50 p-2.5"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <p className="min-w-0 flex-1 text-sm font-medium text-slate-900">
-                    <span className="block truncate">{email.subject}</span>
-                  </p>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span
-                      className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${emailCategoryStyles[email.category]}`}
-                    >
-                      {email.category}
-                    </span>
-                    <span
-                      className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${emailStatusStyles[email.status]}`}
-                    >
-                      {email.status}
-                    </span>
-                  </div>
-                </div>
-                <p className="mt-1 text-xs text-slate-500">
-                  <span className="inline-block max-w-64 truncate align-bottom">De: {email.from}</span>
-                  <span className="mt-0.5 block truncate text-slate-500">Responsable: {email.assignee}</span>
-                </p>
-                <p className="mt-1 text-xs text-slate-600">
-                  Recu le {email.receivedDate} a {email.receivedAt}
-                </p>
-              </article>
-            ))}
-          </div>
-        </SectionCard>
-      </div>
-
-      <div className="mt-4 min-h-0 lg:mt-0">
-        <SectionCard title="Suivi des reglements" href="/reglements">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="text-left text-xs text-slate-500">
-                <tr>
-                  <th className="pb-2 font-medium">Patient</th>
-                  <th className="pb-2 font-medium">Montant</th>
-                  <th className="pb-2 font-medium">Echeance</th>
-                  <th className="pb-2 font-medium">Retard</th>
-                  <th className="pb-2 font-medium">Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visiblePayments.map((payment) => (
-                  <tr key={payment.id} className="border-t border-slate-100">
-                    <td className="py-2 text-slate-800">{payment.patientName}</td>
-                    <td className="py-2 font-medium text-slate-900">{payment.amountDue} EUR</td>
-                    <td className="py-2 text-slate-700">{payment.dueDate}</td>
-                    <td className="py-2 text-red-600">{payment.daysLate} jours</td>
-                    <td className="py-2 text-slate-600">{payment.status}</td>
-                  </tr>
+            <SectionPanel title="Emails non traités" href="/emails">
+              <ul className="space-y-2">
+                {topEmails.map((email) => (
+                  <li
+                    key={email.id}
+                    className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 transition hover:border-slate-200 hover:bg-white"
+                  >
+                    <p className="text-sm font-medium leading-snug text-slate-900">{email.subject}</p>
+                    <p className="mt-1 truncate text-xs text-slate-500">
+                      {email.from} · {email.assignee}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${emailCategoryStyles[email.category]}`}
+                      >
+                        {email.category}
+                      </span>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${emailStatusStyles[email.status]}`}
+                      >
+                        {email.status}
+                      </span>
+                      <span className="ml-auto text-[11px] tabular-nums text-slate-400">
+                        {email.receivedDate} {email.receivedAt}
+                      </span>
+                    </div>
+                  </li>
                 ))}
-              </tbody>
-            </table>
+              </ul>
+            </SectionPanel>
           </div>
-        </SectionCard>
+
+          <SectionPanel title="Suivi des règlements" href="/reglements">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-left text-[13px]">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                    <th className="pb-2 pr-3 font-medium">Patient</th>
+                    <th className="pb-2 pr-3 font-medium">Montant</th>
+                    <th className="pb-2 pr-3 font-medium">Échéance</th>
+                    <th className="pb-2 pr-3 font-medium">Retard</th>
+                    <th className="pb-2 pr-3 font-medium">Statut</th>
+                    <th className="pb-2 text-right font-medium"> </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {visiblePayments.map((payment) => (
+                    <tr key={payment.id} className="text-slate-700 transition hover:bg-slate-50/80">
+                      <td className="py-2.5 pr-3 font-medium text-slate-900">
+                        <Link
+                          href={`/patients/${payment.patientId}`}
+                          className="text-sky-700 hover:underline"
+                        >
+                          {payment.patientName}
+                        </Link>
+                      </td>
+                      <td className="py-2.5 pr-3 tabular-nums font-semibold text-slate-900">
+                        {payment.amountDue} EUR
+                      </td>
+                      <td className="py-2.5 pr-3 tabular-nums text-slate-600">{payment.dueDate}</td>
+                      <td className="py-2.5 pr-3">
+                        {payment.daysLate > 0 ? (
+                          <span className="font-medium text-rose-600">{payment.daysLate} j</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 pr-3 text-slate-600">{payment.status}</td>
+                      <td className="py-2.5 text-right">
+                        <Link
+                          href="/reglements"
+                          className="inline-flex rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-800"
+                        >
+                          Relancer
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </SectionPanel>
+        </div>
+
+        <div className="flex min-h-0 flex-col gap-5">
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-900/5">
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold tracking-tight text-slate-900">Répartition règlements</h3>
+              <Link href="/reglements" className="text-xs font-semibold text-sky-600 hover:text-sky-700">
+                Détails
+              </Link>
+            </div>
+            <PaymentsDonut slices={distribution} total={distributionTotal} />
+          </section>
+
+          <section className="min-h-0 flex-1 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-900/5">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold tracking-tight text-slate-900">Activité récente</h3>
+            </div>
+            <DashboardActivityFeed items={activity} />
+          </section>
+        </div>
       </div>
-      </div>
+
+      <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-900/5">
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold tracking-tight text-slate-900">Accès rapides</h3>
+        </div>
+        <DashboardQuickAccess />
+      </section>
     </div>
   );
 }

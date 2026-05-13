@@ -1,8 +1,8 @@
 firstName;lastName;email;phone;legalGuardian;nextAppointmentAt;mutuelle;internalComment;hubStatus
 Jean;Dupont;jean.dupont.import.test@example.com;06 11 11 11 01;;2026-07-15 10:00;MutuelleA;L1 creation OK;ACTIF
-Jean;Dupont;jean.dupont.import.test@example.com;06 22 22 22 02;;2026-07-16 11:00;;L2 meme EMAIL que L1 = mise a jour;
-Marie;Bernard;marie.bernard.import.test@example.com;06 33 33 33 03;;;;L3 creation;
-Marie;Bernard;marie.bernard.import.test@example.com;06 33 33 33 99;;MutuelleB;L4 meme EMAIL que L3 = mise a jour tel et mutuelle;
+Jean;Dupont;jean.dupont.import.test@example.com;06 22 22 22 02;;2026-07-16 11:00;;L2 meme EMAIL que L1 = mise a jour;ACTIF
+Marie;Bernard;marie.bernard.import.test@example.com;06 33 33 33 03;;;L3 creation;ACTIF
+Marie;Bernard;marie.bernard.import.test@example.com;06 33 33 33 99;;MutuelleB;L4 meme EMAIL que L3 = mise a jour tel et mutuelle;ACTIF
 Sophie;Durand;;;;;"L5 creation sans email ni telephone";ACTIF
 Sophie;Durand;sophie.durand.import.test@example.com;06 44 44 44 04;;;"L6 meme prenom+nom que L5 = mise a jour par nom";ACTIF
 ;Martin;vide.prenom@example.com;06 55 55 55 05;;;"L7 ERREUR prenom vide";ACTIF

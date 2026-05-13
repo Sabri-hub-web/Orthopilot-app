@@ -159,7 +159,7 @@ export function CalendarView({ canManage }: CalendarViewProps) {
     (async () => {
       const [uRes, pRes] = await Promise.all([
         fetch("/api/calendar/assignees", { cache: "no-store" }),
-        fetch("/api/patients?pageSize=100", { cache: "no-store" }),
+        fetch("/api/patients?page=1&pageSize=50", { cache: "no-store" }),
       ]);
       if (cancelled) return;
       if (uRes.ok) {

@@ -84,23 +84,31 @@ export function TasksView() {
 
   useEffect(() => {
     async function loadOptions() {
-      try {
-        const [patientsRes, usersRes] = await Promise.all([
-          fetch("/api/patients?page=1&pageSize=100", { cache: "no-store" }),
-          fetch("/api/users", { cache: "no-store" }),
-        ]);
-        if (!patientsRes.ok || !usersRes.ok) return;
+      const patientsUrl = "/api/patients?page=1&pageSize=50";
+      const usersUrl = "/api/users";
 
-        const patientsPayload = await patientsRes.json();
-        const usersPayload = await usersRes.json();
-        setPatients(patientsPayload.items ?? []);
-        setUsers(usersPayload.items ?? []);
+      try {
+        const patientsRes = await fetch(patientsUrl, { cache: "no-store" });
+        if (patientsRes.ok) {
+          const patientsPayload = await patientsRes.json();
+          setPatients(patientsPayload.items ?? []);
+        }
       } catch {
-        // keep form functional even if options fail
+        setPatients([]);
+      }
+
+      try {
+        const usersRes = await fetch(usersUrl, { cache: "no-store" });
+        if (usersRes.ok) {
+          const usersPayload = await usersRes.json();
+          setUsers(usersPayload.items ?? []);
+        }
+      } catch {
+        setUsers([]);
       }
     }
 
-    loadOptions();
+    void loadOptions();
   }, []);
 
   function resetForm() {

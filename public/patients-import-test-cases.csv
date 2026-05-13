@@ -1,0 +1,13 @@
+firstName;lastName;email;phone;legalGuardian;nextAppointmentAt;mutuelle;internalComment;hubStatus
+Jean;Dupont;jean.dupont.import.test@example.com;06 11 11 11 01;;2026-07-15 10:00;MutuelleA;L1 creation OK;ACTIF
+Jean;Dupont;jean.dupont.import.test@example.com;06 22 22 22 02;;2026-07-16 11:00;;L2 meme EMAIL que L1 = mise a jour;
+Marie;Bernard;marie.bernard.import.test@example.com;06 33 33 33 03;;;;L3 creation;
+Marie;Bernard;marie.bernard.import.test@example.com;06 33 33 33 99;;;MutuelleB;L4 meme EMAIL que L3 = mise a jour tel et mutuelle;
+Sophie;Durand;;;;;;;L5 creation sans email ni telephone;
+Sophie;Durand;sophie.durand.import.test@example.com;06 44 44 44 04;;;;L6 meme prenom+nom que L5 = mise a jour par nom;
+;Martin;vide.prenom@example.com;06 55 55 55 05;;;;L7 ERREUR prenom vide;
+Paul;;paul.sansnom@example.com;06 66 66 66 06;;;;L8 ERREUR nom vide;
+Bad;Email;ceci-n-est-pas-un-email;06 77 77 77 07;;;;L9 ERREUR email invalide;
+Bad;Phone;phone.bad@example.com;abc-tel-invalide;;;;L10 ERREUR telephone invalide;
+Homonyme;Test;;;;;;;L11 creation sans contact;
+Homonyme;Test;homonyme.test@example.com;06 88 88 88 08;;;;L12 un seul Homonyme Test en base = MAJ par nom+prenom;

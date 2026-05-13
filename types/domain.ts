@@ -203,6 +203,23 @@ export interface PatientsListResponse {
   totalPages: number;
 }
 
+export type PatientCsvImportLineStatus = "created" | "updated" | "skipped" | "error";
+
+export interface PatientCsvImportLineResult {
+  line: number;
+  status: PatientCsvImportLineStatus;
+  message?: string;
+  patientId?: string;
+}
+
+export interface PatientCsvImportResponse {
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: number;
+  lines: PatientCsvImportLineResult[];
+}
+
 export interface LogsListResponse {
   items: ActivityLog[];
   total: number;

@@ -22,20 +22,20 @@ const shortcuts = [
 export function DashboardQuickAccess({ compact = false }: { compact?: boolean }) {
   if (compact) {
     return (
-      <div className="grid h-full min-h-0 grid-cols-3 grid-rows-2 gap-1.5">
+      <div className="grid h-full min-h-0 grid-cols-3 grid-rows-2 gap-1">
         {shortcuts.map(({ label, href, icon: Icon, accent }) => (
           <Link
             key={label}
             href={href}
             title={label}
-            className="group flex aspect-square min-h-0 max-h-full flex-col items-center justify-center gap-1 rounded-xl border border-slate-100 bg-slate-50/80 px-1 py-1.5 text-center shadow-sm transition hover:border-slate-200 hover:bg-white hover:shadow-md"
+            className="group flex aspect-square min-h-0 max-h-full flex-col items-center justify-center gap-0.5 rounded-lg border border-slate-100 bg-slate-50/80 px-0.5 py-1 text-center shadow-sm transition hover:border-slate-200 hover:bg-white hover:shadow-md"
           >
             <span
-              className={`flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br ${accent} text-white shadow-sm ring-2 ring-white/40 transition group-hover:ring-white/70`}
+              className={`flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br ${accent} text-white shadow-sm ring-2 ring-white/40 transition group-hover:ring-white/70`}
             >
-              <Icon className="h-4 w-4" strokeWidth={1.6} aria-hidden />
+              <Icon className="h-3.5 w-3.5" strokeWidth={1.6} aria-hidden />
             </span>
-            <span className="line-clamp-2 max-w-full px-0.5 text-[9px] font-medium leading-tight text-slate-700">
+            <span className="line-clamp-2 max-w-full px-0.5 text-[8px] font-medium leading-tight text-slate-700">
               {label}
             </span>
           </Link>

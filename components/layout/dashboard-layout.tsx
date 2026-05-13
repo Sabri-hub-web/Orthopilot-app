@@ -52,7 +52,7 @@ export function DashboardLayout({
             currentUserRole={currentUserRole}
             onOpenMobileNav={() => setMobileNavOpen(true)}
           />
-          <main className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-6 py-2 md:px-8 md:py-2.5 lg:px-8">
+          <main className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-6 py-1.5 md:px-8 md:py-2 lg:px-8 lg:py-2">
             {children}
           </main>
           <footer className="shrink-0 border-t border-slate-200/80 bg-white/60 px-3 py-1.5 text-center text-[10px] font-medium text-slate-500 backdrop-blur-sm md:px-4">

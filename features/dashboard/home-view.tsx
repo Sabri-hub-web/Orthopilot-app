@@ -9,22 +9,22 @@ import type { DashboardSummaryResponse } from "@/types/domain";
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-3 animate-pulse">
-      <div className="h-14 rounded-2xl bg-slate-200/70" />
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="space-y-2 animate-pulse">
+      <div className="h-12 rounded-2xl bg-slate-200/70" />
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-[150px] rounded-2xl bg-slate-200/60" />
+          <div key={i} className="h-[128px] rounded-2xl bg-slate-200/60" />
         ))}
       </div>
-      <div className="grid gap-3 lg:grid-cols-3">
-        <div className="h-[280px] rounded-2xl bg-slate-200/50" />
-        <div className="h-[280px] rounded-2xl bg-slate-200/50" />
-        <div className="h-[280px] rounded-2xl bg-slate-200/50" />
+      <div className="grid min-h-[200px] gap-2 lg:grid-cols-3">
+        <div className="rounded-2xl bg-slate-200/50" />
+        <div className="rounded-2xl bg-slate-200/50" />
+        <div className="rounded-2xl bg-slate-200/50" />
       </div>
-      <div className="grid gap-3 lg:grid-cols-3">
-        <div className="h-[240px] rounded-2xl bg-slate-200/45" />
-        <div className="h-[240px] rounded-2xl bg-slate-200/45" />
-        <div className="h-[240px] rounded-2xl bg-slate-200/45" />
+      <div className="grid min-h-[180px] gap-2 lg:grid-cols-3">
+        <div className="rounded-2xl bg-slate-200/45" />
+        <div className="rounded-2xl bg-slate-200/45" />
+        <div className="rounded-2xl bg-slate-200/45" />
       </div>
     </div>
   );
@@ -68,7 +68,9 @@ export function HomeView({
   const kpis = useMemo(() => (data ? computeDashboardKpis(data) : null), [data]);
 
   return (
-    <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-2 px-0 pb-4">
+    <div
+      className={`mx-auto flex w-full max-w-[1680px] flex-col gap-1 px-0 ${data && kpis ? "lg:min-h-0 lg:flex-1 lg:overflow-hidden lg:pb-1" : "pb-2"}`}
+    >
       <DashboardPageHeader greetingName={greetingName} currentDateLabel={currentDateLabel} />
 
       {loading ? <DashboardSkeleton /> : null}
@@ -83,14 +85,9 @@ export function HomeView({
       ) : null}
 
       {data && kpis ? (
-        <div className="animate-dashboard-in flex flex-col gap-2.5">
+        <div className="animate-dashboard-in flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden lg:gap-2">
           <DashboardKpiRow kpis={kpis} />
-          <DashboardWidgets
-            payments={data.payments}
-            emails={data.emails}
-            tasks={data.tasks}
-            patientsSummary={data.patientsSummary}
-          />
+          <DashboardWidgets payments={data.payments} emails={data.emails} tasks={data.tasks} />
         </div>
       ) : null}
     </div>

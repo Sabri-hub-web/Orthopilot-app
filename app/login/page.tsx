@@ -9,7 +9,7 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
+    <main className="min-h-screen">
       <LoginView />
     </main>
   );

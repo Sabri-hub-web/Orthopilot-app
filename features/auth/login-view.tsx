@@ -1,15 +1,71 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import {
+  AlertCircle,
+  ArrowRight,
+  Building2,
+  Eye,
+  EyeOff,
+  Loader2,
+  Lock,
+  Mail,
+  Shield,
+} from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { errorMessageFromResponse } from "@/lib/validation/client-errors";
 
+const REMEMBER_EMAIL_KEY = "orthopilot_login_remember_email";
+const REMEMBER_FLAG_KEY = "orthopilot_login_remember_me";
+
+function CabinetToothLogo({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      <circle cx="24" cy="24" r="22" fill="white" fillOpacity="0.12" />
+      <path
+        d="M24 10c-4.2 0-7 2.4-8.2 6.1-.6 2-.4 4.1.2 6 .5 1.6.4 3.2-.2 4.7-.8 2.1-.9 4.3-.2 6.4.5 1.6 1.7 2.8 3.3 3.2 1.1.3 2.3.1 3.3-.5 1.1-.7 2.5-.7 3.6 0 1 .6 1.7 1.5 2.1.9.4 2 .4 2.9 0 1.1-.5 1.8-1.5 2.1-1 .3-2.2.2-3.3-.5-1.6-1-2.8-1.6-3.3-3.2-.7-2.1-.6-4.3.2-6.4.6-1.5.7-3.1.2-4.7-.6-1.9-.8-4-.2-6C17 12.4 19.8 10 24 10Z"
+        fill="white"
+        fillOpacity="0.95"
+      />
+    </svg>
+  );
+}
+
 export function LoginView() {
   const router = useRouter();
+  const cabinetName =
+    typeof process.env.NEXT_PUBLIC_CABINET_DISPLAY_NAME === "string" &&
+    process.env.NEXT_PUBLIC_CABINET_DISPLAY_NAME.trim() !== ""
+      ? process.env.NEXT_PUBLIC_CABINET_DISPLAY_NAME.trim()
+      : "Cabinet";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        const saved = localStorage.getItem(REMEMBER_FLAG_KEY) === "1";
+        const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY);
+        if (saved && savedEmail) {
+          setRememberMe(true);
+          setEmail(savedEmail);
+        }
+      } catch {
+        /* ignore */
+      }
+    });
+  }, []);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -27,6 +83,18 @@ export function LoginView() {
         return;
       }
 
+      try {
+        if (rememberMe) {
+          localStorage.setItem(REMEMBER_FLAG_KEY, "1");
+          localStorage.setItem(REMEMBER_EMAIL_KEY, email.trim());
+        } else {
+          localStorage.removeItem(REMEMBER_FLAG_KEY);
+          localStorage.removeItem(REMEMBER_EMAIL_KEY);
+        }
+      } catch {
+        /* ignore */
+      }
+
       router.replace("/");
       router.refresh();
     } catch (e) {
@@ -37,42 +105,199 @@ export function LoginView() {
   }
 
   return (
-    <section className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h1 className="text-xl font-semibold text-slate-900">Connexion ORTHOPILOT</h1>
-      <p className="mt-1 text-sm text-slate-500">Acces securise au tableau de bord du cabinet.</p>
+    <div className="relative grid min-h-screen w-full overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+      {/* Fond dégradé + formes floues */}
+      <div
+        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-sky-100 via-indigo-50 to-violet-100"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -left-24 top-20 h-72 w-72 rounded-full bg-cyan-300/25 blur-3xl"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute bottom-0 right-0 h-96 w-96 rounded-full bg-indigo-400/20 blur-3xl"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute right-1/4 top-1/3 h-64 w-64 rounded-full bg-violet-300/20 blur-3xl"
+        aria-hidden
+      />
 
-      <form onSubmit={onSubmit} className="mt-5 space-y-3">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">Email</label>
-          <input
-            type="text"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            placeholder=""
-            required
+      {/* Panneau branding — desktop */}
+      <aside className="relative z-0 hidden flex-col justify-between border-white/10 bg-gradient-to-br from-slate-900/95 via-indigo-950/90 to-slate-900 p-10 text-white lg:flex lg:border-r">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.07]">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
+              backgroundSize: "28px 28px",
+            }}
           />
         </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">Mot de passe</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            required
-          />
+        <div className="relative z-10">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20 backdrop-blur-sm">
+              <CabinetToothLogo className="h-9 w-9" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200/90">OrthoPilot</p>
+              <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-white">OrthoPilot</h1>
+            </div>
+          </div>
+          <p className="mt-6 max-w-sm text-sm leading-relaxed text-slate-300">
+            Plateforme de gestion du cabinet dentaire — outils internes, dossiers patients et coordination
+            d&apos;équipe.
+          </p>
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60"
-        >
-          {loading ? "Connexion..." : "Se connecter"}
-        </button>
-      </form>
+        <div className="relative z-10 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+          <div className="flex gap-3">
+            <Shield className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden />
+            <p className="text-xs leading-relaxed text-slate-200">
+              Sécurisé. Fiable. Conçu pour les cabinets dentaires modernes.
+            </p>
+          </div>
+        </div>
+      </aside>
 
-      {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
-    </section>
+      {/* Colonne formulaire */}
+      <div className="relative z-10 flex flex-col justify-center px-4 py-10 sm:px-8 lg:px-12 xl:px-16">
+        {/* Branding compact mobile / tablette */}
+        <div className="mb-8 flex items-center gap-3 lg:hidden">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-lg shadow-indigo-900/20">
+            <CabinetToothLogo className="h-7 w-7" />
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">OrthoPilot</p>
+            <p className="text-sm font-semibold text-slate-800">Connexion sécurisée</p>
+          </div>
+        </div>
+
+        <div className="animate-login-card-in mx-auto w-full max-w-md">
+          <div className="rounded-3xl border border-white/60 bg-white/85 p-8 shadow-[0_25px_50px_-12px_rgba(15,23,42,0.18)] shadow-indigo-950/5 backdrop-blur-xl sm:p-9">
+            <div className="mb-8 text-center lg:text-left">
+              <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/25 lg:mx-0">
+                <Building2 className="h-5 w-5" aria-hidden />
+              </div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Cabinet dentaire
+              </p>
+              <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{cabinetName}</h2>
+              <p className="mt-2 text-sm text-slate-600">Bienvenue sur votre espace OrthoPilot</p>
+            </div>
+
+            <form onSubmit={onSubmit} className="space-y-5">
+              {error ? (
+                <div
+                  role="alert"
+                  className="flex gap-3 rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm text-rose-900 shadow-sm backdrop-blur-sm"
+                >
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" aria-hidden />
+                  <p className="leading-snug">{error}</p>
+                </div>
+              ) : null}
+
+              <div>
+                <label htmlFor="login-email" className="mb-1.5 block text-xs font-semibold text-slate-700">
+                  Email
+                </label>
+                <div className="group relative">
+                  <Mail
+                    className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-indigo-500"
+                    aria-hidden
+                  />
+                  <input
+                    id="login-email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    className="w-full rounded-xl border border-slate-200/90 bg-white/90 py-3 pl-11 pr-3 text-sm text-slate-900 shadow-inner shadow-slate-900/5 outline-none ring-0 transition-[border-color,box-shadow] placeholder:text-slate-400 focus:border-indigo-400 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)]"
+                    placeholder="vous@cabinet.fr"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="login-password" className="mb-1.5 block text-xs font-semibold text-slate-700">
+                  Mot de passe
+                </label>
+                <div className="group relative">
+                  <Lock
+                    className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-indigo-500"
+                    aria-hidden
+                  />
+                  <input
+                    id="login-password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className="w-full rounded-xl border border-slate-200/90 bg-white/90 py-3 pl-11 pr-12 text-sm text-slate-900 shadow-inner shadow-slate-900/5 outline-none transition-[border-color,box-shadow] placeholder:text-slate-400 focus:border-indigo-400 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)]"
+                    placeholder="Votre mot de passe"
+                    required
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+                    aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <label className="flex cursor-pointer select-none items-center gap-2.5 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/30"
+                  />
+                  <span>Se souvenir de moi</span>
+                </label>
+                <span
+                  className="text-xs font-medium text-slate-400"
+                  title="Contactez l'administrateur du cabinet pour réinitialiser votre accès."
+                >
+                  Mot de passe oublié ?
+                </span>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition hover:from-indigo-500 hover:to-violet-500 hover:shadow-indigo-500/35 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    Connexion en cours…
+                  </>
+                ) : (
+                  <>
+                    Se connecter
+                    <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-slate-500">
+              <Lock className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+              Vos données sont sécurisées et confidentielles.
+            </p>
+          </div>
+
+          <p className="mt-8 text-center text-xs text-slate-500">
+            © {new Date().getFullYear()} OrthoPilot — Tous droits réservés
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

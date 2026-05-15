@@ -16,6 +16,7 @@ export default async function CalendarPage() {
   return (
     <DashboardLayout
       title="Calendrier"
+      fillViewport
       currentUserName={user.fullName}
       currentUserRole={roleLabel(user.role)}
       currentUserRoleKey={user.role}

@@ -12,6 +12,8 @@ interface DashboardLayoutProps {
   currentUserName: string;
   currentUserRole: string;
   currentUserRoleKey: AuthUser["role"];
+  /** Page calendrier : hauteur fixe, pas de scroll ni footer */
+  fillViewport?: boolean;
 }
 
 export function DashboardLayout({
@@ -20,6 +22,7 @@ export function DashboardLayout({
   currentUserName,
   currentUserRole,
   currentUserRoleKey,
+  fillViewport = false,
 }: DashboardLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -27,8 +30,12 @@ export function DashboardLayout({
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   return (
-    <div className="min-h-screen bg-[var(--app-surface,#f6f8fb)] text-slate-900 antialiased">
-      <div className="flex min-h-screen">
+    <section
+      className={`bg-[var(--app-surface,#f6f8fb)] text-slate-900 antialiased ${
+        fillViewport ? "h-screen max-h-screen overflow-hidden" : "min-h-screen"
+      }`}
+    >
+      <section className={`flex ${fillViewport ? "h-full" : "min-h-screen"}`}>
         <Sidebar
           collapsed={sidebarCollapsed}
           role={currentUserRoleKey}
@@ -38,10 +45,10 @@ export function DashboardLayout({
           currentUserName={currentUserName}
           currentUserRole={currentUserRole}
         />
-        <div
-          className={`flex min-h-screen min-w-0 flex-1 flex-col transition-[padding] duration-300 ${
+        <section
+          className={`flex min-w-0 flex-1 flex-col transition-[padding] duration-300 ${
             notificationsOpen ? "lg:pr-80" : "pr-0"
-          }`}
+          } ${fillViewport ? "h-full overflow-hidden" : "min-h-screen"}`}
         >
           <Topbar
             title={title}
@@ -52,19 +59,25 @@ export function DashboardLayout({
             currentUserRole={currentUserRole}
             onOpenMobileNav={() => setMobileNavOpen(true)}
           />
-          <main className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-6 py-1.5 md:px-8 md:py-2 lg:px-8 lg:py-2">
+          <main
+            className={`flex min-h-0 flex-1 flex-col overflow-x-hidden px-4 md:px-6 ${
+              fillViewport ? "overflow-hidden py-0.5" : "overflow-y-auto py-1.5 md:py-2"
+            }`}
+          >
             {children}
           </main>
-          <footer className="shrink-0 border-t border-slate-200/80 bg-white/60 px-3 py-1.5 text-center text-[10px] font-medium text-slate-500 backdrop-blur-sm md:px-4">
-            © {new Date().getFullYear()} ORTHOPILOT — Tous droits réservés.
-          </footer>
-        </div>
+          {fillViewport ? null : (
+            <footer className="shrink-0 border-t border-slate-200/80 bg-white/60 px-3 py-1.5 text-center text-[10px] font-medium text-slate-500 backdrop-blur-sm md:px-4">
+              © {new Date().getFullYear()} ORTHOPILOT — Tous droits réservés.
+            </footer>
+          )}
+        </section>
         <NotificationsPanel
           open={notificationsOpen}
           onClose={() => setNotificationsOpen(false)}
           onUnreadCountChange={setUnreadNotificationsCount}
         />
-      </div>
-    </div>
+      </section>
+    </section>
   );
 }

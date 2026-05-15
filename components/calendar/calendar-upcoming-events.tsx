@@ -15,16 +15,16 @@ export function CalendarUpcomingEvents({ events, onEventClick }: CalendarUpcomin
     return [...events]
       .filter((e) => new Date(e.endAt).getTime() >= now)
       .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
-      .slice(0, 6);
+      .slice(0, 3);
   }, [events]);
 
   return (
-    <article className="rounded-2xl border border-slate-200/90 bg-white p-3 shadow-sm">
-      <h3 className="text-xs font-semibold text-slate-900">Prochains événements</h3>
+    <article className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white p-2 shadow-sm">
+      <h3 className="shrink-0 text-[10px] font-semibold text-slate-900">Prochains événements</h3>
       {upcoming.length === 0 ? (
-        <p className="mt-2 text-[10px] text-slate-500">Aucun événement à venir sur cette période.</p>
+        <p className="mt-1 text-[9px] text-slate-500">Aucun événement à venir.</p>
       ) : (
-        <ul className="mt-2 space-y-2">
+        <ul className="mt-1 min-h-0 flex-1 space-y-0.5 overflow-hidden">
           {upcoming.map((ev) => {
             const s = EVENT_TYPE_STYLES[ev.type];
             const start = new Date(ev.startAt);
@@ -33,15 +33,15 @@ export function CalendarUpcomingEvents({ events, onEventClick }: CalendarUpcomin
                 <button
                   type="button"
                   onClick={() => onEventClick(ev)}
-                  className="flex w-full items-start gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-1.5 text-left transition hover:border-slate-200 hover:bg-white"
+                  className="flex w-full items-start gap-1.5 rounded-md border border-slate-100 bg-slate-50/60 px-1.5 py-1 text-left hover:bg-white"
                 >
-                  <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${s.dot}`} />
+                  <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${s.dot}`} />
                   <span className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-semibold text-slate-900">
-                      {ev.typeLabel} — {ev.title}
+                    <p className="truncate text-[10px] font-semibold leading-tight text-slate-900">
+                      {ev.title}
                     </p>
-                    <p className="text-[10px] text-slate-500">
-                      {relativeDayLabel(start)} à {formatTimeHm(start)}
+                    <p className="truncate text-[9px] text-slate-500">
+                      {relativeDayLabel(start)} · {formatTimeHm(start)}
                     </p>
                   </span>
                 </button>

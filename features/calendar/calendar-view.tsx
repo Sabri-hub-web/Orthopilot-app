@@ -357,11 +357,12 @@ export function CalendarView({ canManage }: CalendarViewProps) {
   }, [anchor, range.from, range.to, viewMode]);
 
   return (
-    <section className="mx-auto flex w-full max-w-[1680px] flex-col gap-3 xl:flex-row xl:items-start xl:gap-4">
-      <section className="min-w-0 flex-1">
-        <CalendarPageHeader />
+    <section className="flex h-full min-h-0 flex-col overflow-hidden">
+      <section className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden xl:flex-row xl:gap-2">
+        <section className="flex min-h-0 min-w-0 flex-[1_1_73%] flex-col gap-1 overflow-hidden">
+          <CalendarPageHeader />
 
-        <CalendarToolbar
+          <CalendarToolbar
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           periodLabel={periodLabel}
@@ -374,60 +375,52 @@ export function CalendarView({ canManage }: CalendarViewProps) {
           onToggleFilters={() => setFiltersOpen((v) => !v)}
         />
 
-        {loading ? (
-          <p className="rounded-2xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500 shadow-sm">
-            Chargement du calendrier…
-          </p>
-        ) : null}
-
         {error ? (
-          <p className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800" role="alert">
+          <p className="shrink-0 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] text-rose-800" role="alert">
             {error}
           </p>
         ) : null}
 
+        {loading ? (
+          <p className="flex flex-1 items-center justify-center text-xs text-slate-500">Chargement…</p>
+        ) : null}
+
         {!loading && feed ? (
-          <>
+          <section className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
             {viewMode === "week" || viewMode === "day" ? (
-              <CalendarWeekGrid
-                weekDays={weekDays}
-                events={filteredEvents}
-                onEventClick={openEdit}
-              />
+              <CalendarWeekGrid weekDays={weekDays} events={filteredEvents} onEventClick={openEdit} />
             ) : null}
             {viewMode === "month" ? (
-              <CalendarMonthView
-                anchor={anchor}
-                events={filteredEvents}
-                tasks={filteredTasks}
-                onDayClick={(d) => {
-                  setAnchor(d);
-                  setViewMode("day");
-                }}
-                onEventClick={openEdit}
-              />
+              <section className="min-h-0 flex-1 overflow-auto">
+                <CalendarMonthView
+                  anchor={anchor}
+                  events={filteredEvents}
+                  tasks={filteredTasks}
+                  onDayClick={(d) => {
+                    setAnchor(d);
+                    setViewMode("day");
+                  }}
+                  onEventClick={openEdit}
+                />
+              </section>
             ) : null}
             {viewMode === "agenda" ? (
-              <CalendarAgendaView
-                days={days}
-                byDay={byDay}
-                onEventClick={openEdit}
-                canManage={canManage}
-                onDeleteEvent={deleteEvent}
-              />
+              <section className="min-h-0 flex-1 overflow-auto">
+                <CalendarAgendaView
+                  days={days}
+                  byDay={byDay}
+                  onEventClick={openEdit}
+                  canManage={canManage}
+                  onDeleteEvent={deleteEvent}
+                />
+              </section>
             ) : null}
-            <CalendarLegend />
-          </>
+            {viewMode === "week" || viewMode === "day" ? <CalendarLegend /> : null}
+          </section>
         ) : null}
+        </section>
 
-        {!canManage ? (
-          <p className="mt-3 text-xs text-slate-500">
-            Lecture seule : création et modification réservées aux profils habilités.
-          </p>
-        ) : null}
-      </section>
-
-      <aside className="flex w-full shrink-0 flex-col gap-3 xl:w-[280px]">
+        <aside className="flex min-h-0 w-full shrink-0 flex-col gap-1 overflow-hidden xl:w-[27%] xl:max-w-[300px]">
         <CalendarMiniMonth
           anchor={anchor}
           selected={anchor}
@@ -452,7 +445,8 @@ export function CalendarView({ canManage }: CalendarViewProps) {
         />
         <CalendarUpcomingEvents events={filteredEvents} onEventClick={openEdit} />
         <CalendarTeamPresence />
-      </aside>
+        </aside>
+      </section>
 
       <CalendarEventFormModal
         open={formOpen}

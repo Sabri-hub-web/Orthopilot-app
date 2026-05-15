@@ -1,11 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { CalendarAgendaView } from "@/components/calendar/calendar-agenda-view";
+import { CalendarEventFormModal } from "@/components/calendar/calendar-event-form-modal";
+import { CalendarFiltersPanel } from "@/components/calendar/calendar-filters-panel";
+import { CalendarLegend } from "@/components/calendar/calendar-legend";
+import { CalendarMiniMonth } from "@/components/calendar/calendar-mini-month";
+import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
+import { CalendarPageHeader } from "@/components/calendar/calendar-page-header";
+import { CalendarTeamPresence } from "@/components/calendar/calendar-team-presence";
+import { CalendarToolbar } from "@/components/calendar/calendar-toolbar";
+import { CalendarUpcomingEvents } from "@/components/calendar/calendar-upcoming-events";
+import { CalendarWeekGrid } from "@/components/calendar/calendar-week-grid";
 import { errorMessageFromResponse } from "@/lib/validation/client-errors";
 import {
-  CALENDAR_EVENT_TYPES,
-  calendarEventTypeLabelMap,
-} from "@/lib/calendar";
+  dayKeyLocal,
+  endOfWeekSunday,
+  filterEvents,
+  formatWeekRangeLabel,
+  startOfWeekMonday,
+  type CalendarViewMode,
+} from "@/lib/calendar-ui";
 import type {
   CalendarEventItem,
   CalendarEventTypeApi,
@@ -13,24 +28,6 @@ import type {
   InternalTask,
   PatientsListResponse,
 } from "@/types/domain";
-
-type ViewMode = "day" | "week" | "month";
-
-function startOfWeekMonday(d: Date): Date {
-  const x = new Date(d);
-  const day = x.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  x.setDate(x.getDate() + diff);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-function endOfWeekSunday(fromMonday: Date): Date {
-  const x = new Date(fromMonday);
-  x.setDate(x.getDate() + 6);
-  x.setHours(23, 59, 59, 999);
-  return x;
-}
 
 function startOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
@@ -40,7 +37,7 @@ function endOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
 }
 
-function startEndForView(anchor: Date, mode: ViewMode): { from: Date; to: Date } {
+function startEndForView(anchor: Date, mode: CalendarViewMode): { from: Date; to: Date } {
   if (mode === "day") {
     const from = new Date(anchor);
     from.setHours(0, 0, 0, 0);
@@ -49,6 +46,11 @@ function startEndForView(anchor: Date, mode: ViewMode): { from: Date; to: Date }
     return { from, to };
   }
   if (mode === "week") {
+    const from = startOfWeekMonday(anchor);
+    const to = endOfWeekSunday(from);
+    return { from, to };
+  }
+  if (mode === "agenda") {
     const from = startOfWeekMonday(anchor);
     const to = endOfWeekSunday(from);
     return { from, to };
@@ -76,11 +78,6 @@ function eachDayInRange(from: Date, to: Date): Date[] {
   return days;
 }
 
-function dayKeyLocal(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
 function eventDayKeys(ev: CalendarEventItem): string[] {
   const start = new Date(ev.startAt);
   const end = new Date(ev.endAt);
@@ -102,13 +99,19 @@ interface CalendarViewProps {
 
 export function CalendarView({ canManage }: CalendarViewProps) {
   const [anchor, setAnchor] = useState(() => new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [viewMode, setViewMode] = useState<CalendarViewMode>("week");
   const [feed, setFeed] = useState<CalendarFeedResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [assignees, setAssignees] = useState<{ id: string; fullName: string }[]>([]);
   const [patients, setPatients] = useState<{ id: string; fullName: string }[]>([]);
   const [editing, setEditing] = useState<CalendarEventItem | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const [filterAssigneeId, setFilterAssigneeId] = useState("");
+  const [filterTypes, setFilterTypes] = useState<Set<CalendarEventTypeApi>>(new Set());
+  const [showTasks, setShowTasks] = useState(true);
 
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -130,7 +133,7 @@ export function CalendarView({ canManage }: CalendarViewProps) {
       to: to.toISOString(),
     });
     const res = await fetch(`/api/calendar/feed?${qs}`, { cache: "no-store" });
-    if (!res.ok) throw new Error("Echec chargement calendrier.");
+    if (!res.ok) throw new Error("Échec de chargement du calendrier.");
     const data: CalendarFeedResponse = await res.json();
     setFeed(data);
   }, [anchor, viewMode]);
@@ -154,27 +157,48 @@ export function CalendarView({ canManage }: CalendarViewProps) {
   }, [loadFeed]);
 
   useEffect(() => {
-    if (!canManage) return;
     let cancelled = false;
     (async () => {
-      const [uRes, pRes] = await Promise.all([
-        fetch("/api/calendar/assignees", { cache: "no-store" }),
-        fetch("/api/patients?page=1&pageSize=50", { cache: "no-store" }),
-      ]);
+      const uRes = await fetch("/api/calendar/assignees", { cache: "no-store" });
       if (cancelled) return;
       if (uRes.ok) {
         const uJson = (await uRes.json()) as { items: { id: string; fullName: string }[] };
         setAssignees(uJson.items ?? []);
       }
-      if (pRes.ok) {
-        const pJson = (await pRes.json()) as PatientsListResponse;
-        setPatients(pJson.items.map((p) => ({ id: p.id, fullName: p.fullName })));
+      if (canManage) {
+        const pRes = await fetch("/api/patients?page=1&pageSize=50", { cache: "no-store" });
+        if (!cancelled && pRes.ok) {
+          const pJson = (await pRes.json()) as PatientsListResponse;
+          setPatients(pJson.items.map((p) => ({ id: p.id, fullName: p.fullName })));
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
   }, [canManage]);
+
+  const filteredEvents = useMemo(() => {
+    if (!feed) return [];
+    return filterEvents(feed.events, {
+      assigneeId: filterAssigneeId,
+      types: filterTypes,
+    });
+  }, [feed, filterAssigneeId, filterTypes]);
+
+  const filteredTasks = useMemo(() => {
+    if (!feed || !showTasks) return [];
+    if (!filterAssigneeId) return feed.tasks;
+    return feed.tasks.filter((t) => t.assigneeId === filterAssigneeId);
+  }, [feed, showTasks, filterAssigneeId]);
+
+  const eventDayKeysSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const ev of filteredEvents) {
+      for (const k of eventDayKeys(ev)) set.add(k);
+    }
+    return set;
+  }, [filteredEvents]);
 
   function resetFormToNew() {
     setFormTitle("");
@@ -188,6 +212,12 @@ export function CalendarView({ canManage }: CalendarViewProps) {
     setFormPatientId("");
   }
 
+  function openNewEvent() {
+    setEditing(null);
+    resetFormToNew();
+    setFormOpen(true);
+  }
+
   function openEdit(ev: CalendarEventItem) {
     setEditing(ev);
     setFormTitle(ev.title);
@@ -197,9 +227,11 @@ export function CalendarView({ canManage }: CalendarViewProps) {
     setFormType(ev.type);
     setFormAssigneeId(ev.assigneeId ?? "");
     setFormPatientId(ev.patientId ?? "");
+    setFormOpen(true);
   }
 
-  function cancelEdit() {
+  function closeForm() {
+    setFormOpen(false);
     setEditing(null);
     resetFormToNew();
   }
@@ -208,9 +240,18 @@ export function CalendarView({ canManage }: CalendarViewProps) {
     setAnchor((prev) => {
       const n = new Date(prev);
       if (viewMode === "day") n.setDate(n.getDate() + delta);
-      else if (viewMode === "week") n.setDate(n.getDate() + 7 * delta);
+      else if (viewMode === "week" || viewMode === "agenda") n.setDate(n.getDate() + 7 * delta);
       else n.setMonth(n.getMonth() + delta);
       return n;
+    });
+  }
+
+  function toggleFilterType(type: CalendarEventTypeApi) {
+    setFilterTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
     });
   }
 
@@ -250,8 +291,7 @@ export function CalendarView({ canManage }: CalendarViewProps) {
           return;
         }
       }
-      setEditing(null);
-      resetFormToNew();
+      closeForm();
       await loadFeed();
     } finally {
       setSaving(false);
@@ -266,9 +306,21 @@ export function CalendarView({ canManage }: CalendarViewProps) {
       setError(await errorMessageFromResponse(res));
       return;
     }
-    if (editing?.id === ev.id) setEditing(null);
+    if (editing?.id === ev.id) closeForm();
     await loadFeed();
   }
+
+  const weekDays = useMemo(() => {
+    if (viewMode === "day") return [new Date(anchor)];
+    const from = startOfWeekMonday(anchor);
+    const days: Date[] = [];
+    for (let i = 0; i < 7; i += 1) {
+      const d = new Date(from);
+      d.setDate(from.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }, [anchor, viewMode]);
 
   const days = useMemo(() => eachDayInRange(range.from, range.to), [range.from, range.to]);
 
@@ -277,14 +329,13 @@ export function CalendarView({ canManage }: CalendarViewProps) {
     for (const d of days) {
       map.set(dayKeyLocal(d), { events: [], tasks: [] });
     }
-    if (!feed) return map;
-    for (const ev of feed.events) {
+    for (const ev of filteredEvents) {
       for (const k of eventDayKeys(ev)) {
         const bucket = map.get(k);
         if (bucket && !bucket.events.find((x) => x.id === ev.id)) bucket.events.push(ev);
       }
     }
-    for (const t of feed.tasks) {
+    for (const t of filteredTasks) {
       const k = t.dueDate.slice(0, 10);
       const bucket = map.get(k);
       if (bucket) bucket.tasks.push(t);
@@ -293,266 +344,140 @@ export function CalendarView({ canManage }: CalendarViewProps) {
       b.events.sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
     }
     return map;
-  }, [feed, days]);
+  }, [filteredEvents, filteredTasks, days]);
 
-  const titleRange = useMemo(() => {
-    const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "long", year: "numeric" };
-    if (viewMode === "day") return anchor.toLocaleDateString("fr-FR", opts);
-    if (viewMode === "week") {
-      return `Semaine du ${range.from.toLocaleDateString("fr-FR", opts)} au ${range.to.toLocaleDateString("fr-FR", opts)}`;
+  const periodLabel = useMemo(() => {
+    if (viewMode === "day") {
+      return anchor.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
     }
-    return anchor.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    if (viewMode === "month") {
+      return anchor.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    }
+    return formatWeekRangeLabel(range.from, range.to);
   }, [anchor, range.from, range.to, viewMode]);
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-lg font-semibold text-slate-900">Calendrier</h3>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-lg border border-slate-200 p-0.5 text-xs">
-            {(["day", "week", "month"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setViewMode(m)}
-                className={`rounded-md px-2 py-1 capitalize ${
-                  viewMode === m ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                {m === "day" ? "Jour" : m === "week" ? "Semaine" : "Mois"}
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => shiftAnchor(-1)}
-            className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700"
-          >
-            precedent
-          </button>
-          <button
-            type="button"
-            onClick={() => setAnchor(new Date())}
-            className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700"
-          >
-            Aujourd hui
-          </button>
-          <button
-            type="button"
-            onClick={() => shiftAnchor(1)}
-            className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700"
-          >
-            suivant
-          </button>
-        </div>
-      </div>
-      <p className="mt-1 text-sm text-slate-600">{titleRange}</p>
+    <section className="mx-auto flex w-full max-w-[1680px] flex-col gap-3 xl:flex-row xl:items-start xl:gap-4">
+      <section className="min-w-0 flex-1">
+        <CalendarPageHeader />
 
-      {loading ? <p className="mt-4 text-sm text-slate-500">Chargement...</p> : null}
-      {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
+        <CalendarToolbar
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          periodLabel={periodLabel}
+          onPrev={() => shiftAnchor(-1)}
+          onNext={() => shiftAnchor(1)}
+          onToday={() => setAnchor(new Date())}
+          onNewEvent={openNewEvent}
+          canManage={canManage}
+          filtersOpen={filtersOpen}
+          onToggleFilters={() => setFiltersOpen((v) => !v)}
+        />
 
-      {!loading && feed ? (
-        <div className="mt-4 space-y-6">
-          {days.map((d) => {
-            const key = dayKeyLocal(d);
-            const bucket = byDay.get(key) ?? { events: [], tasks: [] };
-            const label = d.toLocaleDateString("fr-FR", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-            });
-            if (bucket.events.length === 0 && bucket.tasks.length === 0) {
-              return (
-                <div key={key} className="rounded-xl border border-dashed border-slate-200 px-3 py-2 text-sm text-slate-400">
-                  <p className="font-medium capitalize text-slate-500">{label}</p>
-                  <p className="text-xs">Rien de prevu.</p>
-                </div>
-              );
-            }
-            return (
-              <div key={key} className="rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-3">
-                <p className="font-semibold capitalize text-slate-900">{label}</p>
-                <ul className="mt-2 space-y-2">
-                  {bucket.events.map((ev) => (
-                    <li
-                      key={ev.id}
-                      className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                    >
-                      <div>
-                        <span className="font-medium text-slate-900">{ev.title}</span>
-                        <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800">
-                          {ev.typeLabel}
-                        </span>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          {new Date(ev.startAt).toLocaleTimeString("fr-FR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}{" "}
-                          –{" "}
-                          {new Date(ev.endAt).toLocaleTimeString("fr-FR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                          {ev.assigneeName ? ` · ${ev.assigneeName}` : ""}
-                          {ev.patientName ? ` · Patient: ${ev.patientName}` : ""}
-                        </p>
-                        {ev.description ? (
-                          <p className="mt-1 text-xs text-slate-600">{ev.description}</p>
-                        ) : null}
-                      </div>
-                      {canManage ? (
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            className="text-xs font-medium text-emerald-700 hover:underline"
-                            onClick={() => openEdit(ev)}
-                          >
-                            Modifier
-                          </button>
-                          <button
-                            type="button"
-                            className="text-xs font-medium text-red-600 hover:underline"
-                            onClick={() => deleteEvent(ev)}
-                          >
-                            Supprimer
-                          </button>
-                        </div>
-                      ) : null}
-                    </li>
-                  ))}
-                  {bucket.tasks.map((t) => (
-                    <li
-                      key={`task-${t.id}`}
-                      className="rounded-lg border border-amber-100 bg-amber-50/80 px-3 py-2 text-sm text-amber-950"
-                    >
-                      <span className="font-medium">Tache : {t.title}</span>
-                      <span className="ml-2 text-xs text-amber-800">{t.status}</span>
-                      <p className="text-xs text-amber-900/90">
-                        Echeance {t.dueDate} · {t.assignee}
-                        {t.patientName ? ` · ${t.patientName}` : ""}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-        </div>
-      ) : null}
+        {loading ? (
+          <p className="rounded-2xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500 shadow-sm">
+            Chargement du calendrier…
+          </p>
+        ) : null}
 
-      {canManage ? (
-        <form onSubmit={submitForm} className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <h4 className="text-sm font-semibold text-slate-900">
-            {editing ? "Modifier l evenement" : "Nouvel evenement"}
-          </h4>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-xs">
-              Titre
-              <input
-                required
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-                className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+        {error ? (
+          <p className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        {!loading && feed ? (
+          <>
+            {viewMode === "week" || viewMode === "day" ? (
+              <CalendarWeekGrid
+                weekDays={weekDays}
+                events={filteredEvents}
+                onEventClick={openEdit}
               />
-            </label>
-            <label className="flex flex-col gap-1 text-xs">
-              Type
-              <select
-                value={formType}
-                onChange={(e) => setFormType(e.target.value as CalendarEventTypeApi)}
-                className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-              >
-                {CALENDAR_EVENT_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {calendarEventTypeLabelMap[t]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-xs sm:col-span-2">
-              Description (optionnel)
-              <textarea
-                value={formDescription}
-                onChange={(e) => setFormDescription(e.target.value)}
-                rows={2}
-                className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-xs">
-              Debut
-              <input
-                type="datetime-local"
-                required
-                value={formStart}
-                onChange={(e) => setFormStart(e.target.value)}
-                className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-xs">
-              Fin
-              <input
-                type="datetime-local"
-                required
-                value={formEnd}
-                onChange={(e) => setFormEnd(e.target.value)}
-                className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-xs">
-              Assigne a
-              <select
-                value={formAssigneeId}
-                onChange={(e) => setFormAssigneeId(e.target.value)}
-                className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-              >
-                <option value="">—</option>
-                {assignees.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.fullName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-xs">
-              Patient (optionnel)
-              <select
-                value={formPatientId}
-                onChange={(e) => setFormPatientId(e.target.value)}
-                className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-              >
-                <option value="">—</option>
-                {patients.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.fullName}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
-            >
-              {saving ? "..." : editing ? "Enregistrer" : "Creer"}
-            </button>
-            {editing ? (
-              <button
-                type="button"
-                onClick={cancelEdit}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700"
-              >
-                Annuler
-              </button>
             ) : null}
-          </div>
-        </form>
-      ) : (
-        <p className="mt-4 text-xs text-slate-500">
-          Lecture seule : vous voyez les evenements et les taches a echéance ; la creation est reservee aux profils habilites.
-        </p>
-      )}
+            {viewMode === "month" ? (
+              <CalendarMonthView
+                anchor={anchor}
+                events={filteredEvents}
+                tasks={filteredTasks}
+                onDayClick={(d) => {
+                  setAnchor(d);
+                  setViewMode("day");
+                }}
+                onEventClick={openEdit}
+              />
+            ) : null}
+            {viewMode === "agenda" ? (
+              <CalendarAgendaView
+                days={days}
+                byDay={byDay}
+                onEventClick={openEdit}
+                canManage={canManage}
+                onDeleteEvent={deleteEvent}
+              />
+            ) : null}
+            <CalendarLegend />
+          </>
+        ) : null}
+
+        {!canManage ? (
+          <p className="mt-3 text-xs text-slate-500">
+            Lecture seule : création et modification réservées aux profils habilités.
+          </p>
+        ) : null}
+      </section>
+
+      <aside className="flex w-full shrink-0 flex-col gap-3 xl:w-[280px]">
+        <CalendarMiniMonth
+          anchor={anchor}
+          selected={anchor}
+          onSelectDay={(d) => setAnchor(d)}
+          onPrevMonth={() =>
+            setAnchor((p) => new Date(p.getFullYear(), p.getMonth() - 1, p.getDate()))
+          }
+          onNextMonth={() =>
+            setAnchor((p) => new Date(p.getFullYear(), p.getMonth() + 1, p.getDate()))
+          }
+          eventDayKeys={eventDayKeysSet}
+        />
+        <CalendarFiltersPanel
+          assignees={assignees}
+          filterAssigneeId={filterAssigneeId}
+          onAssigneeChange={setFilterAssigneeId}
+          filterTypes={filterTypes}
+          onToggleType={toggleFilterType}
+          showTasks={showTasks}
+          onShowTasksChange={setShowTasks}
+          highlighted={filtersOpen}
+        />
+        <CalendarUpcomingEvents events={filteredEvents} onEventClick={openEdit} />
+        <CalendarTeamPresence />
+      </aside>
+
+      <CalendarEventFormModal
+        open={formOpen}
+        editing={editing}
+        canManage={canManage}
+        saving={saving}
+        formTitle={formTitle}
+        formDescription={formDescription}
+        formStart={formStart}
+        formEnd={formEnd}
+        formType={formType}
+        formAssigneeId={formAssigneeId}
+        formPatientId={formPatientId}
+        assignees={assignees}
+        patients={patients}
+        onClose={closeForm}
+        onSubmit={submitForm}
+        onTitleChange={setFormTitle}
+        onDescriptionChange={setFormDescription}
+        onStartChange={setFormStart}
+        onEndChange={setFormEnd}
+        onTypeChange={setFormType}
+        onAssigneeChange={setFormAssigneeId}
+        onPatientChange={setFormPatientId}
+      />
     </section>
   );
 }

@@ -3,14 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarAgendaView } from "@/components/calendar/calendar-agenda-view";
 import { CalendarEventFormModal } from "@/components/calendar/calendar-event-form-modal";
-import { CalendarFiltersPanel } from "@/components/calendar/calendar-filters-panel";
 import { CalendarLegend } from "@/components/calendar/calendar-legend";
 import { CalendarMiniMonth } from "@/components/calendar/calendar-mini-month";
 import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
 import { CalendarPageHeader } from "@/components/calendar/calendar-page-header";
-import { CalendarTeamPresence } from "@/components/calendar/calendar-team-presence";
 import { CalendarToolbar } from "@/components/calendar/calendar-toolbar";
-import { CalendarUpcomingEvents } from "@/components/calendar/calendar-upcoming-events";
 import { CalendarWeekGrid } from "@/components/calendar/calendar-week-grid";
 import { errorMessageFromResponse } from "@/lib/validation/client-errors";
 import {
@@ -366,9 +363,11 @@ export function CalendarView({ canManage }: CalendarViewProps) {
   }, [anchor, range.from, range.to, viewMode]);
 
   return (
-    <section className="animate-dashboard-in flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex shrink-0 flex-col gap-1.5">
-        <CalendarPageHeader />
+    <>
+      <div className="animate-dashboard-in h-[calc(100vh-80px)] overflow-hidden p-4">
+        <div className="grid h-full grid-cols-[minmax(0,70%)_minmax(280px,30%)] gap-4 overflow-hidden">
+          <main className="flex h-full min-w-0 flex-col gap-2 overflow-hidden">
+            <CalendarPageHeader />
         <CalendarToolbar
             viewMode={viewMode}
             onViewModeChange={setViewMode}
@@ -390,11 +389,8 @@ export function CalendarView({ canManage }: CalendarViewProps) {
               {error}
             </p>
           ) : null}
-      </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden xl:h-[calc(100vh-120px)] xl:grid-cols-[minmax(0,1fr)_340px]">
-        <main className="min-w-0 overflow-hidden">
-          {loading ? (
+            {loading ? (
             <section className="flex h-full flex-col gap-2 animate-pulse">
               <div className="h-10 rounded-2xl bg-slate-200/60" />
               <div className="min-h-0 flex-1 rounded-2xl bg-slate-200/50" />
@@ -402,12 +398,9 @@ export function CalendarView({ canManage }: CalendarViewProps) {
           ) : null}
 
           {!loading && feed ? (
-            <>
+            <section className="min-h-0 flex-1 overflow-hidden">
               {viewMode === "week" || viewMode === "day" ? (
-                <section className="flex h-full min-h-0 flex-col gap-1 overflow-hidden">
-                  <CalendarWeekGrid weekDays={weekDays} events={gridEvents} onEventClick={openEdit} />
-                  <CalendarLegend />
-                </section>
+                <CalendarWeekGrid weekDays={weekDays} events={gridEvents} onEventClick={openEdit} />
               ) : null}
               {viewMode === "month" ? (
                 <section className="h-full min-h-0 overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm">
@@ -434,13 +427,12 @@ export function CalendarView({ canManage }: CalendarViewProps) {
                   />
                 </section>
               ) : null}
-            </>
+            </section>
           ) : null}
-        </main>
+          </main>
 
-        <aside className="w-full overflow-hidden xl:w-[340px]">
-          <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto overflow-x-hidden">
-          <CalendarMiniMonth
+          <aside className="flex h-full min-w-0 flex-col gap-4 overflow-hidden">
+            <CalendarMiniMonth
             anchor={anchor}
             selected={anchor}
             onSelectDay={(d) => setAnchor(d)}
@@ -451,21 +443,10 @@ export function CalendarView({ canManage }: CalendarViewProps) {
               setAnchor((p) => new Date(p.getFullYear(), p.getMonth() + 1, p.getDate()))
             }
             eventDayKeys={eventDayKeysSet}
-          />
-          <CalendarFiltersPanel
-            assignees={assignees}
-            filterAssigneeId={filterAssigneeId}
-            onAssigneeChange={setFilterAssigneeId}
-            filterTypes={filterTypes}
-            onToggleType={toggleFilterType}
-            showTasks={showTasks}
-            onShowTasksChange={setShowTasks}
-            highlighted={filtersOpen}
-          />
-          <CalendarUpcomingEvents events={filteredEvents} onEventClick={openEdit} />
-          <CalendarTeamPresence />
-          </div>
-        </aside>
+            />
+            <CalendarLegend variant="card" />
+          </aside>
+        </div>
       </div>
 
       <CalendarEventFormModal
@@ -492,6 +473,7 @@ export function CalendarView({ canManage }: CalendarViewProps) {
         onAssigneeChange={setFormAssigneeId}
         onPatientChange={setFormPatientId}
       />
-    </section>
+    </>
   );
 }
+

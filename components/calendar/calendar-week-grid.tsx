@@ -96,20 +96,19 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
         })}
       </section>
 
-      {/* Corps grille — hauteur fixe pixels */}
+      {/* Corps grille */}
       <section className="relative min-h-0 flex-1 overflow-hidden">
         <section
-          className="relative grid"
+          className="relative grid h-full"
           style={{
             gridTemplateColumns: colTemplate,
-            height: CALENDAR_GRID_HEIGHT_PX,
             minHeight: CALENDAR_GRID_HEIGHT_PX,
           }}
         >
           {/* Gutter heures */}
           <section
             className="relative border-r border-[#eef2f7] bg-slate-50/50"
-            style={{ height: CALENDAR_GRID_HEIGHT_PX }}
+            style={{ minHeight: CALENDAR_GRID_HEIGHT_PX }}
           >
             {hourLabels.slice(0, -1).map((h) => {
               const top = (h - CALENDAR_HOUR_START) * CALENDAR_HOUR_HEIGHT_PX;
@@ -144,7 +143,7 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
                 className={`relative border-r border-[#eef2f7] last:border-r-0 ${
                   isToday ? "bg-violet-50/15" : "bg-white"
                 }`}
-                style={{ height: CALENDAR_GRID_HEIGHT_PX }}
+                style={{ minHeight: CALENDAR_GRID_HEIGHT_PX }}
               >
                 {/* Lignes horaires */}
                 {hourLabels.slice(0, -1).map((h) => (

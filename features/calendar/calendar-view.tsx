@@ -367,8 +367,8 @@ export function CalendarView({ canManage }: CalendarViewProps) {
 
   return (
     <section className="animate-dashboard-in flex h-full min-h-0 flex-col overflow-hidden">
-      <section className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden xl:grid-cols-[minmax(0,1fr)_340px] xl:h-[calc(100vh-120px)]">
-        <section className="flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden">
+      <section className="grid h-[calc(100vh-150px)] min-h-0 grid-cols-1 gap-3 overflow-hidden px-0 xl:grid-cols-[minmax(0,70%)_minmax(300px,30%)]">
+        <section className="flex h-full min-h-0 min-w-0 flex-col gap-2 overflow-hidden">
           <section className="flex shrink-0 flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between">
             <CalendarPageHeader />
           </section>
@@ -439,7 +439,7 @@ export function CalendarView({ canManage }: CalendarViewProps) {
           ) : null}
         </section>
 
-        <aside className="flex min-h-0 w-full shrink-0 flex-col gap-3 overflow-y-auto xl:w-[340px] xl:overflow-hidden">
+        <aside className="flex h-full min-h-0 w-full shrink-0 flex-col gap-1.5 overflow-hidden xl:max-w-[320px]">
           <CalendarMiniMonth
             anchor={anchor}
             selected={anchor}

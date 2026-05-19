@@ -19,8 +19,10 @@ export function CalendarUpcomingEvents({ events, onEventClick }: CalendarUpcomin
   }, [events]);
 
   return (
-    <article className="shrink-0 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
-      <h3 className="text-xs font-semibold text-slate-900">Prochains événements</h3>
+    <article className="shrink-0 rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-sm">
+      <h3 className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        Prochains événements
+      </h3>
       {upcoming.length === 0 ? (
         <p className="mt-2 text-[11px] text-slate-500">Aucun événement à venir.</p>
       ) : (

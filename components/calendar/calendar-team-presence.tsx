@@ -60,8 +60,10 @@ export function CalendarTeamPresence() {
   const members = data?.members?.slice(0, 5) ?? [];
 
   return (
-    <article className="shrink-0 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
-      <h3 className="text-xs font-semibold text-slate-900">Utilisateurs présents</h3>
+    <article className="shrink-0 rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-sm">
+      <h3 className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        Utilisateurs présents
+      </h3>
       {loading ? (
         <p className="mt-2 text-[11px] text-slate-500">Chargement…</p>
       ) : !members.length ? (

@@ -36,7 +36,7 @@ export function CalendarMiniMonth({
   const today = new Date();
 
   return (
-    <article className="shrink-0 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
+    <article className="shrink-0 rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-sm">
       <header className="flex items-center justify-between">
         <button
           type="button"
@@ -46,7 +46,7 @@ export function CalendarMiniMonth({
         >
           <ChevronLeft className="h-3 w-3" />
         </button>
-        <p className="text-[11px] font-semibold capitalize text-slate-900">{title}</p>
+        <p className="text-[10px] font-semibold capitalize text-slate-900">{title}</p>
         <button
           type="button"
           onClick={onNextMonth}
@@ -74,7 +74,7 @@ export function CalendarMiniMonth({
               key={key}
               type="button"
               onClick={() => onSelectDay(d)}
-              className={`relative flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-medium tabular-nums transition ${
+              className={`relative flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-medium tabular-nums transition ${
                 !inMonth ? "text-slate-300" : "text-slate-700 hover:bg-slate-100"
               } ${selectedDay ? "bg-violet-600 text-white shadow-sm" : ""} ${
                 isToday && !selectedDay ? "font-bold text-violet-700 ring-1 ring-violet-400" : ""

@@ -28,11 +28,13 @@ export function CalendarFiltersPanel({
 }: CalendarFiltersPanelProps) {
   return (
     <article
-      className={`shrink-0 rounded-2xl border bg-white p-3.5 shadow-sm ${
+      className={`shrink-0 rounded-xl border bg-white p-2.5 shadow-sm ${
         highlighted ? "border-violet-300 ring-2 ring-violet-100" : "border-slate-200"
       }`}
     >
-      <h3 className="text-xs font-semibold text-slate-900">Filtres d&apos;affichage</h3>
+      <h3 className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        Filtres d&apos;affichage
+      </h3>
       <section className="mt-2 space-y-2">
         <label className="block">
           <span className="text-[10px] font-medium text-slate-500">Utilisateurs</span>

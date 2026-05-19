@@ -12,7 +12,6 @@ import {
   calendarHourLabels,
   currentTimeLine,
   dayKeyLocal,
-  EVENT_TYPE_STYLES,
   isSameDay,
   isWeekday,
   layoutOverlappingEvents,
@@ -63,11 +62,9 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
   const nowLine = useMemo(() => currentTimeLine(now), [now]);
   const showNowLine = weekDays.some((d) => isSameDay(d, today));
   const colTemplate = gridTemplateColumns(weekDays.length);
-  const pauseStyle = EVENT_TYPE_STYLES.PAUSE;
-
   return (
-    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      {/* Header jours — 72px max */}
+    <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-slate-200/70 bg-white shadow-[0_4px_24px_rgba(15,23,42,0.04)]">
+      {/* Header jours */}
       <section
         className="grid shrink-0 border-b border-[#eef2f7] bg-gradient-to-b from-slate-50 to-white"
         style={{ gridTemplateColumns: colTemplate, height: CALENDAR_DAY_HEADER_PX, maxHeight: CALENDAR_DAY_HEADER_PX }}
@@ -82,11 +79,11 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
                 isToday ? "bg-violet-50/60" : ""
               }`}
             >
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                 {WEEKDAY_LABELS[i]}
               </p>
               <p
-                className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold tabular-nums ${
+                className={`mt-1 flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold tabular-nums ${
                   isToday
                     ? "bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/30"
                     : "text-slate-800"
@@ -119,7 +116,7 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
               return (
                 <span
                   key={h}
-                  className="absolute right-0 flex w-full items-start justify-end pr-1.5 text-[10px] font-medium tabular-nums text-slate-400"
+                  className="absolute right-0 flex w-full items-start justify-end pr-1 text-[9px] font-medium tabular-nums text-slate-400"
                   style={{ top, height: CALENDAR_HOUR_HEIGHT_PX }}
                 >
                   {String(h).padStart(2, "0")}:00
@@ -165,11 +162,13 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
                 {/* Pause déjeuner (lun–ven) */}
                 {showLunch ? (
                   <div
-                    className={`pointer-events-none absolute left-1 right-1 z-[1] overflow-hidden rounded-lg border px-2 py-1 opacity-90 ${pauseStyle.bg} ${pauseStyle.border} ${pauseStyle.text}`}
+                    className="pointer-events-none absolute left-1.5 right-1.5 z-[1] overflow-hidden rounded-[10px] border border-amber-100/80 bg-amber-50/70 px-1.5 py-0.5 opacity-75"
                     style={{ top: lunch.topPx, height: lunch.heightPx }}
                   >
-                    <p className="text-[10px] font-bold leading-tight">Pause déjeuner</p>
-                    <p className={`text-[9px] leading-tight ${pauseStyle.muted}`}>13:00</p>
+                    <p className="text-[9px] font-semibold leading-tight text-amber-900/80 opacity-80">
+                      Pause déjeuner
+                    </p>
+                    <p className="text-[8px] leading-tight text-amber-800/60">13:00</p>
                   </div>
                 ) : null}
 
@@ -186,14 +185,14 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
                       style={{
                         top: p.topPx,
                         height: p.heightPx,
-                        left: `calc(${leftPct}% + 4px)`,
-                        width: `calc(${widthPct}% - 8px)`,
+                        left: `calc(${leftPct}% + 6px)`,
+                        width: `calc(${widthPct}% - 12px)`,
                       }}
                     >
                       <CalendarEventCard
                         event={p.event}
                         compact
-                        minimal={p.heightPx < 56}
+                        minimal={p.heightPx < 48}
                         onClick={() => {
                           if (!isTask) onEventClick(p.event);
                         }}
@@ -224,10 +223,10 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
                 return (
                   <section key={dayKeyLocal(d)} className="relative">
                     <div
-                      className="absolute left-0 right-0 h-px bg-rose-500"
+                      className="absolute left-0 right-0 h-[1px] bg-rose-400/80"
                       style={{ top: nowLine.topPx }}
                     >
-                      <span className="absolute -left-1.5 -top-1.5 h-3 w-3 rounded-full bg-rose-500 ring-2 ring-white" />
+                      <span className="absolute -left-1.5 -top-1.5 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
                     </div>
                   </section>
                 );

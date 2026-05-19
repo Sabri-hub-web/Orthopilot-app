@@ -367,13 +367,9 @@ export function CalendarView({ canManage }: CalendarViewProps) {
 
   return (
     <section className="animate-dashboard-in flex h-full min-h-0 flex-col overflow-hidden">
-      <section className="grid h-[calc(100vh-150px)] min-h-0 grid-cols-1 gap-3 overflow-hidden px-0 xl:grid-cols-[minmax(0,70%)_minmax(300px,30%)]">
-        <section className="flex h-full min-h-0 min-w-0 flex-col gap-2 overflow-hidden">
-          <section className="flex shrink-0 flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between">
-            <CalendarPageHeader />
-          </section>
-
-          <CalendarToolbar
+      <div className="flex shrink-0 flex-col gap-1.5">
+        <CalendarPageHeader />
+        <CalendarToolbar
             viewMode={viewMode}
             onViewModeChange={setViewMode}
             periodLabel={periodLabel}
@@ -394,24 +390,27 @@ export function CalendarView({ canManage }: CalendarViewProps) {
               {error}
             </p>
           ) : null}
+      </div>
 
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden xl:h-[calc(100vh-120px)] xl:grid-cols-[minmax(0,1fr)_340px]">
+        <main className="min-w-0 overflow-hidden">
           {loading ? (
-            <section className="flex flex-1 flex-col gap-2 animate-pulse">
+            <section className="flex h-full flex-col gap-2 animate-pulse">
               <div className="h-10 rounded-2xl bg-slate-200/60" />
               <div className="min-h-0 flex-1 rounded-2xl bg-slate-200/50" />
             </section>
           ) : null}
 
           {!loading && feed ? (
-            <section className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
+            <>
               {viewMode === "week" || viewMode === "day" ? (
-                <section className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
+                <section className="flex h-full min-h-0 flex-col gap-1 overflow-hidden">
                   <CalendarWeekGrid weekDays={weekDays} events={gridEvents} onEventClick={openEdit} />
                   <CalendarLegend />
                 </section>
               ) : null}
               {viewMode === "month" ? (
-                <section className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200/70 bg-white shadow-sm">
+                <section className="h-full min-h-0 overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm">
                   <CalendarMonthView
                     anchor={anchor}
                     events={filteredEvents}
@@ -425,7 +424,7 @@ export function CalendarView({ canManage }: CalendarViewProps) {
                 </section>
               ) : null}
               {viewMode === "agenda" ? (
-                <section className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200/70 bg-white p-2 shadow-sm">
+                <section className="h-full min-h-0 overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-2 shadow-sm">
                   <CalendarAgendaView
                     days={days}
                     byDay={byDay}
@@ -435,11 +434,12 @@ export function CalendarView({ canManage }: CalendarViewProps) {
                   />
                 </section>
               ) : null}
-            </section>
+            </>
           ) : null}
-        </section>
+        </main>
 
-        <aside className="flex h-full min-h-0 w-full shrink-0 flex-col gap-1.5 overflow-hidden xl:max-w-[320px]">
+        <aside className="w-full overflow-hidden xl:w-[340px]">
+          <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto overflow-x-hidden">
           <CalendarMiniMonth
             anchor={anchor}
             selected={anchor}
@@ -464,8 +464,9 @@ export function CalendarView({ canManage }: CalendarViewProps) {
           />
           <CalendarUpcomingEvents events={filteredEvents} onEventClick={openEdit} />
           <CalendarTeamPresence />
+          </div>
         </aside>
-      </section>
+      </div>
 
       <CalendarEventFormModal
         open={formOpen}

@@ -36,7 +36,7 @@ export function CalendarMiniMonth({
   const today = new Date();
 
   return (
-    <article className="shrink-0 rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-sm">
+    <article className="w-full max-w-full shrink-0 rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-sm">
       <header className="flex items-center justify-between">
         <button
           type="button"

@@ -36,27 +36,27 @@ export function CalendarMiniMonth({
   const today = new Date();
 
   return (
-    <article className="shrink-0 rounded-2xl border border-slate-200/70 bg-white p-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-      <header className="flex items-center justify-between gap-1">
+    <article className="shrink-0 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
+      <header className="flex items-center justify-between">
         <button
           type="button"
           onClick={onPrevMonth}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+          className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100"
           aria-label="Mois précédent"
         >
-          <ChevronLeft className="h-3.5 w-3.5" />
+          <ChevronLeft className="h-3 w-3" />
         </button>
-        <p className="text-xs font-semibold capitalize text-slate-900">{title}</p>
+        <p className="text-[11px] font-semibold capitalize text-slate-900">{title}</p>
         <button
           type="button"
           onClick={onNextMonth}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+          className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100"
           aria-label="Mois suivant"
         >
-          <ChevronRight className="h-3.5 w-3.5" />
+          <ChevronRight className="h-3 w-3" />
         </button>
       </header>
-      <section className="mt-2 grid grid-cols-7 gap-0.5 text-center text-[9px] font-semibold uppercase tracking-wide text-slate-400">
+      <section className="mt-2 grid grid-cols-7 gap-0.5 text-center text-[9px] font-semibold text-slate-400">
         {["L", "M", "M", "J", "V", "S", "D"].map((l, i) => (
           <span key={`${l}-${i}`}>{l}</span>
         ))}
@@ -74,17 +74,15 @@ export function CalendarMiniMonth({
               key={key}
               type="button"
               onClick={() => onSelectDay(d)}
-              className={`relative flex h-7 w-full items-center justify-center rounded-full text-[10px] font-medium tabular-nums transition ${
+              className={`relative flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-medium tabular-nums transition ${
                 !inMonth ? "text-slate-300" : "text-slate-700 hover:bg-slate-100"
-              } ${selectedDay ? "bg-violet-600 text-white shadow-sm hover:bg-violet-700" : ""} ${
-                isToday && !selectedDay
-                  ? "font-bold text-violet-700 ring-2 ring-violet-400/70 ring-offset-1"
-                  : ""
+              } ${selectedDay ? "bg-violet-600 text-white shadow-sm" : ""} ${
+                isToday && !selectedDay ? "font-bold text-violet-700 ring-1 ring-violet-400" : ""
               }`}
             >
               {d.getDate()}
               {hasEvent && !selectedDay ? (
-                <span className="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-violet-500" />
+                <span className="absolute bottom-0.5 left-1/2 h-0.5 w-0.5 -translate-x-1/2 rounded-full bg-violet-500" />
               ) : null}
             </button>
           );

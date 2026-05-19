@@ -3,23 +3,28 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarEventCard } from "@/components/calendar/calendar-event-card";
 import {
-  CALENDAR_HOUR_COUNT,
+  CALENDAR_DAY_HEADER_PX,
+  CALENDAR_GRID_HEIGHT_PX,
   CALENDAR_HOUR_END,
+  CALENDAR_HOUR_HEIGHT_PX,
   CALENDAR_HOUR_START,
+  CALENDAR_TIME_GUTTER_PX,
+  calendarHourLabels,
   currentTimeLine,
   dayKeyLocal,
+  EVENT_TYPE_STYLES,
   isSameDay,
+  isWeekday,
   layoutOverlappingEvents,
+  lunchBreakLayout,
   placeEventsForWeek,
 } from "@/lib/calendar-ui";
 import type { CalendarEventItem } from "@/types/domain";
 
 const WEEKDAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
-const HOUR_ROWS = `repeat(${CALENDAR_HOUR_COUNT}, minmax(0, 1fr))`;
-const TIME_GUTTER = "2.75rem";
 
-function gridColumns(dayCount: number) {
-  return `${TIME_GUTTER} repeat(${dayCount}, minmax(0, 1fr))`;
+function gridTemplateColumns(dayCount: number) {
+  return `${CALENDAR_TIME_GUTTER_PX}px repeat(${dayCount}, minmax(0, 1fr))`;
 }
 
 interface CalendarWeekGridProps {
@@ -36,11 +41,8 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
     return () => window.clearInterval(id);
   }, []);
 
-  const hours = useMemo(() => {
-    const list: number[] = [];
-    for (let h = CALENDAR_HOUR_START; h < CALENDAR_HOUR_END; h += 1) list.push(h);
-    return list;
-  }, []);
+  const hourLabels = useMemo(() => calendarHourLabels(), []);
+  const lunch = useMemo(() => lunchBreakLayout(), []);
 
   const placed = useMemo(() => {
     const raw = placeEventsForWeek(events, weekDays);
@@ -60,32 +62,33 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
   const today = new Date();
   const nowLine = useMemo(() => currentTimeLine(now), [now]);
   const showNowLine = weekDays.some((d) => isSameDay(d, today));
-  const colTemplate = gridColumns(weekDays.length);
+  const colTemplate = gridTemplateColumns(weekDays.length);
+  const pauseStyle = EVENT_TYPE_STYLES.PAUSE;
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-      {/* En-têtes jours */}
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      {/* Header jours — 72px max */}
       <section
-        className="grid shrink-0 border-b border-slate-100 bg-gradient-to-b from-slate-50/90 to-white"
-        style={{ gridTemplateColumns: colTemplate }}
+        className="grid shrink-0 border-b border-[#eef2f7] bg-gradient-to-b from-slate-50 to-white"
+        style={{ gridTemplateColumns: colTemplate, height: CALENDAR_DAY_HEADER_PX, maxHeight: CALENDAR_DAY_HEADER_PX }}
       >
-        <span className="border-r border-slate-100/80" aria-hidden />
+        <span className="border-r border-[#eef2f7]" aria-hidden />
         {weekDays.map((d, i) => {
           const isToday = isSameDay(d, today);
           return (
             <header
               key={dayKeyLocal(d)}
-              className={`border-r border-slate-100/80 px-1 py-1.5 text-center last:border-r-0 ${
-                isToday ? "bg-violet-50/50" : ""
+              className={`flex flex-col items-center justify-center border-r border-[#eef2f7] last:border-r-0 ${
+                isToday ? "bg-violet-50/60" : ""
               }`}
             >
               <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                 {WEEKDAY_LABELS[i]}
               </p>
               <p
-                className={`mx-auto mt-0.5 flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold tabular-nums ${
+                className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold tabular-nums ${
                   isToday
-                    ? "bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/25"
+                    ? "bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/30"
                     : "text-slate-800"
                 }`}
               >
@@ -96,119 +99,142 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
         })}
       </section>
 
-      {/* Grille horaire */}
-      <section
-        className="relative grid min-h-0 flex-1 overflow-hidden"
-        style={{ gridTemplateColumns: colTemplate }}
-      >
-        {/* Colonne heures */}
+      {/* Corps grille — hauteur fixe pixels */}
+      <section className="relative min-h-0 flex-1 overflow-hidden">
         <section
-          className="relative z-10 grid min-h-0 border-r border-slate-100 bg-slate-50/40"
-          style={{ gridTemplateRows: HOUR_ROWS }}
+          className="relative grid"
+          style={{
+            gridTemplateColumns: colTemplate,
+            height: CALENDAR_GRID_HEIGHT_PX,
+            minHeight: CALENDAR_GRID_HEIGHT_PX,
+          }}
         >
-          {hours.map((h) => (
+          {/* Gutter heures */}
+          <section
+            className="relative border-r border-[#eef2f7] bg-slate-50/50"
+            style={{ height: CALENDAR_GRID_HEIGHT_PX }}
+          >
+            {hourLabels.slice(0, -1).map((h) => {
+              const top = (h - CALENDAR_HOUR_START) * CALENDAR_HOUR_HEIGHT_PX;
+              return (
+                <span
+                  key={h}
+                  className="absolute right-0 flex w-full items-start justify-end pr-1.5 text-[10px] font-medium tabular-nums text-slate-400"
+                  style={{ top, height: CALENDAR_HOUR_HEIGHT_PX }}
+                >
+                  {String(h).padStart(2, "0")}:00
+                </span>
+              );
+            })}
             <span
-              key={h}
-              className="relative flex items-start justify-end border-b border-slate-100/90 pr-1.5 pt-0.5 text-[9px] font-medium tabular-nums leading-none text-slate-400"
+              className="absolute bottom-0 right-0 flex w-full items-start justify-end pr-1.5 text-[10px] font-medium tabular-nums text-slate-400"
+              style={{ height: CALENDAR_HOUR_HEIGHT_PX }}
             >
-              {String(h).padStart(2, "0")}:00
+              {String(CALENDAR_HOUR_END).padStart(2, "0")}:00
             </span>
-          ))}
-        </section>
+          </section>
 
-        {/* Colonnes jours */}
-        {weekDays.map((d) => {
-          const key = dayKeyLocal(d);
-          const dayEvents = byDayKey.get(key) ?? [];
-          const isToday = isSameDay(d, today);
+          {/* Colonnes jours */}
+          {weekDays.map((d) => {
+            const key = dayKeyLocal(d);
+            const dayEvents = byDayKey.get(key) ?? [];
+            const isToday = isSameDay(d, today);
+            const showLunch = isWeekday(d);
 
-          return (
-            <section
-              key={key}
-              className={`relative min-h-0 border-r border-slate-100/90 last:border-r-0 ${
-                isToday ? "bg-violet-50/20" : "bg-white"
-              }`}
-            >
+            return (
               <section
-                className="absolute inset-0 grid"
-                style={{ gridTemplateRows: HOUR_ROWS }}
-                aria-hidden
+                key={key}
+                className={`relative border-r border-[#eef2f7] last:border-r-0 ${
+                  isToday ? "bg-violet-50/15" : "bg-white"
+                }`}
+                style={{ height: CALENDAR_GRID_HEIGHT_PX }}
               >
-                {hours.map((h) => (
-                  <span key={h} className="border-b border-slate-100/80" />
+                {/* Lignes horaires */}
+                {hourLabels.slice(0, -1).map((h) => (
+                  <span
+                    key={h}
+                    className="pointer-events-none absolute left-0 right-0 border-b border-[#eef2f7]"
+                    style={{
+                      top: (h - CALENDAR_HOUR_START) * CALENDAR_HOUR_HEIGHT_PX,
+                      height: CALENDAR_HOUR_HEIGHT_PX,
+                    }}
+                    aria-hidden
+                  />
                 ))}
-              </section>
 
-              <section className="absolute inset-0">
+                {/* Pause déjeuner (lun–ven) */}
+                {showLunch ? (
+                  <div
+                    className={`pointer-events-none absolute left-1 right-1 z-[1] overflow-hidden rounded-lg border px-2 py-1 opacity-90 ${pauseStyle.bg} ${pauseStyle.border} ${pauseStyle.text}`}
+                    style={{ top: lunch.topPx, height: lunch.heightPx }}
+                  >
+                    <p className="text-[10px] font-bold leading-tight">Pause déjeuner</p>
+                    <p className={`text-[9px] leading-tight ${pauseStyle.muted}`}>13:00</p>
+                  </div>
+                ) : null}
+
+                {/* Événements */}
                 {dayEvents.map((p) => {
                   const widthPct = 100 / p.columnCount;
                   const leftPct = p.column * widthPct;
                   const isTask = p.event.id.startsWith("task-");
 
                   return (
-                    <section
+                    <div
                       key={`${p.event.id}-${key}-${p.column}`}
-                      className="absolute z-10 px-[2px]"
+                      className="absolute z-10"
                       style={{
-                        top: `${p.topPct}%`,
-                        height: `${p.heightPct}%`,
-                        left: `${leftPct}%`,
-                        width: `${widthPct}%`,
+                        top: p.topPx,
+                        height: p.heightPx,
+                        left: `calc(${leftPct}% + 4px)`,
+                        width: `calc(${widthPct}% - 8px)`,
                       }}
                     >
                       <CalendarEventCard
                         event={p.event}
                         compact
-                        minimal={p.heightPct < 5.5}
+                        minimal={p.heightPx < 56}
                         onClick={() => {
                           if (!isTask) onEventClick(p.event);
                         }}
                       />
-                    </section>
+                    </div>
                   );
                 })}
               </section>
-            </section>
-          );
-        })}
+            );
+          })}
 
-        {showNowLine && nowLine ? (
-          <section
-            className="pointer-events-none absolute inset-0 z-30 grid"
-            style={{ gridTemplateColumns: colTemplate }}
-            aria-hidden
-          >
-            <span />
-            {weekDays.map((d) => {
-              const isToday = isSameDay(d, today);
-              if (!isToday) return <span key={dayKeyLocal(d)} />;
-              return (
-                <section key={dayKeyLocal(d)} className="relative">
-                  <section
-                    className="absolute left-0 right-0 flex items-center"
-                    style={{ top: `${nowLine.topPct}%`, transform: "translateY(-50%)" }}
-                  >
-                    <span className="absolute -left-1 z-10 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-rose-500 ring-2 ring-white shadow-sm" />
-                    <span className="h-[2px] flex-1 bg-rose-500" />
+          {/* Ligne heure actuelle */}
+          {showNowLine && nowLine ? (
+            <section
+              className="pointer-events-none absolute inset-0 z-30 grid"
+              style={{ gridTemplateColumns: colTemplate, height: CALENDAR_GRID_HEIGHT_PX }}
+            >
+              <span className="relative">
+                <span
+                  className="absolute rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold tabular-nums leading-none text-white shadow-sm"
+                  style={{ top: nowLine.topPx, transform: "translateY(-50%)", right: 4 }}
+                >
+                  {nowLine.label}
+                </span>
+              </span>
+              {weekDays.map((d) => {
+                if (!isSameDay(d, today)) return <span key={dayKeyLocal(d)} />;
+                return (
+                  <section key={dayKeyLocal(d)} className="relative">
+                    <div
+                      className="absolute left-0 right-0 h-px bg-rose-500"
+                      style={{ top: nowLine.topPx }}
+                    >
+                      <span className="absolute -left-1.5 -top-1.5 h-3 w-3 rounded-full bg-rose-500 ring-2 ring-white" />
+                    </div>
                   </section>
-                </section>
-              );
-            })}
-          </section>
-        ) : null}
-
-        {showNowLine && nowLine ? (
-          <span
-            className="pointer-events-none absolute z-40 rounded bg-rose-500 px-1 py-px text-[9px] font-bold tabular-nums leading-none text-white shadow-sm"
-            style={{
-              top: `${nowLine.topPct}%`,
-              left: "0.35rem",
-              transform: "translateY(-50%)",
-            }}
-          >
-            {nowLine.label}
-          </span>
-        ) : null}
+                );
+              })}
+            </section>
+          ) : null}
+        </section>
       </section>
     </section>
   );

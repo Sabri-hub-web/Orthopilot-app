@@ -367,8 +367,8 @@ export function CalendarView({ canManage }: CalendarViewProps) {
 
   return (
     <section className="animate-dashboard-in flex h-full min-h-0 flex-col overflow-hidden">
-      <section className="flex min-h-0 flex-1 gap-2 overflow-hidden">
-        <section className="flex min-h-0 min-w-0 flex-[3] flex-col gap-1.5 overflow-hidden">
+      <section className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden xl:grid-cols-[minmax(0,1fr)_340px] xl:h-[calc(100vh-120px)]">
+        <section className="flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden">
           <section className="flex shrink-0 flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between">
             <CalendarPageHeader />
           </section>
@@ -405,10 +405,10 @@ export function CalendarView({ canManage }: CalendarViewProps) {
           {!loading && feed ? (
             <section className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
               {viewMode === "week" || viewMode === "day" ? (
-                <>
+                <section className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
                   <CalendarWeekGrid weekDays={weekDays} events={gridEvents} onEventClick={openEdit} />
                   <CalendarLegend />
-                </>
+                </section>
               ) : null}
               {viewMode === "month" ? (
                 <section className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200/70 bg-white shadow-sm">
@@ -439,7 +439,7 @@ export function CalendarView({ canManage }: CalendarViewProps) {
           ) : null}
         </section>
 
-        <aside className="hidden min-h-0 w-[min(100%,17.5rem)] shrink-0 flex-col gap-1.5 overflow-y-auto overflow-x-hidden xl:flex">
+        <aside className="flex min-h-0 w-full shrink-0 flex-col gap-3 overflow-y-auto xl:w-[340px] xl:overflow-hidden">
           <CalendarMiniMonth
             anchor={anchor}
             selected={anchor}

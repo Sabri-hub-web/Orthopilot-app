@@ -191,20 +191,27 @@ export function CalendarView({ canManage }: CalendarViewProps) {
   }, [feed, showTasks, filterAssigneeId]);
 
   const gridEvents = useMemo(() => {
+    if (!showTasks) return filteredEvents;
     const taskEvents = filteredTasks.map(taskToCalendarEvent);
     if (filterTypes.size > 0 && !filterTypes.has("TACHE")) {
       return filteredEvents;
     }
     return [...filteredEvents, ...taskEvents];
-  }, [filteredEvents, filteredTasks, filterTypes]);
+  }, [filteredEvents, filteredTasks, filterTypes, showTasks]);
 
   const eventDayKeysSet = useMemo(() => {
     const set = new Set<string>();
     for (const ev of filteredEvents) {
       for (const k of eventDayKeys(ev)) set.add(k);
     }
+    if (showTasks) {
+      for (const t of filteredTasks) {
+        const key = t.dueDate.slice(0, 10);
+        if (key) set.add(key);
+      }
+    }
     return set;
-  }, [filteredEvents]);
+  }, [filteredEvents, filteredTasks, showTasks]);
 
   function resetFormToNew() {
     setFormTitle("");

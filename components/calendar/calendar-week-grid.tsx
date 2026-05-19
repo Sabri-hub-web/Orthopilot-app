@@ -10,6 +10,7 @@ import {
   CALENDAR_HOUR_START,
   CALENDAR_TIME_GUTTER_PX,
   calendarHourLabels,
+  calendarSlotHours,
   currentTimeLine,
   dayKeyLocal,
   isSameDay,
@@ -41,7 +42,14 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
   }, []);
 
   const hourLabels = useMemo(() => calendarHourLabels(), []);
+  const slotHours = useMemo(() => calendarSlotHours(), []);
   const lunch = useMemo(() => lunchBreakLayout(), []);
+
+  const hourLabelTop = (h: number) => {
+    const top = (h - CALENDAR_HOUR_START) * CALENDAR_HOUR_HEIGHT_PX;
+    if (h === CALENDAR_HOUR_END) return CALENDAR_GRID_HEIGHT_PX;
+    return top;
+  };
 
   const placed = useMemo(() => {
     const raw = placeEventsForWeek(events, weekDays);
@@ -99,35 +107,26 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
       {/* Corps grille */}
       <section className="relative min-h-0 flex-1 overflow-hidden">
         <section
-          className="relative grid h-full"
+          className="relative grid"
           style={{
             gridTemplateColumns: colTemplate,
-            minHeight: CALENDAR_GRID_HEIGHT_PX,
+            height: CALENDAR_GRID_HEIGHT_PX,
           }}
         >
           {/* Gutter heures */}
           <section
             className="relative border-r border-[#eef2f7] bg-slate-50/50"
-            style={{ minHeight: CALENDAR_GRID_HEIGHT_PX }}
+            style={{ height: CALENDAR_GRID_HEIGHT_PX }}
           >
-            {hourLabels.slice(0, -1).map((h) => {
-              const top = (h - CALENDAR_HOUR_START) * CALENDAR_HOUR_HEIGHT_PX;
-              return (
-                <span
-                  key={h}
-                  className="absolute right-0 flex w-full items-start justify-end pr-1 text-[9px] font-medium tabular-nums text-slate-400"
-                  style={{ top, height: CALENDAR_HOUR_HEIGHT_PX }}
-                >
-                  {String(h).padStart(2, "0")}:00
-                </span>
-              );
-            })}
-            <span
-              className="absolute bottom-0 right-0 flex w-full items-start justify-end pr-1.5 text-[10px] font-medium tabular-nums text-slate-400"
-              style={{ height: CALENDAR_HOUR_HEIGHT_PX }}
-            >
-              {String(CALENDAR_HOUR_END).padStart(2, "0")}:00
-            </span>
+            {hourLabels.map((h) => (
+              <span
+                key={h}
+                className="absolute right-0 flex w-full -translate-y-1/2 items-center justify-end pr-1 text-[9px] font-medium tabular-nums text-slate-400"
+                style={{ top: hourLabelTop(h) }}
+              >
+                {String(h).padStart(2, "0")}:00
+              </span>
+            ))}
           </section>
 
           {/* Colonnes jours */}
@@ -143,10 +142,10 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
                 className={`relative border-r border-[#eef2f7] last:border-r-0 ${
                   isToday ? "bg-violet-50/15" : "bg-white"
                 }`}
-                style={{ minHeight: CALENDAR_GRID_HEIGHT_PX }}
+                style={{ height: CALENDAR_GRID_HEIGHT_PX }}
               >
                 {/* Lignes horaires */}
-                {hourLabels.slice(0, -1).map((h) => (
+                {slotHours.map((h) => (
                   <span
                     key={h}
                     className="pointer-events-none absolute left-0 right-0 border-b border-[#eef2f7]"

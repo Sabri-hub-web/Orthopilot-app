@@ -262,15 +262,34 @@ export function layoutOverlappingEvents(placed: PlacedEvent[]): PlacedEventLayou
   return result;
 }
 
-export function taskToCalendarEvent(task: InternalTask): CalendarEventItem {
-  const due = new Date(task.dueDate);
-  const start = new Date(due);
-  if (Number.isNaN(start.getTime())) {
-    start.setHours(CALENDAR_HOUR_START, 0, 0, 0);
-  } else if (start.getHours() === 0 && start.getMinutes() === 0) {
-    start.setHours(CALENDAR_HOUR_START, 0, 0, 0);
+const TASK_DEFAULT_HOUR = 14;
+const TASK_DEFAULT_DURATION_MIN = 60;
+
+function parseTaskDueStart(dueDate: string): Date {
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})/.exec(dueDate.trim());
+  if (dateOnly) {
+    const year = Number(dateOnly[1]);
+    const month = Number(dateOnly[2]) - 1;
+    const day = Number(dateOnly[3]);
+    return new Date(year, month, day, TASK_DEFAULT_HOUR, 0, 0, 0);
   }
-  const end = new Date(start.getTime() + 30 * 60 * 1000);
+
+  const parsed = new Date(dueDate);
+  if (Number.isNaN(parsed.getTime())) {
+    const fallback = new Date();
+    fallback.setHours(TASK_DEFAULT_HOUR, 0, 0, 0);
+    return fallback;
+  }
+
+  if (parsed.getHours() === 0 && parsed.getMinutes() === 0) {
+    parsed.setHours(TASK_DEFAULT_HOUR, 0, 0, 0);
+  }
+  return parsed;
+}
+
+export function taskToCalendarEvent(task: InternalTask): CalendarEventItem {
+  const start = parseTaskDueStart(task.dueDate);
+  const end = new Date(start.getTime() + TASK_DEFAULT_DURATION_MIN * 60 * 1000);
   return {
     id: `task-${task.id}`,
     title: task.title,
@@ -320,11 +339,17 @@ export function filterEvents(
 }
 
 export function currentTimeLine(now = new Date()): { topPx: number; label: string } | null {
-  const h = now.getHours();
-  const m = now.getMinutes();
-  if (h < CALENDAR_HOUR_START || h >= CALENDAR_HOUR_END) return null;
-  const offsetMin = minutesFromCalendarStart(h, m);
+  const offsetMin = minutesFromCalendarStart(now.getHours(), now.getMinutes());
+  const maxMin = CALENDAR_HOUR_COUNT * 60;
+  if (offsetMin < 0 || offsetMin > maxMin) return null;
   return { topPx: minutesToTopPx(offsetMin), label: formatTimeHm(now) };
+}
+
+/** Créneaux horaires 10h–11h … 19h–20h */
+export function calendarSlotHours(): number[] {
+  const list: number[] = [];
+  for (let h = CALENDAR_HOUR_START; h < CALENDAR_HOUR_END; h += 1) list.push(h);
+  return list;
 }
 
 /** Labels d'heures affichés : 10:00 … 20:00 */

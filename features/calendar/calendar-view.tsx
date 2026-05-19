@@ -19,6 +19,7 @@ import {
   filterEvents,
   formatWeekRangeLabel,
   startOfWeekMonday,
+  taskToCalendarEvent,
   type CalendarViewMode,
 } from "@/lib/calendar-ui";
 import type {
@@ -192,6 +193,14 @@ export function CalendarView({ canManage }: CalendarViewProps) {
     return feed.tasks.filter((t) => t.assigneeId === filterAssigneeId);
   }, [feed, showTasks, filterAssigneeId]);
 
+  const gridEvents = useMemo(() => {
+    const taskEvents = filteredTasks.map(taskToCalendarEvent);
+    if (filterTypes.size > 0 && !filterTypes.has("TACHE")) {
+      return filteredEvents;
+    }
+    return [...filteredEvents, ...taskEvents];
+  }, [filteredEvents, filteredTasks, filterTypes]);
+
   const eventDayKeysSet = useMemo(() => {
     const set = new Set<string>();
     for (const ev of filteredEvents) {
@@ -357,94 +366,104 @@ export function CalendarView({ canManage }: CalendarViewProps) {
   }, [anchor, range.from, range.to, viewMode]);
 
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden">
-      <section className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden xl:flex-row xl:gap-2">
-        <section className="flex min-h-0 min-w-0 flex-[1_1_73%] flex-col gap-1 overflow-hidden">
-          <CalendarPageHeader />
+    <section className="animate-dashboard-in flex h-full min-h-0 flex-col overflow-hidden">
+      <section className="flex min-h-0 flex-1 gap-2 overflow-hidden">
+        <section className="flex min-h-0 min-w-0 flex-[3] flex-col gap-1.5 overflow-hidden">
+          <section className="flex shrink-0 flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between">
+            <CalendarPageHeader />
+          </section>
 
           <CalendarToolbar
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          periodLabel={periodLabel}
-          onPrev={() => shiftAnchor(-1)}
-          onNext={() => shiftAnchor(1)}
-          onToday={() => setAnchor(new Date())}
-          onNewEvent={openNewEvent}
-          canManage={canManage}
-          filtersOpen={filtersOpen}
-          onToggleFilters={() => setFiltersOpen((v) => !v)}
-        />
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            periodLabel={periodLabel}
+            onPrev={() => shiftAnchor(-1)}
+            onNext={() => shiftAnchor(1)}
+            onToday={() => setAnchor(new Date())}
+            onNewEvent={openNewEvent}
+            canManage={canManage}
+            filtersOpen={filtersOpen}
+            onToggleFilters={() => setFiltersOpen((v) => !v)}
+          />
 
-        {error ? (
-          <p className="shrink-0 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] text-rose-800" role="alert">
-            {error}
-          </p>
-        ) : null}
+          {error ? (
+            <p
+              className="shrink-0 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] text-rose-800"
+              role="alert"
+            >
+              {error}
+            </p>
+          ) : null}
 
-        {loading ? (
-          <p className="flex flex-1 items-center justify-center text-xs text-slate-500">Chargement…</p>
-        ) : null}
+          {loading ? (
+            <section className="flex flex-1 flex-col gap-2 animate-pulse">
+              <div className="h-10 rounded-2xl bg-slate-200/60" />
+              <div className="min-h-0 flex-1 rounded-2xl bg-slate-200/50" />
+            </section>
+          ) : null}
 
-        {!loading && feed ? (
-          <section className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
-            {viewMode === "week" || viewMode === "day" ? (
-              <CalendarWeekGrid weekDays={weekDays} events={filteredEvents} onEventClick={openEdit} />
-            ) : null}
-            {viewMode === "month" ? (
-              <section className="min-h-0 flex-1 overflow-auto">
-                <CalendarMonthView
-                  anchor={anchor}
-                  events={filteredEvents}
-                  tasks={filteredTasks}
-                  onDayClick={(d) => {
-                    setAnchor(d);
-                    setViewMode("day");
-                  }}
-                  onEventClick={openEdit}
-                />
-              </section>
-            ) : null}
-            {viewMode === "agenda" ? (
-              <section className="min-h-0 flex-1 overflow-auto">
-                <CalendarAgendaView
-                  days={days}
-                  byDay={byDay}
-                  onEventClick={openEdit}
-                  canManage={canManage}
-                  onDeleteEvent={deleteEvent}
-                />
-              </section>
-            ) : null}
-            {viewMode === "week" || viewMode === "day" ? <CalendarLegend /> : null}
-          </section>
-        ) : null}
+          {!loading && feed ? (
+            <section className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
+              {viewMode === "week" || viewMode === "day" ? (
+                <>
+                  <CalendarWeekGrid weekDays={weekDays} events={gridEvents} onEventClick={openEdit} />
+                  <CalendarLegend />
+                </>
+              ) : null}
+              {viewMode === "month" ? (
+                <section className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200/70 bg-white shadow-sm">
+                  <CalendarMonthView
+                    anchor={anchor}
+                    events={filteredEvents}
+                    tasks={filteredTasks}
+                    onDayClick={(d) => {
+                      setAnchor(d);
+                      setViewMode("day");
+                    }}
+                    onEventClick={openEdit}
+                  />
+                </section>
+              ) : null}
+              {viewMode === "agenda" ? (
+                <section className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200/70 bg-white p-2 shadow-sm">
+                  <CalendarAgendaView
+                    days={days}
+                    byDay={byDay}
+                    onEventClick={openEdit}
+                    canManage={canManage}
+                    onDeleteEvent={deleteEvent}
+                  />
+                </section>
+              ) : null}
+            </section>
+          ) : null}
         </section>
 
-        <aside className="flex min-h-0 w-full shrink-0 flex-col gap-1 overflow-hidden xl:w-[27%] xl:max-w-[300px]">
-        <CalendarMiniMonth
-          anchor={anchor}
-          selected={anchor}
-          onSelectDay={(d) => setAnchor(d)}
-          onPrevMonth={() =>
-            setAnchor((p) => new Date(p.getFullYear(), p.getMonth() - 1, p.getDate()))
-          }
-          onNextMonth={() =>
-            setAnchor((p) => new Date(p.getFullYear(), p.getMonth() + 1, p.getDate()))
-          }
-          eventDayKeys={eventDayKeysSet}
-        />
-        <CalendarFiltersPanel
-          assignees={assignees}
-          filterAssigneeId={filterAssigneeId}
-          onAssigneeChange={setFilterAssigneeId}
-          filterTypes={filterTypes}
-          onToggleType={toggleFilterType}
-          showTasks={showTasks}
-          onShowTasksChange={setShowTasks}
-          highlighted={filtersOpen}
-        />
-        <CalendarUpcomingEvents events={filteredEvents} onEventClick={openEdit} />
-        <CalendarTeamPresence />
+        <aside className="hidden min-h-0 w-[min(100%,17.5rem)] shrink-0 flex-col gap-1.5 overflow-y-auto overflow-x-hidden xl:flex">
+          <CalendarMiniMonth
+            anchor={anchor}
+            selected={anchor}
+            onSelectDay={(d) => setAnchor(d)}
+            onPrevMonth={() =>
+              setAnchor((p) => new Date(p.getFullYear(), p.getMonth() - 1, p.getDate()))
+            }
+            onNextMonth={() =>
+              setAnchor((p) => new Date(p.getFullYear(), p.getMonth() + 1, p.getDate()))
+            }
+            eventDayKeys={eventDayKeysSet}
+          />
+          <CalendarFiltersPanel
+            assignees={assignees}
+            filterAssigneeId={filterAssigneeId}
+            onAssigneeChange={setFilterAssigneeId}
+            filterTypes={filterTypes}
+            onToggleType={toggleFilterType}
+            showTasks={showTasks}
+            onShowTasksChange={setShowTasks}
+            highlighted={filtersOpen}
+          />
+          <CalendarUpcomingEvents events={filteredEvents} onEventClick={openEdit} />
+          <CalendarTeamPresence />
         </aside>
       </section>
 

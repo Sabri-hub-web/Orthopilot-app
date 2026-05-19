@@ -90,7 +90,7 @@ export function Sidebar({
       ? process.env.NEXT_PUBLIC_CABINET_DISPLAY_NAME.trim()
       : "Cabinet";
 
-  const widthClass = collapsed ? "w-[250px] lg:w-14" : "w-[250px] lg:w-[250px]";
+  const widthClass = collapsed ? "w-[240px] lg:w-[3.25rem]" : "w-[240px] lg:w-[240px]";
 
   return (
     <>
@@ -104,7 +104,7 @@ export function Sidebar({
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-white/10 bg-gradient-to-b from-[#0a1628] via-[#0d1b2e] to-[#050a12] text-slate-100 shadow-xl shadow-black/30 transition-transform duration-300 ease-out lg:sticky lg:top-0 lg:z-20 lg:max-h-screen lg:translate-x-0 lg:shadow-none ${widthClass} ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-white/[0.08] bg-gradient-to-b from-[#080f1c] via-[#0c1526] to-[#050910] text-slate-100 shadow-xl shadow-black/40 transition-transform duration-300 ease-out lg:sticky lg:top-0 lg:z-20 lg:max-h-screen lg:translate-x-0 lg:shadow-none ${widthClass} ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -175,12 +175,12 @@ export function Sidebar({
                             collapsed ? "justify-center px-0 lg:px-0" : "px-2"
                           } ${
                             isActive
-                              ? "bg-gradient-to-r from-sky-500/25 to-indigo-500/15 text-white shadow-[inset_0_0_0_1px_rgba(56,189,248,0.25)]"
+                              ? "bg-gradient-to-r from-violet-500/30 via-indigo-500/20 to-sky-500/10 text-white shadow-[0_0_20px_rgba(139,92,246,0.15),inset_0_0_0_1px_rgba(167,139,250,0.35)]"
                               : "text-slate-300 hover:bg-white/5 hover:text-white"
                           }`}
                         >
                           <Icon
-                            className={`h-4 w-4 shrink-0 transition ${isActive ? "text-sky-300" : "text-slate-400 group-hover:text-slate-200"}`}
+                            className={`h-4 w-4 shrink-0 transition ${isActive ? "text-violet-300" : "text-slate-400 group-hover:text-slate-200"}`}
                             strokeWidth={1.75}
                             aria-hidden
                           />

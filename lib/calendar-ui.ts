@@ -1,9 +1,8 @@
-import type { CalendarEventItem, CalendarEventTypeApi } from "@/types/domain";
+import type { CalendarEventItem, CalendarEventTypeApi, InternalTask } from "@/types/domain";
 
 export const CALENDAR_HOUR_START = 7;
 export const CALENDAR_HOUR_END = 19;
 export const CALENDAR_HOUR_COUNT = CALENDAR_HOUR_END - CALENDAR_HOUR_START;
-export const CALENDAR_ROW_PX = 44;
 
 export type CalendarViewMode = "day" | "week" | "month" | "agenda";
 
@@ -16,47 +15,67 @@ export const CALENDAR_VIEW_MODES: { id: CalendarViewMode; label: string }[] = [
 
 export const EVENT_TYPE_STYLES: Record<
   CalendarEventTypeApi,
-  { bg: string; border: string; text: string; dot: string; legend: string }
+  {
+    bg: string;
+    border: string;
+    accent: string;
+    text: string;
+    muted: string;
+    dot: string;
+    legend: string;
+  }
 > = {
   CONSULTATION: {
-    bg: "bg-sky-50",
-    border: "border-sky-200/90",
-    text: "text-sky-900",
+    bg: "bg-sky-50/95",
+    border: "border-sky-200/80",
+    accent: "border-l-sky-500",
+    text: "text-sky-950",
+    muted: "text-sky-700/85",
     dot: "bg-sky-500",
     legend: "Consultation",
   },
   RDV_PATIENT: {
-    bg: "bg-emerald-50",
-    border: "border-emerald-200/90",
-    text: "text-emerald-900",
+    bg: "bg-emerald-50/95",
+    border: "border-emerald-200/80",
+    accent: "border-l-emerald-500",
+    text: "text-emerald-950",
+    muted: "text-emerald-700/85",
     dot: "bg-emerald-500",
-    legend: "Rendez-vous patient",
+    legend: "RDV patient",
   },
   REUNION: {
-    bg: "bg-violet-50",
-    border: "border-violet-200/90",
-    text: "text-violet-900",
+    bg: "bg-violet-50/95",
+    border: "border-violet-200/80",
+    accent: "border-l-violet-500",
+    text: "text-violet-950",
+    muted: "text-violet-700/85",
     dot: "bg-violet-500",
     legend: "Réunion",
   },
   TACHE: {
-    bg: "bg-rose-50",
-    border: "border-rose-200/90",
-    text: "text-rose-900",
+    bg: "bg-rose-50/95",
+    border: "border-rose-200/80",
+    accent: "border-l-rose-500",
+    text: "text-rose-950",
+    muted: "text-rose-700/85",
     dot: "bg-rose-500",
     legend: "Tâche",
   },
   PAUSE: {
-    bg: "bg-orange-50",
-    border: "border-orange-200/90",
-    text: "text-orange-900",
+    bg: "bg-orange-50/95",
+    border: "border-orange-200/80",
+    accent: "border-l-orange-500",
+    text: "text-orange-950",
+    muted: "text-orange-700/85",
     dot: "bg-orange-500",
     legend: "Pause",
   },
   AUTRE: {
-    bg: "bg-slate-50",
-    border: "border-slate-200/90",
-    text: "text-slate-800",
+    bg: "bg-slate-50/95",
+    border: "border-slate-200/80",
+    accent: "border-l-slate-400",
+    text: "text-slate-900",
+    muted: "text-slate-600/85",
     dot: "bg-slate-400",
     legend: "Autre",
   },
@@ -110,6 +129,11 @@ export interface PlacedEvent {
   columnDate: Date;
 }
 
+export interface PlacedEventLayout extends PlacedEvent {
+  column: number;
+  columnCount: number;
+}
+
 export function placeEventsForWeek(
   events: CalendarEventItem[],
   weekDays: Date[],
@@ -143,12 +167,89 @@ export function placeEventsForWeek(
         event: ev,
         dayKey: key,
         topPct,
-        heightPct: Math.max(heightPct, 2.5),
+        heightPct: Math.max(heightPct, 3.2),
         columnDate: day,
       });
     }
   }
   return placed;
+}
+
+function rangesOverlap(aTop: number, aH: number, bTop: number, bH: number): boolean {
+  return aTop < bTop + bH && bTop < aTop + aH;
+}
+
+export function layoutOverlappingEvents(placed: PlacedEvent[]): PlacedEventLayout[] {
+  const byDay = new Map<string, PlacedEvent[]>();
+  for (const p of placed) {
+    const list = byDay.get(p.dayKey) ?? [];
+    list.push(p);
+    byDay.set(p.dayKey, list);
+  }
+
+  const result: PlacedEventLayout[] = [];
+
+  for (const [, dayEvents] of byDay) {
+    const sorted = [...dayEvents].sort((a, b) => a.topPct - b.topPct || b.heightPct - a.heightPct);
+    const layouts: PlacedEventLayout[] = [];
+
+    for (const item of sorted) {
+      const overlapping = layouts.filter((o) =>
+        rangesOverlap(item.topPct, item.heightPct, o.topPct, o.heightPct),
+      );
+      const used = new Set(overlapping.map((o) => o.column));
+      let column = 0;
+      while (used.has(column)) column += 1;
+      const columnCount = Math.max(column + 1, ...overlapping.map((o) => o.columnCount), 1);
+      for (const o of overlapping) {
+        o.columnCount = Math.max(o.columnCount, columnCount);
+      }
+      layouts.push({ ...item, column, columnCount });
+    }
+
+    const maxCols = Math.max(1, ...layouts.map((l) => l.columnCount));
+    for (const l of layouts) {
+      l.columnCount = maxCols;
+      result.push(l);
+    }
+  }
+
+  return result;
+}
+
+export function taskToCalendarEvent(task: InternalTask): CalendarEventItem {
+  const due = new Date(task.dueDate);
+  const start = new Date(due);
+  if (Number.isNaN(start.getTime())) {
+    start.setHours(9, 0, 0, 0);
+  } else if (start.getHours() === 0 && start.getMinutes() === 0) {
+    start.setHours(9, 0, 0, 0);
+  }
+  const end = new Date(start.getTime() + 30 * 60 * 1000);
+  return {
+    id: `task-${task.id}`,
+    title: task.title,
+    description: task.comment,
+    startAt: start.toISOString(),
+    endAt: end.toISOString(),
+    type: "TACHE",
+    typeLabel: "Tâche",
+    patientId: task.patientId,
+    patientName: task.patientName,
+    assigneeId: task.assigneeId,
+    assigneeName: task.assignee || null,
+    createdById: null,
+    createdByName: null,
+  };
+}
+
+export function eventSubtitle(event: CalendarEventItem): string {
+  const who = event.patientName ?? event.assigneeName;
+  return who ?? "Cabinet";
+}
+
+export function eventRoomLabel(): string {
+  return "—";
 }
 
 export function relativeDayLabel(date: Date, now = new Date()): string {
@@ -172,4 +273,13 @@ export function filterEvents(
     if (opts.types.size > 0 && !opts.types.has(ev.type)) return false;
     return true;
   });
+}
+
+export function currentTimeLine(now = new Date()): { topPct: number; label: string } | null {
+  const h = now.getHours();
+  const m = now.getMinutes();
+  if (h < CALENDAR_HOUR_START || h >= CALENDAR_HOUR_END) return null;
+  const totalMin = CALENDAR_HOUR_COUNT * 60;
+  const offset = (h - CALENDAR_HOUR_START) * 60 + m;
+  return { topPct: (offset / totalMin) * 100, label: formatTimeHm(now) };
 }

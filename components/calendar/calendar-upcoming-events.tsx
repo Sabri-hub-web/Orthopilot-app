@@ -15,16 +15,16 @@ export function CalendarUpcomingEvents({ events, onEventClick }: CalendarUpcomin
     return [...events]
       .filter((e) => new Date(e.endAt).getTime() >= now)
       .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
-      .slice(0, 3);
+      .slice(0, 4);
   }, [events]);
 
   return (
-    <article className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white p-2 shadow-sm">
-      <h3 className="shrink-0 text-[10px] font-semibold text-slate-900">Prochains événements</h3>
+    <article className="flex min-h-0 shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <h3 className="text-[11px] font-semibold text-slate-900">Prochains événements</h3>
       {upcoming.length === 0 ? (
-        <p className="mt-1 text-[9px] text-slate-500">Aucun événement à venir.</p>
+        <p className="mt-2 text-[10px] text-slate-500">Aucun événement à venir.</p>
       ) : (
-        <ul className="mt-1 min-h-0 flex-1 space-y-0.5 overflow-hidden">
+        <ul className="mt-1.5 space-y-1">
           {upcoming.map((ev) => {
             const s = EVENT_TYPE_STYLES[ev.type];
             const start = new Date(ev.startAt);
@@ -33,14 +33,12 @@ export function CalendarUpcomingEvents({ events, onEventClick }: CalendarUpcomin
                 <button
                   type="button"
                   onClick={() => onEventClick(ev)}
-                  className="flex w-full items-start gap-1.5 rounded-md border border-slate-100 bg-slate-50/60 px-1.5 py-1 text-left hover:bg-white"
+                  className="flex w-full items-center gap-2 rounded-xl border border-slate-100/90 bg-slate-50/50 px-2 py-1.5 text-left transition hover:border-slate-200 hover:bg-white hover:shadow-sm"
                 >
-                  <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${s.dot}`} />
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${s.dot}`} />
                   <span className="min-w-0 flex-1">
-                    <p className="truncate text-[10px] font-semibold leading-tight text-slate-900">
-                      {ev.title}
-                    </p>
-                    <p className="truncate text-[9px] text-slate-500">
+                    <p className="truncate text-[11px] font-semibold text-slate-900">{ev.title}</p>
+                    <p className="truncate text-[10px] text-slate-500">
                       {relativeDayLabel(start)} · {formatTimeHm(start)}
                     </p>
                   </span>

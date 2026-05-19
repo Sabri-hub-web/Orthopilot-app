@@ -6,16 +6,21 @@ import {
   CALENDAR_HOUR_COUNT,
   CALENDAR_HOUR_END,
   CALENDAR_HOUR_START,
+  currentTimeLine,
   dayKeyLocal,
-  formatTimeHm,
   isSameDay,
+  layoutOverlappingEvents,
   placeEventsForWeek,
-  type PlacedEvent,
 } from "@/lib/calendar-ui";
 import type { CalendarEventItem } from "@/types/domain";
 
 const WEEKDAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 const HOUR_ROWS = `repeat(${CALENDAR_HOUR_COUNT}, minmax(0, 1fr))`;
+const TIME_GUTTER = "2.75rem";
+
+function gridColumns(dayCount: number) {
+  return `${TIME_GUTTER} repeat(${dayCount}, minmax(0, 1fr))`;
+}
 
 interface CalendarWeekGridProps {
   weekDays: Date[];
@@ -27,7 +32,7 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), 60_000);
+    const id = window.setInterval(() => setNow(new Date()), 30_000);
     return () => window.clearInterval(id);
   }, []);
 
@@ -37,9 +42,13 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
     return list;
   }, []);
 
-  const placed = useMemo(() => placeEventsForWeek(events, weekDays), [events, weekDays]);
+  const placed = useMemo(() => {
+    const raw = placeEventsForWeek(events, weekDays);
+    return layoutOverlappingEvents(raw);
+  }, [events, weekDays]);
+
   const byDayKey = useMemo(() => {
-    const map = new Map<string, PlacedEvent[]>();
+    const map = new Map<string, typeof placed>();
     for (const p of placed) {
       const arr = map.get(p.dayKey) ?? [];
       arr.push(p);
@@ -49,34 +58,34 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
   }, [placed]);
 
   const today = new Date();
-
-  const nowLine = useMemo(() => {
-    const h = now.getHours();
-    const m = now.getMinutes();
-    if (h < CALENDAR_HOUR_START || h >= CALENDAR_HOUR_END) return null;
-    const totalMin = CALENDAR_HOUR_COUNT * 60;
-    const offset = (h - CALENDAR_HOUR_START) * 60 + m;
-    return { topPct: (offset / totalMin) * 100, label: formatTimeHm(now) };
-  }, [now]);
+  const nowLine = useMemo(() => currentTimeLine(now), [now]);
+  const showNowLine = weekDays.some((d) => isSameDay(d, today));
+  const colTemplate = gridColumns(weekDays.length);
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
-      <section className="grid shrink-0 grid-cols-[2.25rem_repeat(7,minmax(0,1fr))] border-b border-slate-100 bg-slate-50/80">
-        <span className="border-r border-slate-100" />
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+      {/* En-têtes jours */}
+      <section
+        className="grid shrink-0 border-b border-slate-100 bg-gradient-to-b from-slate-50/90 to-white"
+        style={{ gridTemplateColumns: colTemplate }}
+      >
+        <span className="border-r border-slate-100/80" aria-hidden />
         {weekDays.map((d, i) => {
           const isToday = isSameDay(d, today);
           return (
             <header
               key={dayKeyLocal(d)}
-              className="border-r border-slate-100 px-0.5 py-1 text-center last:border-r-0"
+              className={`border-r border-slate-100/80 px-1 py-1.5 text-center last:border-r-0 ${
+                isToday ? "bg-violet-50/50" : ""
+              }`}
             >
-              <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                 {WEEKDAY_LABELS[i]}
               </p>
               <p
-                className={`mx-auto mt-px flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold tabular-nums ${
+                className={`mx-auto mt-0.5 flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold tabular-nums ${
                   isToday
-                    ? "bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-sm"
+                    ? "bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/25"
                     : "text-slate-800"
                 }`}
               >
@@ -87,60 +96,119 @@ export function CalendarWeekGrid({ weekDays, events, onEventClick }: CalendarWee
         })}
       </section>
 
-      <section className="grid min-h-0 flex-1 grid-cols-[2.25rem_repeat(7,minmax(0,1fr))] overflow-hidden">
-        <section className="grid min-h-0 border-r border-slate-100 bg-slate-50/40" style={{ gridTemplateRows: HOUR_ROWS }}>
+      {/* Grille horaire */}
+      <section
+        className="relative grid min-h-0 flex-1 overflow-hidden"
+        style={{ gridTemplateColumns: colTemplate }}
+      >
+        {/* Colonne heures */}
+        <section
+          className="relative z-10 grid min-h-0 border-r border-slate-100 bg-slate-50/40"
+          style={{ gridTemplateRows: HOUR_ROWS }}
+        >
           {hours.map((h) => (
             <span
               key={h}
-              className="flex items-start justify-end border-b border-slate-100/90 pr-1 pt-0.5 text-[8px] font-medium tabular-nums leading-none text-slate-400"
+              className="relative flex items-start justify-end border-b border-slate-100/90 pr-1.5 pt-0.5 text-[9px] font-medium tabular-nums leading-none text-slate-400"
             >
               {String(h).padStart(2, "0")}:00
             </span>
           ))}
         </section>
 
+        {/* Colonnes jours */}
         {weekDays.map((d) => {
           const key = dayKeyLocal(d);
           const dayEvents = byDayKey.get(key) ?? [];
-          const showNow = nowLine && isSameDay(d, today);
+          const isToday = isSameDay(d, today);
 
           return (
-            <section key={key} className="relative min-h-0 border-r border-slate-100 last:border-r-0">
+            <section
+              key={key}
+              className={`relative min-h-0 border-r border-slate-100/90 last:border-r-0 ${
+                isToday ? "bg-violet-50/20" : "bg-white"
+              }`}
+            >
               <section
                 className="absolute inset-0 grid"
                 style={{ gridTemplateRows: HOUR_ROWS }}
                 aria-hidden
               >
                 {hours.map((h) => (
-                  <span key={h} className="border-b border-slate-100/90" />
+                  <span key={h} className="border-b border-slate-100/80" />
                 ))}
               </section>
+
               <section className="absolute inset-0">
-                {dayEvents.map((p) => (
-                  <section
-                    key={`${p.event.id}-${key}`}
-                    className="absolute left-0 right-0 z-10 px-px"
-                    style={{ top: `${p.topPct}%`, height: `${p.heightPct}%` }}
-                  >
-                    <CalendarEventCard event={p.event} compact onClick={() => onEventClick(p.event)} />
-                  </section>
-                ))}
+                {dayEvents.map((p) => {
+                  const widthPct = 100 / p.columnCount;
+                  const leftPct = p.column * widthPct;
+                  const isTask = p.event.id.startsWith("task-");
+
+                  return (
+                    <section
+                      key={`${p.event.id}-${key}-${p.column}`}
+                      className="absolute z-10 px-[2px]"
+                      style={{
+                        top: `${p.topPct}%`,
+                        height: `${p.heightPct}%`,
+                        left: `${leftPct}%`,
+                        width: `${widthPct}%`,
+                      }}
+                    >
+                      <CalendarEventCard
+                        event={p.event}
+                        compact
+                        minimal={p.heightPct < 5.5}
+                        onClick={() => {
+                          if (!isTask) onEventClick(p.event);
+                        }}
+                      />
+                    </section>
+                  );
+                })}
               </section>
-              {showNow && nowLine ? (
-                <section
-                  className="pointer-events-none absolute left-0 right-0 z-20 flex items-center"
-                  style={{ top: `${nowLine.topPct}%` }}
-                >
-                  <span className="h-1.5 w-1.5 shrink-0 -translate-x-1/2 rounded-full bg-rose-500 ring-2 ring-white" />
-                  <span className="h-px flex-1 bg-rose-500" />
-                  <span className="shrink-0 rounded bg-rose-500 px-0.5 py-px text-[7px] font-bold leading-none text-white">
-                    {nowLine.label}
-                  </span>
-                </section>
-              ) : null}
             </section>
           );
         })}
+
+        {showNowLine && nowLine ? (
+          <section
+            className="pointer-events-none absolute inset-0 z-30 grid"
+            style={{ gridTemplateColumns: colTemplate }}
+            aria-hidden
+          >
+            <span />
+            {weekDays.map((d) => {
+              const isToday = isSameDay(d, today);
+              if (!isToday) return <span key={dayKeyLocal(d)} />;
+              return (
+                <section key={dayKeyLocal(d)} className="relative">
+                  <section
+                    className="absolute left-0 right-0 flex items-center"
+                    style={{ top: `${nowLine.topPct}%`, transform: "translateY(-50%)" }}
+                  >
+                    <span className="absolute -left-1 z-10 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-rose-500 ring-2 ring-white shadow-sm" />
+                    <span className="h-[2px] flex-1 bg-rose-500" />
+                  </section>
+                </section>
+              );
+            })}
+          </section>
+        ) : null}
+
+        {showNowLine && nowLine ? (
+          <span
+            className="pointer-events-none absolute z-40 rounded bg-rose-500 px-1 py-px text-[9px] font-bold tabular-nums leading-none text-white shadow-sm"
+            style={{
+              top: `${nowLine.topPct}%`,
+              left: "0.35rem",
+              transform: "translateY(-50%)",
+            }}
+          >
+            {nowLine.label}
+          </span>
+        ) : null}
       </section>
     </section>
   );

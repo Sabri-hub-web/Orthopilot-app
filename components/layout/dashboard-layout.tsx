@@ -14,6 +14,8 @@ interface DashboardLayoutProps {
   currentUserRoleKey: AuthUser["role"];
   /** Page calendrier : hauteur fixe, pas de scroll ni footer */
   fillViewport?: boolean;
+  /** Topbar réduite (calendrier plein écran) */
+  topbarCompact?: boolean;
 }
 
 export function DashboardLayout({
@@ -23,6 +25,7 @@ export function DashboardLayout({
   currentUserRole,
   currentUserRoleKey,
   fillViewport = false,
+  topbarCompact = false,
 }: DashboardLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -52,6 +55,7 @@ export function DashboardLayout({
         >
           <Topbar
             title={title}
+            compact={topbarCompact}
             notificationsOpen={notificationsOpen}
             onToggleNotifications={() => setNotificationsOpen((prev) => !prev)}
             unreadNotificationsCount={unreadNotificationsCount}
@@ -60,8 +64,8 @@ export function DashboardLayout({
             onOpenMobileNav={() => setMobileNavOpen(true)}
           />
           <main
-            className={`flex min-h-0 flex-1 flex-col overflow-x-hidden px-4 md:px-6 ${
-              fillViewport ? "overflow-hidden py-0.5" : "overflow-y-auto py-1.5 md:py-2"
+            className={`flex min-h-0 flex-1 flex-col overflow-x-hidden ${
+              fillViewport ? "overflow-hidden px-3 py-0 md:px-4" : "overflow-y-auto px-4 py-1.5 md:px-6 md:py-2"
             }`}
           >
             {children}

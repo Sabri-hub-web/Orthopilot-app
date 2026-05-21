@@ -14,6 +14,8 @@ export default async function MessagesPage() {
   return (
     <DashboardLayout
       title="Messages internes"
+      fillViewport
+      topbarCompact
       currentUserName={user.fullName}
       currentUserRole={roleLabel(user.role)}
       currentUserRoleKey={user.role}

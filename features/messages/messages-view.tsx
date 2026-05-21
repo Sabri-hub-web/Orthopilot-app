@@ -2,14 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PendingMessageFile } from "@/components/messages/messages-composer";
-import { MessagesChatPanel } from "@/components/messages/messages-chat-panel";
-import {
-  MessagesConversationList,
-  type ConversationTab,
-} from "@/components/messages/messages-conversation-list";
-import { MessagesDetailsPanel } from "@/components/messages/messages-details-panel";
+import { MessagesChat } from "@/components/messages/messages-chat";
+import { MessagesDetails } from "@/components/messages/messages-details";
+import { MessagesLayout } from "@/components/messages/messages-layout";
 import { MessagesNewMessageModal } from "@/components/messages/messages-new-message-modal";
-import { MessagesToolbar } from "@/components/messages/messages-toolbar";
+import { MessagesSidebar, type MessagesListTab } from "@/components/messages/messages-sidebar";
 import {
   MESSAGE_ATTACHMENT_MAX_BYTES,
   MESSAGE_ATTACHMENT_MAX_FILES,
@@ -17,6 +14,7 @@ import {
 } from "@/lib/messages-ui";
 import { errorMessageFromResponse } from "@/lib/validation/client-errors";
 import type {
+  ConversationSummary,
   ConversationsResponse,
   MessagesThreadResponse,
   PresenceTeamResponse,
@@ -28,14 +26,14 @@ interface MessagesViewProps {
 }
 
 export function MessagesView({ currentUserName }: MessagesViewProps) {
-  const [conversations, setConversations] = useState<ConversationsResponse["conversations"]>([]);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [recipients, setRecipients] = useState<RecipientOption[]>([]);
   const [presenceMembers, setPresenceMembers] = useState<PresenceTeamResponse["members"]>([]);
   const [peerId, setPeerId] = useState<string | null>(null);
   const [thread, setThread] = useState<MessagesThreadResponse | null>(null);
   const [body, setBody] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [listTab, setListTab] = useState<ConversationTab>("all");
+  const [listTab, setListTab] = useState<MessagesListTab>("all");
   const [newMessageOpen, setNewMessageOpen] = useState(false);
   const [loadingList, setLoadingList] = useState(true);
   const [loadingThread, setLoadingThread] = useState(false);
@@ -55,24 +53,27 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
     return data.conversations;
   }, []);
 
-  const loadThread = useCallback(async (id: string) => {
-    const res = await fetch(`/api/messages?with=${encodeURIComponent(id)}`, { cache: "no-store" });
-    if (!res.ok) throw new Error("Thread");
-    const data: MessagesThreadResponse = await res.json();
-    setThread({
-      ...data,
-      messages: data.messages.map((m) => ({
-        ...m,
-        attachments: m.attachments ?? [],
-      })),
-    });
-    await fetch("/api/messages/read-peer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ peerId: id }),
-    });
-    await loadConversations();
-  }, [loadConversations]);
+  const loadThread = useCallback(
+    async (id: string) => {
+      const res = await fetch(`/api/messages?with=${encodeURIComponent(id)}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("Thread");
+      const data: MessagesThreadResponse = await res.json();
+      setThread({
+        ...data,
+        messages: data.messages.map((m) => ({
+          ...m,
+          attachments: m.attachments ?? [],
+        })),
+      });
+      await fetch("/api/messages/read-peer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ peerId: id }),
+      });
+      await loadConversations();
+    },
+    [loadConversations],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -94,8 +95,8 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
             const pData: PresenceTeamResponse = await pRes.json();
             setPresenceMembers(pData.members);
           }
-          if (cData.conversations.length > 0 && !peerId) {
-            setPeerId(cData.conversations[0]!.peerId);
+          if (cData.conversations.length > 0) {
+            setPeerId((prev) => prev ?? cData.conversations[0]!.peerId);
           }
         }
       } catch {
@@ -107,10 +108,7 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- init only
   }, []);
-
-  const threadToShow = peerId ? thread : null;
 
   useEffect(() => {
     if (!peerId) return;
@@ -133,7 +131,7 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [threadToShow?.messages.length]);
+  }, [thread?.messages.length]);
 
   function clearPendingFiles() {
     setPendingFiles((prev) => {
@@ -148,7 +146,6 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
     if (!files?.length) return;
     const next: PendingMessageFile[] = [];
     const room = MESSAGE_ATTACHMENT_MAX_FILES - pendingFiles.length;
-
     for (let i = 0; i < files.length && next.length < room; i++) {
       const file = files[i]!;
       if (file.size > MESSAGE_ATTACHMENT_MAX_BYTES) {
@@ -156,13 +153,8 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
         continue;
       }
       const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined;
-      next.push({ id: `${file.name}-${file.size}-${Date.now()}-${i}`, file, previewUrl });
+      next.push({ id: `${file.name}-${Date.now()}-${i}`, file, previewUrl });
     }
-
-    if (files.length > room) {
-      setError(`Maximum ${MESSAGE_ATTACHMENT_MAX_FILES} fichiers par message.`);
-    }
-
     if (next.length) setPendingFiles((prev) => [...prev, ...next]);
   }
 
@@ -183,23 +175,20 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
     setSending(true);
     setError(null);
     try {
-      let res: Response;
-
-      if (pendingFiles.length > 0) {
-        const formData = new FormData();
-        formData.append("recipientId", peerId);
-        formData.append("body", trimmed);
-        for (const pf of pendingFiles) {
-          formData.append("files", pf.file);
-        }
-        res = await fetch("/api/messages", { method: "POST", body: formData });
-      } else {
-        res = await fetch("/api/messages", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ recipientId: peerId, body: trimmed }),
-        });
-      }
+      const res =
+        pendingFiles.length > 0
+          ? await (() => {
+              const fd = new FormData();
+              fd.append("recipientId", peerId);
+              fd.append("body", trimmed);
+              for (const pf of pendingFiles) fd.append("files", pf.file);
+              return fetch("/api/messages", { method: "POST", body: fd });
+            })()
+          : await fetch("/api/messages", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ recipientId: peerId, body: trimmed }),
+            });
 
       if (!res.ok) {
         setError(await errorMessageFromResponse(res));
@@ -208,7 +197,6 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
       setBody("");
       clearPendingFiles();
       await loadThread(peerId);
-      await loadConversations();
     } finally {
       setSending(false);
     }
@@ -222,81 +210,56 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
 
   const activePresence = peerId ? presenceMap.get(peerId) : undefined;
   const peerName =
-    threadToShow?.peer.fullName ?? recipients.find((r) => r.id === peerId)?.fullName ?? null;
-
-  const messages = threadToShow?.messages ?? [];
+    thread?.peer.fullName ?? recipients.find((r) => r.id === peerId)?.fullName ?? null;
+  const messages = thread?.messages ?? [];
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden p-2 md:p-3">
-      {error ? (
-        <div className="mb-2 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {error}
-        </div>
-      ) : null}
-
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_2px_20px_rgba(15,23,42,0.06)]">
-        <MessagesToolbar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onNewMessage={() => setNewMessageOpen(true)}
-        />
-
-        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(280px,300px)_minmax(0,1fr)] xl:grid-cols-[minmax(280px,300px)_minmax(0,1fr)_minmax(280px,300px)]">
-          <div
-            className={`min-h-0 border-slate-100 lg:border-r ${
-              peerId ? "hidden lg:flex lg:flex-col" : "flex min-h-0 flex-col"
-            }`}
-          >
-            <MessagesConversationList
-              conversations={conversations}
-              loading={loadingList}
-              activePeerId={peerId}
-              tab={listTab}
-              searchQuery={searchQuery}
-              presenceMap={presenceMap}
-              onTabChange={setListTab}
-              onSelect={pickPeer}
-            />
-          </div>
-
-          <div
-            className={`min-h-0 min-w-0 ${
-              !peerId ? "hidden lg:flex lg:flex-col" : "flex min-h-0 flex-col"
-            } ${peerId ? "lg:border-r lg:border-slate-100 xl:border-r" : ""}`}
-          >
-            <MessagesChatPanel
-              peerId={peerId}
-              peerName={peerName}
-              currentUserName={currentUserName}
-              messages={messages}
-              loading={loadingThread}
-              sending={sending}
-              draft={body}
-              pendingFiles={pendingFiles}
-              fileInputRef={fileInputRef}
-              presence={activePresence}
-              showMobileBack={!!peerId}
-              onBack={() => {
-                setPeerId(null);
-                clearPendingFiles();
-              }}
-              onDraftChange={setBody}
-              onSend={handleSend}
-              onPickFiles={() => fileInputRef.current?.click()}
-              onFilesSelected={handleFilesSelected}
-              onRemoveFile={handleRemoveFile}
-              messagesEndRef={bottomRef}
-            />
-          </div>
-
-          <MessagesDetailsPanel
+    <>
+      <MessagesLayout
+        error={error}
+        sidebar={
+          <MessagesSidebar
+            conversations={conversations}
+            loading={loadingList}
+            activePeerId={peerId}
+            tab={listTab}
+            searchQuery={searchQuery}
+            presenceMap={presenceMap}
+            onTabChange={setListTab}
+            onSearchChange={setSearchQuery}
+            onSelect={pickPeer}
+            onNewMessage={() => setNewMessageOpen(true)}
+          />
+        }
+        chat={
+          <MessagesChat
+            peerId={peerId}
+            peerName={peerName}
+            currentUserName={currentUserName}
+            messages={messages}
+            loading={loadingThread}
+            sending={sending}
+            draft={body}
+            pendingFiles={pendingFiles}
+            fileInputRef={fileInputRef}
+            presence={activePresence}
+            onDraftChange={setBody}
+            onSend={handleSend}
+            onPickFiles={() => fileInputRef.current?.click()}
+            onFilesSelected={handleFilesSelected}
+            onRemoveFile={handleRemoveFile}
+            messagesEndRef={bottomRef}
+          />
+        }
+        details={
+          <MessagesDetails
             peerId={peerId}
             peerName={peerName}
             messages={messages}
             presence={activePresence}
           />
-        </div>
-      </div>
+        }
+      />
 
       <MessagesNewMessageModal
         open={newMessageOpen}
@@ -304,6 +267,6 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
         onClose={() => setNewMessageOpen(false)}
         onSelect={pickPeer}
       />
-    </div>
+    </>
   );
 }

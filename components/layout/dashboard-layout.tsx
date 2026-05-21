@@ -16,6 +16,8 @@ interface DashboardLayoutProps {
   fillViewport?: boolean;
   /** Topbar réduite (calendrier plein écran) */
   topbarCompact?: boolean;
+  /** Contenu plein cadre sans padding (messages) */
+  contentFlush?: boolean;
 }
 
 export function DashboardLayout({
@@ -26,6 +28,7 @@ export function DashboardLayout({
   currentUserRoleKey,
   fillViewport = false,
   topbarCompact = false,
+  contentFlush = false,
 }: DashboardLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -65,7 +68,11 @@ export function DashboardLayout({
           />
           <main
             className={`flex min-h-0 flex-1 flex-col overflow-x-hidden ${
-              fillViewport ? "overflow-hidden px-3 py-0 md:px-4" : "overflow-y-auto px-4 py-1.5 md:px-6 md:py-2"
+              contentFlush
+                ? "overflow-hidden p-0"
+                : fillViewport
+                  ? "overflow-hidden px-3 py-0 md:px-4"
+                  : "overflow-y-auto px-4 py-1.5 md:px-6 md:py-2"
             }`}
           >
             {children}

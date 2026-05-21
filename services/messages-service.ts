@@ -1,3 +1,4 @@
+import { roleLabel } from "@/lib/auth/roles";
 import { prisma } from "@/server/db/client";
 import { writeActivityLog } from "@/server/activity-log";
 import {
@@ -26,10 +27,16 @@ function previewBody(body: string, hasAttachments: boolean, max = 120): string {
 export async function listRecipients(excludeUserId: string): Promise<{ items: RecipientOption[] }> {
   const users = await prisma.user.findMany({
     where: { id: { not: excludeUserId } },
-    select: { id: true, fullName: true },
+    select: { id: true, fullName: true, role: true },
     orderBy: { fullName: "asc" },
   });
-  return { items: users };
+  return {
+    items: users.map((u) => ({
+      id: u.id,
+      fullName: u.fullName,
+      roleLabel: roleLabel(u.role),
+    })),
+  };
 }
 
 export async function getConversations(userId: string): Promise<{ conversations: ConversationSummary[] }> {

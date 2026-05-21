@@ -19,6 +19,7 @@ interface MessagesSidebarProps {
   searchQuery: string;
   presenceMap: Map<string, PresenceTeamMember>;
   recipients: RecipientOption[];
+  recipientsLoading?: boolean;
   onTabChange: (tab: MessagesListTab) => void;
   onSearchChange: (q: string) => void;
   onSelect: (peerId: string) => void;
@@ -33,6 +34,7 @@ export function MessagesSidebar({
   searchQuery,
   presenceMap,
   recipients,
+  recipientsLoading,
   onTabChange,
   onSearchChange,
   onSelect,
@@ -56,7 +58,7 @@ export function MessagesSidebar({
           id="sidebar-recipient"
           recipients={recipients}
           value={activePeerId}
-          presenceMap={presenceMap}
+          loading={recipientsLoading}
           onChange={onRecipientChange}
         />
         <div className="relative">

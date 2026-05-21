@@ -337,6 +337,7 @@ export interface MessagesThreadResponse {
 export interface RecipientOption {
   id: string;
   fullName: string;
+  roleLabel?: string;
 }
 
 export interface SettingModuleStatus {

@@ -21,7 +21,7 @@ export default async function MessagesPage() {
       currentUserRole={roleLabel(user.role)}
       currentUserRoleKey={user.role}
     >
-      <MessagesView currentUserName={user.fullName} />
+      <MessagesView currentUserId={user.id} currentUserName={user.fullName} />
     </DashboardLayout>
   );
 }

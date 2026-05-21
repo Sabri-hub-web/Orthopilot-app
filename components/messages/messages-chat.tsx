@@ -31,7 +31,7 @@ interface MessagesChatProps {
   fileInputRef: RefObject<HTMLInputElement | null>;
   presence?: PresenceTeamMember;
   recipients: RecipientOption[];
-  presenceMap: Map<string, PresenceTeamMember>;
+  recipientsLoading?: boolean;
   onRecipientChange: (peerId: string) => void;
   onDraftChange: (v: string) => void;
   onSend: (e: FormEvent) => void;
@@ -63,7 +63,7 @@ export function MessagesChat({
   fileInputRef,
   presence,
   recipients,
-  presenceMap,
+  recipientsLoading,
   onRecipientChange,
   onDraftChange,
   onSend,
@@ -188,7 +188,7 @@ export function MessagesChat({
           id="chat-recipient"
           recipients={recipients}
           value={peerId}
-          presenceMap={presenceMap}
+          loading={recipientsLoading}
           onChange={onRecipientChange}
           compact
         />

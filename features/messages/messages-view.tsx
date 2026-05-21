@@ -9,6 +9,7 @@ import { MessagesSidebar, type MessagesListTab } from "@/components/messages/mes
 import {
   MESSAGE_ATTACHMENT_MAX_BYTES,
   MESSAGE_ATTACHMENT_MAX_FILES,
+  mergeMessageRecipients,
   presenceByUserId,
 } from "@/lib/messages-ui";
 import { errorMessageFromResponse } from "@/lib/validation/client-errors";
@@ -21,20 +22,21 @@ import type {
 } from "@/types/domain";
 
 interface MessagesViewProps {
+  currentUserId: string;
   currentUserName: string;
 }
 
-export function MessagesView({ currentUserName }: MessagesViewProps) {
+export function MessagesView({ currentUserId, currentUserName }: MessagesViewProps) {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
-  const [recipients, setRecipients] = useState<RecipientOption[]>([]);
+  const [recipientsRaw, setRecipientsRaw] = useState<RecipientOption[]>([]);
   const [presenceMembers, setPresenceMembers] = useState<PresenceTeamResponse["members"]>([]);
   const [peerId, setPeerId] = useState<string | null>(null);
   const [thread, setThread] = useState<MessagesThreadResponse | null>(null);
   const [body, setBody] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [listTab, setListTab] = useState<MessagesListTab>("all");
-  const [newMessageOpen, setNewMessageOpen] = useState(false);
   const [loadingList, setLoadingList] = useState(true);
+  const [loadingRecipients, setLoadingRecipients] = useState(true);
   const [loadingThread, setLoadingThread] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,12 +46,25 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
 
   const presenceMap = useMemo(() => presenceByUserId(presenceMembers), [presenceMembers]);
 
+  const recipients = useMemo(
+    () => mergeMessageRecipients(recipientsRaw, presenceMembers, currentUserId),
+    [recipientsRaw, presenceMembers, currentUserId],
+  );
+
   const loadConversations = useCallback(async () => {
     const res = await fetch("/api/messages/conversations", { cache: "no-store" });
     if (!res.ok) throw new Error("Conversations");
     const data: ConversationsResponse = await res.json();
     setConversations(data.conversations);
     return data.conversations;
+  }, []);
+
+  const loadRecipients = useCallback(async () => {
+    const res = await fetch("/api/messages/recipients", { cache: "no-store" });
+    if (!res.ok) throw new Error("Recipients");
+    const data: { items: RecipientOption[] } = await res.json();
+    setRecipientsRaw(data.items ?? []);
+    return data.items ?? [];
   }, []);
 
   const loadThread = useCallback(
@@ -77,31 +92,48 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      setLoadingList(true);
+      setLoadingRecipients(true);
+      setError(null);
+
+      const results = await Promise.allSettled([
+        fetch("/api/messages/conversations", { cache: "no-store" }),
+        fetch("/api/messages/recipients", { cache: "no-store" }),
+        fetch("/api/presence", { cache: "no-store" }),
+      ]);
+
+      if (cancelled) return;
+
       try {
-        setLoadingList(true);
-        const [cRes, rRes, pRes] = await Promise.all([
-          fetch("/api/messages/conversations", { cache: "no-store" }),
-          fetch("/api/messages/recipients", { cache: "no-store" }),
-          fetch("/api/presence", { cache: "no-store" }),
-        ]);
-        if (!cRes.ok || !rRes.ok) throw new Error("load");
-        const cData: ConversationsResponse = await cRes.json();
-        const rData: { items: RecipientOption[] } = await rRes.json();
-        if (!cancelled) {
+        const [cRes, rRes, pRes] = results.map((r) =>
+          r.status === "fulfilled" ? r.value : null,
+        );
+
+        if (cRes?.ok) {
+          const cData: ConversationsResponse = await cRes.json();
           setConversations(cData.conversations);
-          setRecipients(rData.items);
-          if (pRes.ok) {
-            const pData: PresenceTeamResponse = await pRes.json();
-            setPresenceMembers(pData.members);
-          }
-          if (cData.conversations.length > 0) {
-            setPeerId((prev) => prev ?? cData.conversations[0]!.peerId);
-          }
         }
-      } catch {
-        if (!cancelled) setError("Impossible de charger les messages.");
+
+        if (rRes?.ok) {
+          const rData: { items: RecipientOption[] } = await rRes.json();
+          setRecipientsRaw(rData.items ?? []);
+        } else if (rRes) {
+          setError("Impossible de charger la liste des collègues.");
+        }
+
+        if (pRes?.ok) {
+          const pData: PresenceTeamResponse = await pRes.json();
+          setPresenceMembers(pData.members);
+        }
+
+        if (!cRes?.ok && !rRes?.ok) {
+          setError("Impossible de charger les messages.");
+        }
       } finally {
-        if (!cancelled) setLoadingList(false);
+        if (!cancelled) {
+          setLoadingList(false);
+          setLoadingRecipients(false);
+        }
       }
     })();
     return () => {
@@ -110,12 +142,16 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
   }, []);
 
   useEffect(() => {
+    if (peerId || recipients.length === 0) return;
+    setPeerId(recipients[0]!.id);
+  }, [recipients, peerId]);
+
+  useEffect(() => {
     if (!peerId) return;
     let cancelled = false;
     (async () => {
       try {
         setLoadingThread(true);
-        setError(null);
         await loadThread(peerId);
       } catch {
         if (!cancelled) setError("Impossible de charger la conversation.");
@@ -196,6 +232,7 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
       setBody("");
       clearPendingFiles();
       await loadThread(peerId);
+      await loadConversations();
     } finally {
       setSending(false);
     }
@@ -213,57 +250,55 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
   const messages = thread?.messages ?? [];
 
   return (
-    <>
-      <MessagesLayout
-        error={error}
-        sidebar={
-          <MessagesSidebar
-            conversations={conversations}
-            loading={loadingList}
-            activePeerId={peerId}
-            tab={listTab}
-            searchQuery={searchQuery}
-            presenceMap={presenceMap}
-            recipients={recipients}
-            onTabChange={setListTab}
-            onSearchChange={setSearchQuery}
-            onSelect={pickPeer}
-            onRecipientChange={pickPeer}
-          />
-        }
-        chat={
-          <MessagesChat
-            peerId={peerId}
-            peerName={peerName}
-            currentUserName={currentUserName}
-            messages={messages}
-            loading={loadingThread}
-            sending={sending}
-            draft={body}
-            pendingFiles={pendingFiles}
-            fileInputRef={fileInputRef}
-            presence={activePresence}
-            recipients={recipients}
-            presenceMap={presenceMap}
-            onRecipientChange={pickPeer}
-            onDraftChange={setBody}
-            onSend={handleSend}
-            onPickFiles={() => fileInputRef.current?.click()}
-            onFilesSelected={handleFilesSelected}
-            onRemoveFile={handleRemoveFile}
-            messagesEndRef={bottomRef}
-          />
-        }
-        details={
-          <MessagesDetails
-            peerId={peerId}
-            peerName={peerName}
-            messages={messages}
-            presence={activePresence}
-          />
-        }
-      />
-
-    </>
+    <MessagesLayout
+      error={error}
+      sidebar={
+        <MessagesSidebar
+          conversations={conversations}
+          loading={loadingList}
+          activePeerId={peerId}
+          tab={listTab}
+          searchQuery={searchQuery}
+          presenceMap={presenceMap}
+          recipients={recipients}
+          recipientsLoading={loadingRecipients}
+          onTabChange={setListTab}
+          onSearchChange={setSearchQuery}
+          onSelect={pickPeer}
+          onRecipientChange={pickPeer}
+        />
+      }
+      chat={
+        <MessagesChat
+          peerId={peerId}
+          peerName={peerName}
+          currentUserName={currentUserName}
+          messages={messages}
+          loading={loadingThread}
+          sending={sending}
+          draft={body}
+          pendingFiles={pendingFiles}
+          fileInputRef={fileInputRef}
+          presence={activePresence}
+          recipients={recipients}
+          recipientsLoading={loadingRecipients}
+          onRecipientChange={pickPeer}
+          onDraftChange={setBody}
+          onSend={handleSend}
+          onPickFiles={() => fileInputRef.current?.click()}
+          onFilesSelected={handleFilesSelected}
+          onRemoveFile={handleRemoveFile}
+          messagesEndRef={bottomRef}
+        />
+      }
+      details={
+        <MessagesDetails
+          peerId={peerId}
+          peerName={peerName}
+          messages={messages}
+          presence={activePresence}
+        />
+      }
+    />
   );
 }

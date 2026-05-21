@@ -13,14 +13,14 @@ export default async function MessagesPage() {
 
   return (
     <DashboardLayout
-      title="Messages internes"
+      title="Messages"
       fillViewport
       topbarCompact
       currentUserName={user.fullName}
       currentUserRole={roleLabel(user.role)}
       currentUserRoleKey={user.role}
     >
-      <MessagesView />
+      <MessagesView currentUserName={user.fullName} />
     </DashboardLayout>
   );
 }

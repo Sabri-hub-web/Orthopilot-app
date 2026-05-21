@@ -1,5 +1,10 @@
 import { prisma } from "@/server/db/client";
 import { writeActivityLog } from "@/server/activity-log";
+import {
+  persistMessageAttachments,
+  type ParsedMessageFile,
+  validateMessageFiles,
+} from "@/lib/message-attachments";
 import { createNotification } from "@/services/notifications-service";
 import type {
   ConversationSummary,
@@ -8,10 +13,14 @@ import type {
   RecipientOption,
 } from "@/types/domain";
 
-function previewBody(body: string, max = 120): string {
+function previewBody(body: string, hasAttachments: boolean, max = 120): string {
   const t = body.trim();
-  if (t.length <= max) return t;
-  return `${t.slice(0, max)}…`;
+  if (t.length > 0) {
+    if (t.length <= max) return t;
+    return `${t.slice(0, max)}…`;
+  }
+  if (hasAttachments) return "📎 Pièce jointe";
+  return "";
 }
 
 export async function listRecipients(excludeUserId: string): Promise<{ items: RecipientOption[] }> {
@@ -31,6 +40,7 @@ export async function getConversations(userId: string): Promise<{ conversations:
     include: {
       sender: { select: { id: true, fullName: true } },
       recipient: { select: { id: true, fullName: true } },
+      attachments: { select: { id: true }, take: 1 },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -54,7 +64,7 @@ export async function getConversations(userId: string): Promise<{ conversations:
         peerId: peer.id,
         peerName: peer.fullName,
         lastMessageAt: row.createdAt.toISOString(),
-        lastPreview: previewBody(row.body, 100),
+        lastPreview: previewBody(row.body, row.attachments.length > 0, 100),
         unreadCount: unreadMap.get(peer.id) ?? 0,
       });
     }
@@ -94,6 +104,10 @@ export async function getThread(
       body: true,
       readAt: true,
       createdAt: true,
+      attachments: {
+        select: { id: true, fileName: true, mimeType: true, sizeBytes: true },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 
@@ -105,6 +119,7 @@ export async function getThread(
     readAt: m.readAt?.toISOString() ?? null,
     createdAt: m.createdAt.toISOString(),
     isMine: m.senderId === userId,
+    attachments: m.attachments,
   }));
 
   return {
@@ -118,8 +133,20 @@ export async function sendInternalMessage(
   senderName: string,
   recipientId: string,
   body: string,
-): Promise<{ ok: true; id: string } | { ok: false; reason: "SELF" | "NOT_FOUND" }> {
+  files: ParsedMessageFile[] = [],
+): Promise<
+  | { ok: true; id: string }
+  | { ok: false; reason: "SELF" | "NOT_FOUND" | "VALIDATION"; message?: string }
+> {
   if (recipientId === senderId) return { ok: false, reason: "SELF" };
+
+  const trimmedBody = body.trim();
+  if (!trimmedBody && files.length === 0) {
+    return { ok: false, reason: "VALIDATION", message: "Message ou pièce jointe requis." };
+  }
+
+  const fileError = validateMessageFiles(files);
+  if (fileError) return { ok: false, reason: "VALIDATION", message: fileError };
 
   const recipient = await prisma.user.findUnique({
     where: { id: recipientId },
@@ -131,10 +158,25 @@ export async function sendInternalMessage(
     data: {
       senderId,
       recipientId,
-      body,
+      body: trimmedBody,
     },
     select: { id: true },
   });
+
+  if (files.length > 0) {
+    const saved = await persistMessageAttachments(msg.id, files);
+    await prisma.internalMessageAttachment.createMany({
+      data: saved.map((s) => ({
+        messageId: msg.id,
+        fileName: s.fileName,
+        mimeType: s.mimeType,
+        sizeBytes: s.sizeBytes,
+        storageKey: s.storageKey,
+      })),
+    });
+  }
+
+  const notifPreview = previewBody(trimmedBody, files.length > 0, 160);
 
   await writeActivityLog({
     actor: senderName,
@@ -144,13 +186,47 @@ export async function sendInternalMessage(
   await createNotification({
     userId: recipientId,
     title: `Message de ${senderName}`,
-    message: previewBody(body, 160),
+    message: notifPreview,
     type: "INTERNAL_MESSAGE",
     relatedEntityType: "InternalMessage",
     relatedEntityId: msg.id,
   });
 
   return { ok: true, id: msg.id };
+}
+
+export async function getMessageAttachmentForUser(
+  userId: string,
+  attachmentId: string,
+): Promise<
+  | {
+      ok: true;
+      fileName: string;
+      mimeType: string;
+      storageKey: string;
+    }
+  | { ok: false; reason: "NOT_FOUND" | "FORBIDDEN" }
+> {
+  const att = await prisma.internalMessageAttachment.findUnique({
+    where: { id: attachmentId },
+    include: {
+      message: { select: { senderId: true, recipientId: true } },
+    },
+  });
+
+  if (!att) return { ok: false, reason: "NOT_FOUND" };
+
+  const { senderId, recipientId } = att.message;
+  if (senderId !== userId && recipientId !== userId) {
+    return { ok: false, reason: "FORBIDDEN" };
+  }
+
+  return {
+    ok: true,
+    fileName: att.fileName,
+    mimeType: att.mimeType,
+    storageKey: att.storageKey,
+  };
 }
 
 export async function markPeerMessagesRead(userId: string, peerId: string): Promise<{ updated: number }> {

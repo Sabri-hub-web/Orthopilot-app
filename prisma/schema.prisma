@@ -207,10 +207,24 @@ model InternalMessage {
   createdAt   DateTime  @default(now())
   sender      User      @relation("MessageSent", fields: [senderId], references: [id], onDelete: Cascade)
   recipient   User      @relation("MessageReceived", fields: [recipientId], references: [id], onDelete: Cascade)
+  attachments InternalMessageAttachment[]
 
   @@index([recipientId, createdAt])
   @@index([senderId, createdAt])
   @@index([recipientId, readAt])
+}
+
+model InternalMessageAttachment {
+  id          String          @id @default(cuid())
+  messageId   String
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  storageKey  String
+  createdAt   DateTime        @default(now())
+  message     InternalMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
 }
 
 model CalendarEvent {

@@ -311,6 +311,13 @@ export interface ConversationsResponse {
   conversations: ConversationSummary[];
 }
 
+export interface MessageAttachmentMeta {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
 export interface InternalMessageLine {
   id: string;
   senderId: string;
@@ -319,6 +326,7 @@ export interface InternalMessageLine {
   readAt: string | null;
   createdAt: string;
   isMine: boolean;
+  attachments: MessageAttachmentMeta[];
 }
 
 export interface MessagesThreadResponse {

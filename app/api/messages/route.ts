@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { requireApiPermission } from "@/lib/auth/api-guard";
+import { parseMessageFilesFromFormData } from "@/lib/message-attachments";
 import { getThread, sendInternalMessage } from "@/services/messages-service";
-import { internalMessageSendSchema } from "@/lib/validation/messages";
+import {
+  internalMessageMultipartSchema,
+  internalMessageSendSchema,
+} from "@/lib/validation/messages";
 import { parseJsonBody, validationErrorResponse } from "@/lib/validation/http";
 
 export async function GET(request: NextRequest) {
@@ -35,6 +39,41 @@ export async function POST(request: NextRequest) {
     const auth = await requireApiPermission(request, "messages:send");
     if (auth.response || !auth.user) return auth.response;
 
+    const contentType = request.headers.get("content-type") ?? "";
+
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await request.formData();
+      const recipientId = String(formData.get("recipientId") ?? "").trim();
+      const body = String(formData.get("body") ?? "");
+
+      const payload = internalMessageMultipartSchema.parse({ recipientId, body });
+      const files = await parseMessageFilesFromFormData(formData);
+
+      if (!payload.body && files.length === 0) {
+        return NextResponse.json({ message: "Message ou pièce jointe requis." }, { status: 400 });
+      }
+
+      const result = await sendInternalMessage(
+        auth.user.id,
+        auth.user.fullName ?? auth.user.email,
+        payload.recipientId,
+        payload.body,
+        files,
+      );
+
+      if (!result.ok) {
+        if (result.reason === "SELF") {
+          return NextResponse.json({ message: "Vous ne pouvez pas vous envoyer un message." }, { status: 400 });
+        }
+        if (result.reason === "VALIDATION") {
+          return NextResponse.json({ message: result.message ?? "Donnees invalides." }, { status: 400 });
+        }
+        return NextResponse.json({ message: "Destinataire introuvable." }, { status: 404 });
+      }
+
+      return NextResponse.json({ id: result.id }, { status: 201 });
+    }
+
     const raw = await parseJsonBody(request);
     if (raw instanceof NextResponse) return raw;
 
@@ -49,6 +88,9 @@ export async function POST(request: NextRequest) {
     if (!result.ok) {
       if (result.reason === "SELF") {
         return NextResponse.json({ message: "Vous ne pouvez pas vous envoyer un message." }, { status: 400 });
+      }
+      if (result.reason === "VALIDATION") {
+        return NextResponse.json({ message: result.message ?? "Donnees invalides." }, { status: 400 });
       }
       return NextResponse.json({ message: "Destinataire introuvable." }, { status: 404 });
     }

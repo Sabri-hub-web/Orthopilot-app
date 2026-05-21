@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: "Destinataire introuvable." }, { status: 404 });
       }
 
-      return NextResponse.json({ id: result.id }, { status: 201 });
+      return NextResponse.json({ id: result.id, message: result.message }, { status: 201 });
     }
 
     const raw = await parseJsonBody(request);
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Destinataire introuvable." }, { status: 404 });
     }
 
-    return NextResponse.json({ id: result.id }, { status: 201 });
+    return NextResponse.json({ id: result.id, message: result.message }, { status: 201 });
   } catch (error) {
     if (error instanceof ZodError) {
       return validationErrorResponse(error);

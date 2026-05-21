@@ -1,6 +1,7 @@
 import { roleLabel } from "@/lib/auth/roles";
 import { prisma } from "@/server/db/client";
 import { writeActivityLog } from "@/server/activity-log";
+import { MESSAGE_ATTACHMENT_MAX_BYTES } from "@/lib/messages-ui";
 import {
   persistMessageAttachments,
   type ParsedMessageFile,
@@ -112,7 +113,13 @@ export async function getThread(
       readAt: true,
       createdAt: true,
       attachments: {
-        select: { id: true, fileName: true, mimeType: true, sizeBytes: true },
+        select: {
+          id: true,
+          fileName: true,
+          mimeType: true,
+          sizeBytes: true,
+          createdAt: true,
+        },
         orderBy: { createdAt: "asc" },
       },
     },
@@ -126,7 +133,13 @@ export async function getThread(
     readAt: m.readAt?.toISOString() ?? null,
     createdAt: m.createdAt.toISOString(),
     isMine: m.senderId === userId,
-    attachments: m.attachments,
+    attachments: m.attachments.map((a) => ({
+      id: a.id,
+      fileName: a.fileName,
+      mimeType: a.mimeType,
+      sizeBytes: a.sizeBytes,
+      createdAt: a.createdAt.toISOString(),
+    })),
   }));
 
   return {
@@ -142,7 +155,7 @@ export async function sendInternalMessage(
   body: string,
   files: ParsedMessageFile[] = [],
 ): Promise<
-  | { ok: true; id: string }
+  | { ok: true; id: string; message: InternalMessageLine }
   | { ok: false; reason: "SELF" | "NOT_FOUND" | "VALIDATION"; message?: string }
 > {
   if (recipientId === senderId) return { ok: false, reason: "SELF" };
@@ -152,7 +165,7 @@ export async function sendInternalMessage(
     return { ok: false, reason: "VALIDATION", message: "Message ou pièce jointe requis." };
   }
 
-  const fileError = validateMessageFiles(files);
+  const fileError = validateMessageFiles(files, MESSAGE_ATTACHMENT_MAX_BYTES);
   if (fileError) return { ok: false, reason: "VALIDATION", message: fileError };
 
   const recipient = await prisma.user.findUnique({
@@ -171,16 +184,27 @@ export async function sendInternalMessage(
   });
 
   if (files.length > 0) {
-    const saved = await persistMessageAttachments(msg.id, files);
-    await prisma.internalMessageAttachment.createMany({
-      data: saved.map((s) => ({
-        messageId: msg.id,
-        fileName: s.fileName,
-        mimeType: s.mimeType,
-        sizeBytes: s.sizeBytes,
-        storageKey: s.storageKey,
-      })),
-    });
+    try {
+      const saved = await persistMessageAttachments(msg.id, files);
+      await prisma.internalMessageAttachment.createMany({
+        data: saved.map((s) => ({
+          messageId: msg.id,
+          fileName: s.fileName,
+          mimeType: s.mimeType,
+          sizeBytes: s.sizeBytes,
+          storageKey: s.storageKey,
+        })),
+      });
+    } catch (err) {
+      await prisma.internalMessage.delete({ where: { id: msg.id } }).catch(() => undefined);
+      console.error("Attachment persist failed", err);
+      return {
+        ok: false,
+        reason: "VALIDATION",
+        message:
+          "Impossible d’enregistrer la pièce jointe. Vérifiez le stockage (Supabase) ou la migration DB.",
+      };
+    }
   }
 
   const notifPreview = previewBody(trimmedBody, files.length > 0, 160);
@@ -199,7 +223,48 @@ export async function sendInternalMessage(
     relatedEntityId: msg.id,
   });
 
-  return { ok: true, id: msg.id };
+  const created = await prisma.internalMessage.findUnique({
+    where: { id: msg.id },
+    select: {
+      id: true,
+      senderId: true,
+      recipientId: true,
+      body: true,
+      readAt: true,
+      createdAt: true,
+      attachments: {
+        select: {
+          id: true,
+          fileName: true,
+          mimeType: true,
+          sizeBytes: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  });
+
+  if (!created) return { ok: false, reason: "NOT_FOUND" };
+
+  const message: InternalMessageLine = {
+    id: created.id,
+    senderId: created.senderId,
+    recipientId: created.recipientId,
+    body: created.body,
+    readAt: created.readAt?.toISOString() ?? null,
+    createdAt: created.createdAt.toISOString(),
+    isMine: true,
+    attachments: created.attachments.map((a) => ({
+      id: a.id,
+      fileName: a.fileName,
+      mimeType: a.mimeType,
+      sizeBytes: a.sizeBytes,
+      createdAt: a.createdAt.toISOString(),
+    })),
+  };
+
+  return { ok: true, id: msg.id, message };
 }
 
 export async function getMessageAttachmentForUser(

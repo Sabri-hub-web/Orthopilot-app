@@ -316,6 +316,7 @@ export interface MessageAttachmentMeta {
   fileName: string;
   mimeType: string;
   sizeBytes: number;
+  createdAt?: string;
 }
 
 export interface InternalMessageLine {

@@ -16,6 +16,7 @@ import { errorMessageFromResponse } from "@/lib/validation/client-errors";
 import type {
   ConversationSummary,
   ConversationsResponse,
+  InternalMessageLine,
   MessagesThreadResponse,
   PresenceTeamResponse,
   RecipientOption,
@@ -184,7 +185,7 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
     for (let i = 0; i < files.length && next.length < room; i++) {
       const file = files[i]!;
       if (file.size > MESSAGE_ATTACHMENT_MAX_BYTES) {
-        setError(`« ${file.name} » dépasse 5 Mo.`);
+        setError(`« ${file.name} » dépasse 10 Mo.`);
         continue;
       }
       const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined;
@@ -207,6 +208,25 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
     const trimmed = body.trim();
     if (!trimmed && pendingFiles.length === 0) return;
 
+    const peerLabel =
+      thread?.peer.fullName ?? recipients.find((r) => r.id === peerId)?.fullName ?? "Collègue";
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: InternalMessageLine = {
+      id: tempId,
+      senderId: currentUserId,
+      recipientId: peerId,
+      body: trimmed || (pendingFiles.length > 0 ? "" : ""),
+      readAt: null,
+      createdAt: new Date().toISOString(),
+      isMine: true,
+      attachments: [],
+    };
+
+    setThread((prev) => ({
+      peer: prev?.peer ?? { id: peerId, fullName: peerLabel },
+      messages: [...(prev?.messages ?? []), optimistic],
+    }));
+
     setSending(true);
     setError(null);
     try {
@@ -226,13 +246,38 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
             });
 
       if (!res.ok) {
+        setThread((prev) =>
+          prev
+            ? { ...prev, messages: prev.messages.filter((m) => m.id !== tempId) }
+            : prev,
+        );
         setError(await errorMessageFromResponse(res));
         return;
       }
+
+      const data: { id: string; message?: InternalMessageLine } = await res.json();
       setBody("");
       clearPendingFiles();
-      await loadThread(peerId);
+
+      if (data.message) {
+        setThread((prev) => {
+          const peer = prev?.peer ?? { id: peerId, fullName: peerLabel };
+          const rest = (prev?.messages ?? []).filter((m) => m.id !== tempId);
+          return {
+            peer,
+            messages: [...rest, { ...data.message!, isMine: true, attachments: data.message!.attachments ?? [] }],
+          };
+        });
+      } else {
+        await loadThread(peerId);
+      }
+
       await loadConversations();
+    } catch {
+      setThread((prev) =>
+        prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== tempId) } : prev,
+      );
+      setError("Impossible d’envoyer le message.");
     } finally {
       setSending(false);
     }
@@ -282,6 +327,7 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
           presence={activePresence}
           recipients={recipients}
           recipientsLoading={loadingRecipients}
+          presenceMap={presenceMap}
           onRecipientChange={pickPeer}
           onDraftChange={setBody}
           onSend={handleSend}

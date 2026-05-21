@@ -1,7 +1,6 @@
-import { readFile } from "fs/promises";
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiPermission } from "@/lib/auth/api-guard";
-import { resolveAttachmentAbsolutePath } from "@/lib/message-attachments";
+import { downloadMessageAttachmentFile } from "@/server/storage/message-attachments-storage";
 import { getMessageAttachmentForUser } from "@/services/messages-service";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -21,11 +20,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ message: "Fichier introuvable." }, { status: 404 });
     }
 
-    const absPath = resolveAttachmentAbsolutePath(result.storageKey);
-    const buffer = await readFile(absPath);
+    const buffer = await downloadMessageAttachmentFile(result.storageKey);
     const inline = request.nextUrl.searchParams.get("inline") === "1";
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         "Content-Type": result.mimeType,

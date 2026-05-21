@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { MessagesRecipientSelect } from "@/components/messages/messages-recipient-select";
+import { MessagesRecipientSearch } from "@/components/messages/messages-recipient-search";
 import {
   formatConversationTime,
   initialsFromName,
@@ -54,11 +54,11 @@ export function MessagesSidebar({
     <div className="flex h-full min-h-0 flex-col">
       <header className="shrink-0 space-y-3 border-b border-slate-100 px-4 pb-3 pt-4">
         <h1 className="text-[15px] font-semibold tracking-tight text-slate-900">Messages</h1>
-        <MessagesRecipientSelect
-          id="sidebar-recipient"
+        <MessagesRecipientSearch
           recipients={recipients}
           value={activePeerId}
           loading={recipientsLoading}
+          presenceMap={presenceMap}
           onChange={onRecipientChange}
         />
         <div className="relative">

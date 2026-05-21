@@ -14,7 +14,7 @@ import {
   presenceStatusLabel,
 } from "@/lib/messages-ui";
 import { MessagesComposer, type PendingMessageFile } from "@/components/messages/messages-composer";
-import { MessagesRecipientSelect } from "@/components/messages/messages-recipient-select";
+import { MessagesRecipientSearch } from "@/components/messages/messages-recipient-search";
 import { MessagesMessageAttachments } from "@/components/messages/messages-message-attachments";
 import type { FormEvent, RefObject } from "react";
 import type { InternalMessageLine, PresenceTeamMember, RecipientOption } from "@/types/domain";
@@ -32,6 +32,7 @@ interface MessagesChatProps {
   presence?: PresenceTeamMember;
   recipients: RecipientOption[];
   recipientsLoading?: boolean;
+  presenceMap: Map<string, PresenceTeamMember>;
   onRecipientChange: (peerId: string) => void;
   onDraftChange: (v: string) => void;
   onSend: (e: FormEvent) => void;
@@ -64,6 +65,7 @@ export function MessagesChat({
   presence,
   recipients,
   recipientsLoading,
+  presenceMap,
   onRecipientChange,
   onDraftChange,
   onSend,
@@ -184,11 +186,11 @@ export function MessagesChat({
       </div>
 
       <div className="shrink-0 border-t border-slate-100 bg-white px-4 pt-2.5">
-        <MessagesRecipientSelect
-          id="chat-recipient"
+        <MessagesRecipientSearch
           recipients={recipients}
           value={peerId}
           loading={recipientsLoading}
+          presenceMap={presenceMap}
           onChange={onRecipientChange}
           compact
         />

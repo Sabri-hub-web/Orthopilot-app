@@ -1,7 +1,7 @@
 import type { InternalMessageLine, PresenceTeamMember, RecipientOption } from "@/types/domain";
 
 export const MESSAGE_ATTACHMENT_MAX_FILES = 5;
-export const MESSAGE_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+export const MESSAGE_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
 
 export function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);

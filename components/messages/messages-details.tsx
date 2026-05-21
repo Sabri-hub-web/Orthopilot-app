@@ -27,11 +27,6 @@ interface MessagesDetailsProps {
   presence?: PresenceTeamMember;
 }
 
-const DEMO_FILES = [
-  { name: "releve_reglement_martin_lucas.pdf", type: "pdf" as const, size: 245760 },
-  { name: "plan_traitement_martin_lucas.xlsx", type: "xlsx" as const, size: 189440 },
-];
-
 function uniqueAttachments(messages: InternalMessageLine[]): MessageAttachmentMeta[] {
   const seen = new Set<string>();
   const out: MessageAttachmentMeta[] = [];
@@ -46,13 +41,32 @@ function uniqueAttachments(messages: InternalMessageLine[]): MessageAttachmentMe
   return out;
 }
 
+function formatAttDate(iso?: string): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+}
+
+function DocIcon({ mimeType }: { mimeType: string }) {
+  if (mimeType.includes("spreadsheet") || mimeType.includes("excel")) {
+    return (
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+        <FileSpreadsheet className="h-3.5 w-3.5" />
+      </span>
+    );
+  }
+  return (
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
+      <FileText className="h-3.5 w-3.5" />
+    </span>
+  );
+}
+
 export function MessagesDetails({ peerId, peerName, messages, presence }: MessagesDetailsProps) {
   const [notificationsOn, setNotificationsOn] = useState(true);
 
   const allAtt = useMemo(() => uniqueAttachments(messages), [messages]);
   const docAtt = allAtt.filter((a) => !a.mimeType.startsWith("image/"));
   const imgAtt = allAtt.filter((a) => a.mimeType.startsWith("image/"));
-  const showDemoFiles = peerId && docAtt.length === 0;
 
   if (!peerId || !peerName) {
     return (
@@ -139,51 +153,38 @@ export function MessagesDetails({ peerId, peerName, messages, presence }: Messag
               Fichiers partagés
             </h3>
             <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-600">
-              {showDemoFiles ? DEMO_FILES.length : docAtt.length}
+              {docAtt.length}
             </span>
           </div>
-          <div className="space-y-1.5">
-            {showDemoFiles
-              ? DEMO_FILES.map((f) => (
-                  <div
-                    key={f.name}
-                    className="flex items-center gap-2 rounded-lg border border-dashed border-slate-200 bg-slate-50/50 px-2 py-2 opacity-75"
-                  >
-                    <span
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${f.type === "pdf" ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"}`}
-                    >
-                      {f.type === "pdf" ? (
-                        <FileText className="h-3.5 w-3.5" />
-                      ) : (
-                        <FileSpreadsheet className="h-3.5 w-3.5" />
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[11px] font-medium text-slate-700">{f.name}</span>
-                      <span className="text-[9px] text-slate-400">
-                        {formatFileSize(f.size)} · Exemple
-                      </span>
-                    </span>
-                  </div>
-                ))
-              : docAtt.map((f) => (
-                  <a
-                    key={f.id}
-                    href={attachmentDownloadUrl(f.id)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-2 py-2 transition hover:bg-slate-50"
-                  >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
-                      <FileText className="h-3.5 w-3.5" />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-slate-700">
+          {docAtt.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50/50 px-2 py-3 text-center text-[10px] text-slate-400">
+              Aucun fichier partagé pour l’instant.
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              {docAtt.map((f) => (
+                <a
+                  key={f.id}
+                  href={attachmentDownloadUrl(f.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-2 py-2 transition hover:bg-slate-50"
+                >
+                  <DocIcon mimeType={f.mimeType} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[11px] font-medium text-slate-700">
                       {f.fileName}
                     </span>
-                    <Download className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                  </a>
-                ))}
-          </div>
+                    <span className="text-[9px] text-slate-400">
+                      {formatFileSize(f.sizeBytes)}
+                      {f.createdAt ? ` · ${formatAttDate(f.createdAt)}` : ""}
+                    </span>
+                  </span>
+                  <Download className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                </a>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="mt-5">
@@ -192,7 +193,7 @@ export function MessagesDetails({ peerId, peerName, messages, presence }: Messag
               Médias partagés
             </h3>
             <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-600">
-              {imgAtt.length > 0 ? imgAtt.length : 1}
+              {imgAtt.length}
             </span>
           </div>
           {imgAtt.length > 0 ? (
@@ -215,10 +216,10 @@ export function MessagesDetails({ peerId, peerName, messages, presence }: Messag
               ))}
             </div>
           ) : (
-            <div className="flex aspect-video items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50">
+            <div className="flex aspect-video items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50/50">
               <div className="text-center">
                 <ImageIcon className="mx-auto h-7 w-7 text-slate-300" />
-                <p className="mt-1 text-[9px] text-slate-400">Radio / imagerie</p>
+                <p className="mt-1 text-[10px] text-slate-400">Aucun média partagé</p>
               </div>
             </div>
           )}

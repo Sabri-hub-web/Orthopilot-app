@@ -1,10 +1,7 @@
-import { mkdir, writeFile } from "fs/promises";
 import path from "path";
-import { randomUUID } from "crypto";
-import {
-  MESSAGE_ATTACHMENT_MAX_BYTES,
-  MESSAGE_ATTACHMENT_MAX_FILES,
-} from "@/lib/messages-ui";
+import { uploadMessageAttachmentFile } from "@/server/storage/message-attachments-storage";
+
+export const MESSAGE_ATTACHMENT_MAX_FILES = 5;
 
 const ALLOWED_MIME = new Set([
   "image/jpeg",
@@ -18,6 +15,18 @@ const ALLOWED_MIME = new Set([
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+]);
+
+const BLOCKED_EXT = new Set([
+  ".exe",
+  ".bat",
+  ".cmd",
+  ".js",
+  ".mjs",
+  ".sh",
+  ".ps1",
+  ".dll",
+  ".msi",
 ]);
 
 export interface ParsedMessageFile {
@@ -53,13 +62,20 @@ export function isImageMime(mime: string): boolean {
   return mime.startsWith("image/");
 }
 
-export function validateMessageFiles(files: ParsedMessageFile[]): string | null {
+export function validateMessageFiles(
+  files: ParsedMessageFile[],
+  maxBytes: number,
+): string | null {
   if (files.length > MESSAGE_ATTACHMENT_MAX_FILES) {
     return `Maximum ${MESSAGE_ATTACHMENT_MAX_FILES} fichiers par message.`;
   }
   for (const f of files) {
-    if (f.sizeBytes > MESSAGE_ATTACHMENT_MAX_BYTES) {
-      return `« ${f.fileName} » dépasse 5 Mo.`;
+    const ext = path.extname(f.fileName).toLowerCase();
+    if (BLOCKED_EXT.has(ext)) {
+      return `Extension non autorisée : ${f.fileName}`;
+    }
+    if (f.sizeBytes > maxBytes) {
+      return `« ${f.fileName} » dépasse ${Math.round(maxBytes / (1024 * 1024))} Mo.`;
     }
     if (!isAllowedMessageMime(f.mimeType)) {
       return `Type de fichier non autorisé : ${f.fileName}.`;
@@ -72,18 +88,18 @@ export async function persistMessageAttachments(
   messageId: string,
   files: ParsedMessageFile[],
 ): Promise<{ fileName: string; mimeType: string; sizeBytes: number; storageKey: string }[]> {
-  const root = messageAttachmentsRoot();
-  await mkdir(path.join(root, messageId), { recursive: true });
-
   const saved: { fileName: string; mimeType: string; sizeBytes: number; storageKey: string }[] = [];
 
   for (const file of files) {
-    const ext = path.extname(sanitizeFileName(file.fileName)) || "";
-    const storageKey = `${messageId}/${randomUUID()}${ext}`;
-    const abs = resolveAttachmentAbsolutePath(storageKey);
-    await writeFile(abs, file.buffer);
+    const safeName = sanitizeFileName(file.fileName);
+    const { storageKey } = await uploadMessageAttachmentFile(
+      messageId,
+      file.buffer,
+      safeName,
+      file.mimeType,
+    );
     saved.push({
-      fileName: sanitizeFileName(file.fileName),
+      fileName: safeName,
       mimeType: file.mimeType,
       sizeBytes: file.sizeBytes,
       storageKey,

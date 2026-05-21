@@ -5,7 +5,6 @@ import type { PendingMessageFile } from "@/components/messages/messages-composer
 import { MessagesChat } from "@/components/messages/messages-chat";
 import { MessagesDetails } from "@/components/messages/messages-details";
 import { MessagesLayout } from "@/components/messages/messages-layout";
-import { MessagesNewMessageModal } from "@/components/messages/messages-new-message-modal";
 import { MessagesSidebar, type MessagesListTab } from "@/components/messages/messages-sidebar";
 import {
   MESSAGE_ATTACHMENT_MAX_BYTES,
@@ -225,10 +224,11 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
             tab={listTab}
             searchQuery={searchQuery}
             presenceMap={presenceMap}
+            recipients={recipients}
             onTabChange={setListTab}
             onSearchChange={setSearchQuery}
             onSelect={pickPeer}
-            onNewMessage={() => setNewMessageOpen(true)}
+            onRecipientChange={pickPeer}
           />
         }
         chat={
@@ -243,6 +243,9 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
             pendingFiles={pendingFiles}
             fileInputRef={fileInputRef}
             presence={activePresence}
+            recipients={recipients}
+            presenceMap={presenceMap}
+            onRecipientChange={pickPeer}
             onDraftChange={setBody}
             onSend={handleSend}
             onPickFiles={() => fileInputRef.current?.click()}
@@ -261,12 +264,6 @@ export function MessagesView({ currentUserName }: MessagesViewProps) {
         }
       />
 
-      <MessagesNewMessageModal
-        open={newMessageOpen}
-        recipients={recipients}
-        onClose={() => setNewMessageOpen(false)}
-        onSelect={pickPeer}
-      />
     </>
   );
 }

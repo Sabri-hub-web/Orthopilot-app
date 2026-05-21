@@ -1,12 +1,13 @@
 "use client";
 
-import { Plus, Search } from "lucide-react";
+import { Search } from "lucide-react";
+import { MessagesRecipientSelect } from "@/components/messages/messages-recipient-select";
 import {
   formatConversationTime,
   initialsFromName,
   isPresenceOnline,
 } from "@/lib/messages-ui";
-import type { ConversationSummary, PresenceTeamMember } from "@/types/domain";
+import type { ConversationSummary, PresenceTeamMember, RecipientOption } from "@/types/domain";
 
 export type MessagesListTab = "all" | "unread";
 
@@ -17,10 +18,11 @@ interface MessagesSidebarProps {
   tab: MessagesListTab;
   searchQuery: string;
   presenceMap: Map<string, PresenceTeamMember>;
+  recipients: RecipientOption[];
   onTabChange: (tab: MessagesListTab) => void;
   onSearchChange: (q: string) => void;
   onSelect: (peerId: string) => void;
-  onNewMessage: () => void;
+  onRecipientChange: (peerId: string) => void;
 }
 
 export function MessagesSidebar({
@@ -30,10 +32,11 @@ export function MessagesSidebar({
   tab,
   searchQuery,
   presenceMap,
+  recipients,
   onTabChange,
   onSearchChange,
   onSelect,
-  onNewMessage,
+  onRecipientChange,
 }: MessagesSidebarProps) {
   const unreadTotal = conversations.reduce((n, c) => n + c.unreadCount, 0);
 
@@ -48,17 +51,14 @@ export function MessagesSidebar({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="shrink-0 space-y-3 border-b border-slate-100 px-4 pb-3 pt-4">
-        <div className="flex items-center justify-between gap-2">
-          <h1 className="text-[15px] font-semibold tracking-tight text-slate-900">Messages</h1>
-          <button
-            type="button"
-            onClick={onNewMessage}
-            className="inline-flex items-center gap-1 rounded-lg bg-[#5D5CDE] px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-[#4f4fc8]"
-          >
-            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-            Nouveau message
-          </button>
-        </div>
+        <h1 className="text-[15px] font-semibold tracking-tight text-slate-900">Messages</h1>
+        <MessagesRecipientSelect
+          id="sidebar-recipient"
+          recipients={recipients}
+          value={activePeerId}
+          presenceMap={presenceMap}
+          onChange={onRecipientChange}
+        />
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
           <input

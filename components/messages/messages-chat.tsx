@@ -14,9 +14,10 @@ import {
   presenceStatusLabel,
 } from "@/lib/messages-ui";
 import { MessagesComposer, type PendingMessageFile } from "@/components/messages/messages-composer";
+import { MessagesRecipientSelect } from "@/components/messages/messages-recipient-select";
 import { MessagesMessageAttachments } from "@/components/messages/messages-message-attachments";
 import type { FormEvent, RefObject } from "react";
-import type { InternalMessageLine, PresenceTeamMember } from "@/types/domain";
+import type { InternalMessageLine, PresenceTeamMember, RecipientOption } from "@/types/domain";
 
 interface MessagesChatProps {
   peerId: string | null;
@@ -29,6 +30,9 @@ interface MessagesChatProps {
   pendingFiles: PendingMessageFile[];
   fileInputRef: RefObject<HTMLInputElement | null>;
   presence?: PresenceTeamMember;
+  recipients: RecipientOption[];
+  presenceMap: Map<string, PresenceTeamMember>;
+  onRecipientChange: (peerId: string) => void;
   onDraftChange: (v: string) => void;
   onSend: (e: FormEvent) => void;
   onPickFiles: () => void;
@@ -58,6 +62,9 @@ export function MessagesChat({
   pendingFiles,
   fileInputRef,
   presence,
+  recipients,
+  presenceMap,
+  onRecipientChange,
   onDraftChange,
   onSend,
   onPickFiles,
@@ -69,47 +76,45 @@ export function MessagesChat({
   const statusLabel = online ? "En ligne" : presenceStatusLabel(presence);
   const dayGroups = groupMessagesByDay(messages);
 
-  if (!peerId) {
-    return (
-      <div className="flex h-full items-center justify-center bg-[#f8f9fb] text-sm text-slate-500">
-        Sélectionnez une conversation
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex shrink-0 items-center gap-3 border-b border-slate-100 px-4 py-2.5">
-        <span className="relative shrink-0">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-slate-500 to-slate-700 text-[10px] font-bold text-white">
-            {initialsFromName(peerName ?? "")}
+      {peerId ? (
+        <header className="flex shrink-0 items-center gap-3 border-b border-slate-100 px-4 py-2.5">
+          <span className="relative shrink-0">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-slate-500 to-slate-700 text-[10px] font-bold text-white">
+              {initialsFromName(peerName ?? "")}
+            </span>
+            {online ? (
+              <span className="absolute -bottom-px -right-px h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
+            ) : null}
           </span>
-          {online ? (
-            <span className="absolute -bottom-px -right-px h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
-          ) : null}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-slate-900">{peerName}</p>
-          <p className={`text-xs ${online ? "font-medium text-emerald-600" : "text-slate-400"}`}>
-            {statusLabel}
-          </p>
-        </div>
-        <div className="flex items-center gap-0.5">
-          {[Phone, Video, Info, MoreHorizontal].map((Icon, i) => (
-            <button
-              key={i}
-              type="button"
-              disabled
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-50 disabled:opacity-45"
-            >
-              <Icon className="h-4 w-4" />
-            </button>
-          ))}
-        </div>
-      </header>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-slate-900">{peerName}</p>
+            <p className={`text-xs ${online ? "font-medium text-emerald-600" : "text-slate-400"}`}>
+              {statusLabel}
+            </p>
+          </div>
+          <div className="flex items-center gap-0.5">
+            {[Phone, Video, Info, MoreHorizontal].map((Icon, i) => (
+              <button
+                key={i}
+                type="button"
+                disabled
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-50 disabled:opacity-45"
+              >
+                <Icon className="h-4 w-4" />
+              </button>
+            ))}
+          </div>
+        </header>
+      ) : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#f8f9fb] px-4">
-        {loading ? (
+        {!peerId ? (
+          <p className="py-10 text-center text-sm text-slate-500">
+            Choisissez un collègue dans la liste déroulante ci-dessous.
+          </p>
+        ) : loading ? (
           <p className="py-10 text-center text-sm text-slate-500">Chargement…</p>
         ) : messages.length === 0 ? (
           <p className="py-10 text-center text-sm text-slate-500">Aucun message. Écrivez ci-dessous.</p>
@@ -178,9 +183,20 @@ export function MessagesChat({
         <div ref={messagesEndRef} className="h-1 shrink-0" aria-hidden />
       </div>
 
+      <div className="shrink-0 border-t border-slate-100 bg-white px-4 pt-2.5">
+        <MessagesRecipientSelect
+          id="chat-recipient"
+          recipients={recipients}
+          value={peerId}
+          presenceMap={presenceMap}
+          onChange={onRecipientChange}
+          compact
+        />
+      </div>
       <MessagesComposer
         value={draft}
         sending={sending}
+        disabled={!peerId}
         pendingFiles={pendingFiles}
         fileInputRef={fileInputRef}
         onChange={onDraftChange}

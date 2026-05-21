@@ -17,6 +17,7 @@ export interface PendingMessageFile {
 interface MessagesComposerProps {
   value: string;
   sending: boolean;
+  disabled?: boolean;
   pendingFiles: PendingMessageFile[];
   fileInputRef: RefObject<HTMLInputElement | null>;
   onChange: (value: string) => void;
@@ -29,6 +30,7 @@ interface MessagesComposerProps {
 export function MessagesComposer({
   value,
   sending,
+  disabled = false,
   pendingFiles,
   fileInputRef,
   onChange,
@@ -37,7 +39,8 @@ export function MessagesComposer({
   onFilesSelected,
   onRemoveFile,
 }: MessagesComposerProps) {
-  const canSend = !sending && (value.trim().length > 0 || pendingFiles.length > 0);
+  const canSend =
+    !disabled && !sending && (value.trim().length > 0 || pendingFiles.length > 0);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -90,8 +93,9 @@ export function MessagesComposer({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Votre message…"
-          className="min-w-0 flex-1 bg-transparent py-2 text-sm text-slate-800 outline-none placeholder:text-slate-400"
+          placeholder={disabled ? "Choisissez un destinataire…" : "Votre message…"}
+          disabled={disabled}
+          className="min-w-0 flex-1 bg-transparent py-2 text-sm text-slate-800 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
         />
         <button
           type="button"

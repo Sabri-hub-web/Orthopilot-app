@@ -1,5 +1,7 @@
 import type { InternalMessageLine, PresenceTeamMember, RecipientOption } from "@/types/domain";
 
+export const MESSAGE_ATTACHMENTS_ENABLED = false;
+
 export const MESSAGE_ATTACHMENT_MAX_FILES = 5;
 export const MESSAGE_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
 

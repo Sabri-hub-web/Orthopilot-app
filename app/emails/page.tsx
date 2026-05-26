@@ -8,6 +8,9 @@ export default async function EmailsPage() {
   return (
     <DashboardLayout
       title="Emails"
+      fillViewport
+      topbarCompact
+      contentFlush
       currentUserName={user.fullName}
       currentUserRole={roleLabel(user.role)}
       currentUserRoleKey={user.role}

@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Loader2, Paperclip, Send, Smile, X } from "lucide-react";
 import {
   MESSAGE_ATTACHMENT_MAX_FILES,
+  MESSAGE_ATTACHMENTS_ENABLED,
   MESSAGE_FILE_ACCEPT,
   formatFileSize,
 } from "@/lib/messages-ui";
@@ -39,8 +41,21 @@ export function MessagesComposer({
   onFilesSelected,
   onRemoveFile,
 }: MessagesComposerProps) {
+  const [attachmentNotice, setAttachmentNotice] = useState(false);
+
   const canSend =
-    !disabled && !sending && (value.trim().length > 0 || pendingFiles.length > 0);
+    !disabled &&
+    !sending &&
+    (value.trim().length > 0 || (MESSAGE_ATTACHMENTS_ENABLED && pendingFiles.length > 0));
+
+  function handlePaperclipClick() {
+    if (!MESSAGE_ATTACHMENTS_ENABLED) {
+      setAttachmentNotice(true);
+      window.setTimeout(() => setAttachmentNotice(false), 3500);
+      return;
+    }
+    onPickFiles();
+  }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -54,19 +69,27 @@ export function MessagesComposer({
 
   return (
     <form onSubmit={onSubmit} className="shrink-0 border-t border-slate-100 bg-white px-4 py-3">
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        accept={MESSAGE_FILE_ACCEPT}
-        className="hidden"
-        onChange={(e) => {
-          onFilesSelected(e.target.files);
-          e.target.value = "";
-        }}
-      />
+      {MESSAGE_ATTACHMENTS_ENABLED ? (
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept={MESSAGE_FILE_ACCEPT}
+          className="hidden"
+          onChange={(e) => {
+            onFilesSelected(e.target.files);
+            e.target.value = "";
+          }}
+        />
+      ) : null}
 
-      {pendingFiles.length > 0 ? (
+      {attachmentNotice ? (
+        <p className="mb-1.5 text-center text-[11px] text-slate-500" role="status">
+          Pièces jointes bientôt disponibles.
+        </p>
+      ) : null}
+
+      {MESSAGE_ATTACHMENTS_ENABLED && pendingFiles.length > 0 ? (
         <ul className="mb-2 flex flex-wrap gap-1.5">
           {pendingFiles.map((pf) => (
             <li
@@ -99,10 +122,9 @@ export function MessagesComposer({
         />
         <button
           type="button"
-          onClick={onPickFiles}
-          disabled={sending || pendingFiles.length >= MESSAGE_ATTACHMENT_MAX_FILES}
-          title="Pièce jointe"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 disabled:opacity-40"
+          onClick={handlePaperclipClick}
+          title={MESSAGE_ATTACHMENTS_ENABLED ? "Pièce jointe" : "Pièces jointes bientôt disponibles."}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100"
         >
           <Paperclip className="h-4 w-4" />
         </button>

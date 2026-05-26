@@ -63,7 +63,7 @@ export const emailStatusBadgeClass: Record<PriorityEmail["status"], string> = {
 };
 
 function emailSearchText(email: PriorityEmail): string {
-  return `${email.subject} ${email.comment ?? ""} ${email.from} ${email.patientName ?? ""}`.toLowerCase();
+  return `${email.subject} ${email.comment ?? ""} ${email.bodyText ?? ""} ${email.snippet ?? ""} ${email.from} ${email.patientName ?? ""}`.toLowerCase();
 }
 
 export function getEmailAccentType(email: PriorityEmail): EmailAccentType {
@@ -130,6 +130,8 @@ export function formatEmailListTime(receivedDate: string, receivedAt: string): s
 }
 
 export function emailPreviewText(email: PriorityEmail): string {
+  if (email.snippet?.trim()) return email.snippet.trim();
+  if (email.bodyText?.trim()) return email.bodyText.trim().slice(0, 120);
   if (email.comment?.trim()) return email.comment.trim();
   return email.subject;
 }

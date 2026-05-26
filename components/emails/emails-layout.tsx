@@ -5,6 +5,7 @@ import { EMAILS_TOPBAR_PX } from "@/lib/emails-ui";
 
 interface EmailsLayoutProps {
   categoryBanner: ReactNode;
+  gmailBar?: ReactNode;
   sidebar: ReactNode;
   viewer: ReactNode;
   aiPanel: ReactNode;
@@ -14,6 +15,7 @@ interface EmailsLayoutProps {
 
 export function EmailsLayout({
   categoryBanner,
+  gmailBar,
   sidebar,
   viewer,
   aiPanel,
@@ -42,6 +44,8 @@ export function EmailsLayout({
           Gérez, triez et suivez tous les emails du cabinet.
         </p>
       </header>
+
+      {gmailBar}
 
       {categoryBanner}
 

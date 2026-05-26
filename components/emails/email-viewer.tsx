@@ -57,6 +57,7 @@ export function EmailViewer({
   }
 
   const bodyText =
+    email.bodyText?.trim() ||
     email.comment?.trim() ||
     `Objet : ${email.subject}\n\nAucun contenu détaillé enregistré pour cet email. Utilisez le commentaire interne pour ajouter des notes.`;
 

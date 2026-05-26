@@ -49,10 +49,22 @@ export interface PriorityEmail {
   category: "Urgent" | "Administratif" | "Suivi clinique";
   status: "A traiter" | "En cours" | "Traite" | "Archive";
   comment: string | null;
+  snippet?: string | null;
+  bodyText?: string | null;
+  importedFrom?: "MANUAL" | "GMAIL";
   patientId: string | null;
   patientName: string | null;
   assigneeId: string | null;
   assignee: string;
+}
+
+export interface GmailConnectionStatus {
+  connected: boolean;
+  configured?: boolean;
+  gmailEmail?: string;
+  lastSyncAt?: string | null;
+  lastSyncCount?: number;
+  importedTotal?: number;
 }
 
 export interface EmailFormPayload {

@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { EmailAiPanel } from "@/components/emails/email-ai-panel";
 import { EmailCategoryBanner } from "@/components/emails/email-category-banner";
 import { EmailComposeModal } from "@/components/emails/email-compose-modal";
+import { EmailGmailBar } from "@/components/emails/email-gmail-bar";
 import { EmailSidebar } from "@/components/emails/email-sidebar";
 import { EmailViewer } from "@/components/emails/email-viewer";
 import { EmailsLayout } from "@/components/emails/emails-layout";
@@ -15,6 +17,7 @@ import {
   EmailCategoryApi,
   EmailStatusApi,
   EmailsListResponse,
+  GmailConnectionStatus,
   PatientListItem,
   UsersListItem,
 } from "@/types/domain";
@@ -65,6 +68,73 @@ export function EmailsView() {
   const [replyDraft, setReplyDraft] = useState("");
   const [replySending, setReplySending] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [gmailStatus, setGmailStatus] = useState<GmailConnectionStatus | null>(null);
+  const [gmailStatusLoading, setGmailStatusLoading] = useState(true);
+  const [gmailSyncing, setGmailSyncing] = useState(false);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const gmailParam = searchParams.get("gmail");
+    if (gmailParam === "connected") {
+      setSuccess("Gmail connecte avec succes.");
+      window.history.replaceState({}, "", "/emails");
+    } else if (gmailParam === "error") {
+      setError("Connexion Gmail echouee. Reessayez.");
+      window.history.replaceState({}, "", "/emails");
+    }
+  }, [searchParams]);
+
+  const loadGmailStatus = useCallback(async () => {
+    try {
+      setGmailStatusLoading(true);
+      const response = await fetch("/api/gmail/status", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = (await response.json()) as GmailConnectionStatus;
+      setGmailStatus(payload);
+    } catch {
+      // statut Gmail facultatif
+    } finally {
+      setGmailStatusLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadGmailStatus();
+  }, [loadGmailStatus]);
+
+  function handleConnectGmail() {
+    window.location.href = "/api/gmail/connect";
+  }
+
+  async function handleSyncGmail() {
+    try {
+      setGmailSyncing(true);
+      setError(null);
+      const response = await fetch("/api/gmail/sync", { method: "POST" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(
+          typeof payload.message === "string"
+            ? payload.message
+            : "Synchronisation Gmail impossible.",
+        );
+        if (payload.reconnectRequired) {
+          await loadGmailStatus();
+        }
+        return;
+      }
+      await loadEmails();
+      await loadGmailStatus();
+      const created = typeof payload.created === "number" ? payload.created : 0;
+      const updated = typeof payload.updated === "number" ? payload.updated : 0;
+      setSuccess(`Synchronisation Gmail : ${created} nouveau(x), ${updated} mis a jour.`);
+    } catch (syncError) {
+      const message = syncError instanceof Error ? syncError.message : "Erreur inconnue.";
+      setError(message);
+    } finally {
+      setGmailSyncing(false);
+    }
+  }
 
   useEffect(() => {
     if (!success) return;
@@ -326,6 +396,15 @@ export function EmailsView() {
       <EmailsLayout
         success={success}
         error={error}
+        gmailBar={
+          <EmailGmailBar
+            status={gmailStatus}
+            statusLoading={gmailStatusLoading}
+            syncing={gmailSyncing}
+            onConnect={handleConnectGmail}
+            onSync={handleSyncGmail}
+          />
+        }
         categoryBanner={
           <EmailCategoryBanner
             allEmails={data?.items ?? []}

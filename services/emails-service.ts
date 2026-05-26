@@ -13,6 +13,9 @@ type EmailRow = {
   category: EmailCategory;
   status: EmailStatus;
   comment: string | null;
+  snippet: string | null;
+  bodyText: string | null;
+  importedFrom: "MANUAL" | "GMAIL";
   patientId: string | null;
   patient: { firstName: string; lastName: string } | null;
   assigneeId: string | null;
@@ -42,6 +45,9 @@ export function toPriorityEmail(item: EmailRow): PriorityEmail {
     category: emailCategoryLabelMap[item.category],
     status: emailStatusLabelMap[item.status],
     comment: item.comment,
+    snippet: item.snippet,
+    bodyText: item.bodyText,
+    importedFrom: item.importedFrom,
     patientId: item.patientId,
     patientName: patientLabel(item.patient),
     assigneeId: item.assigneeId,

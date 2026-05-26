@@ -12,6 +12,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
+    "db:gmail-migrate": "tsx scripts/apply-gmail-migration.ts",
     "vercel-build": "next build"
   },
   "dependencies": {

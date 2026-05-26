@@ -26,7 +26,7 @@ export function EmailListItem({ email, selected, onSelect }: EmailListItemProps)
     <button
       type="button"
       onClick={() => onSelect(email.id)}
-      className={`group relative flex h-[80px] w-full shrink-0 items-stretch overflow-hidden rounded-2xl border text-left transition-all duration-200 ${
+      className={`group relative flex h-[72px] w-full shrink-0 items-stretch overflow-hidden rounded-2xl border text-left transition-all duration-200 ${
         selected
           ? "border-violet-300 bg-violet-50/80 shadow-md shadow-violet-500/10"
           : "border-slate-200/80 bg-white hover:bg-slate-50"
@@ -34,9 +34,9 @@ export function EmailListItem({ email, selected, onSelect }: EmailListItemProps)
     >
       <span className={`w-1 shrink-0 ${emailAccentBarClass[accent]}`} aria-hidden />
 
-      <div className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5">
+      <div className="flex min-w-0 flex-1 items-center gap-2.5 px-2.5 py-2">
         <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white ${
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ${
             selected
               ? "bg-gradient-to-br from-[#7C3AED] to-[#6D28D9]"
               : "bg-gradient-to-br from-slate-500 to-slate-700"

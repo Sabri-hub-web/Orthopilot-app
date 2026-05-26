@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmailAiPanel } from "@/components/emails/email-ai-panel";
+import { EmailCategoryBanner } from "@/components/emails/email-category-banner";
 import { EmailComposeModal } from "@/components/emails/email-compose-modal";
 import { EmailSidebar } from "@/components/emails/email-sidebar";
 import { EmailViewer } from "@/components/emails/email-viewer";
@@ -325,19 +326,23 @@ export function EmailsView() {
       <EmailsLayout
         success={success}
         error={error}
+        categoryBanner={
+          <EmailCategoryBanner
+            allEmails={data?.items ?? []}
+            activeTab={filterTab}
+            onTabChange={setFilterTab}
+          />
+        }
         sidebar={
           <EmailSidebar
             emails={filteredEmails}
-            allEmails={data?.items ?? []}
             loading={loading}
             selectedId={selectedId}
-            filterTab={filterTab}
             searchQuery={searchQuery}
             page={data?.page ?? page}
             totalPages={data?.totalPages ?? 1}
             canGoPrev={canGoPrev}
             canGoNext={canGoNext}
-            onFilterChange={setFilterTab}
             onSearchChange={setSearchQuery}
             onSelect={setSelectedId}
             onRefresh={handleRefresh}

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { EMAILS_TOPBAR_PX } from "@/lib/emails-ui";
 
 interface EmailsLayoutProps {
+  categoryBanner: ReactNode;
   sidebar: ReactNode;
   viewer: ReactNode;
   aiPanel: ReactNode;
@@ -11,7 +12,14 @@ interface EmailsLayoutProps {
   error?: string | null;
 }
 
-export function EmailsLayout({ sidebar, viewer, aiPanel, success, error }: EmailsLayoutProps) {
+export function EmailsLayout({
+  categoryBanner,
+  sidebar,
+  viewer,
+  aiPanel,
+  success,
+  error,
+}: EmailsLayoutProps) {
   return (
     <div
       className="flex w-full flex-col overflow-hidden bg-[#F8FAFC]"
@@ -28,8 +36,17 @@ export function EmailsLayout({ sidebar, viewer, aiPanel, success, error }: Email
         </div>
       ) : null}
 
+      <header className="shrink-0 px-4 pt-3 pb-1">
+        <h1 className="text-base font-semibold tracking-tight text-[#0F172A]">Emails</h1>
+        <p className="mt-0.5 text-xs text-[#475569]">
+          Gérez, triez et suivez tous les emails du cabinet.
+        </p>
+      </header>
+
+      {categoryBanner}
+
       <div
-        className="grid min-h-0 w-full flex-1 gap-3 overflow-hidden p-3"
+        className="grid min-h-0 w-full flex-1 gap-3 overflow-hidden px-3 pb-3 pt-1"
         style={{ gridTemplateColumns: "24% 46% 30%" }}
       >
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">{sidebar}</div>

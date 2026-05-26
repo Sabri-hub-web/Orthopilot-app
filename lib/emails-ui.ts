@@ -26,6 +26,18 @@ export const EMAIL_FILTER_TABS: { id: EmailFilterTab; label: string }[] = [
   { id: "treated", label: "Traités" },
 ];
 
+export const emailFilterBadgeClass: Record<EmailFilterTab, string> = {
+  all: "bg-violet-100 text-violet-700",
+  untreated: "bg-amber-100 text-amber-700",
+  urgent: "bg-red-100 text-red-700",
+  devis: "bg-orange-100 text-orange-700",
+  documents: "bg-emerald-100 text-emerald-700",
+  rdv: "bg-blue-100 text-blue-700",
+  mutuelle: "bg-purple-100 text-purple-700",
+  administratif: "bg-slate-100 text-slate-600",
+  treated: "bg-emerald-100 text-emerald-700",
+};
+
 export type EmailAccentType = "urgent" | "devis" | "document" | "mutuelle" | "rdv" | "default";
 
 export const emailAccentBarClass: Record<EmailAccentType, string> = {

@@ -1,5 +1,5 @@
 import path from "path";
-import { uploadMessageAttachmentFile } from "@/server/storage/message-attachments-storage";
+import { uploadMessageAttachmentFile, deleteMessageAttachmentFile } from "@/server/storage/message-attachments-storage";
 
 export const MESSAGE_ATTACHMENT_MAX_FILES = 5;
 
@@ -90,23 +90,29 @@ export async function persistMessageAttachments(
 ): Promise<{ fileName: string; mimeType: string; sizeBytes: number; storageKey: string }[]> {
   const saved: { fileName: string; mimeType: string; sizeBytes: number; storageKey: string }[] = [];
 
-  for (const file of files) {
-    const safeName = sanitizeFileName(file.fileName);
-    const { storageKey } = await uploadMessageAttachmentFile(
-      messageId,
-      file.buffer,
-      safeName,
-      file.mimeType,
-    );
-    saved.push({
-      fileName: safeName,
-      mimeType: file.mimeType,
-      sizeBytes: file.sizeBytes,
-      storageKey,
-    });
+  try {
+    for (const file of files) {
+      const safeName = sanitizeFileName(file.fileName);
+      const { storageKey } = await uploadMessageAttachmentFile(
+        messageId,
+        file.buffer,
+        safeName,
+        file.mimeType,
+      );
+      saved.push({
+        fileName: safeName,
+        mimeType: file.mimeType,
+        sizeBytes: file.sizeBytes,
+        storageKey,
+      });
+    }
+    return saved;
+  } catch (err) {
+    for (const s of saved) {
+      await deleteMessageAttachmentFile(s.storageKey);
+    }
+    throw err;
   }
-
-  return saved;
 }
 
 export async function parseMessageFilesFromFormData(formData: FormData): Promise<ParsedMessageFile[]> {

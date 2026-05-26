@@ -3,6 +3,15 @@ import { prisma } from "@/server/db/client";
 import { writeActivityLog } from "@/server/activity-log";
 import { MESSAGE_ATTACHMENT_MAX_BYTES } from "@/lib/messages-ui";
 import {
+  classifyAttachmentError,
+  logAttachmentFailure,
+} from "@/lib/message-attachment-errors";
+import {
+  deleteMessageAttachmentFile,
+  getMessageStorageBackend,
+  getStorageEnvDiagnostics,
+} from "@/server/storage/message-attachments-storage";
+import {
   persistMessageAttachments,
   type ParsedMessageFile,
   validateMessageFiles,
@@ -184,8 +193,20 @@ export async function sendInternalMessage(
   });
 
   if (files.length > 0) {
+    const storageBackend = getMessageStorageBackend();
+    const savedKeys: string[] = [];
+
     try {
+      console.info("[messages/attachments] Début enregistrement", {
+        messageId: msg.id,
+        fileCount: files.length,
+        storageBackend,
+        env: getStorageEnvDiagnostics(),
+      });
+
       const saved = await persistMessageAttachments(msg.id, files);
+      savedKeys.push(...saved.map((s) => s.storageKey));
+
       await prisma.internalMessageAttachment.createMany({
         data: saved.map((s) => ({
           messageId: msg.id,
@@ -195,14 +216,30 @@ export async function sendInternalMessage(
           storageKey: s.storageKey,
         })),
       });
+
+      console.info("[messages/attachments] Enregistrement OK", {
+        messageId: msg.id,
+        attachmentCount: saved.length,
+        storageBackend,
+      });
     } catch (err) {
+      for (const key of savedKeys) {
+        await deleteMessageAttachmentFile(key);
+      }
       await prisma.internalMessage.delete({ where: { id: msg.id } }).catch(() => undefined);
-      console.error("Attachment persist failed", err);
+
+      const phase =
+        savedKeys.length > 0 ? ("db_insert" as const) : ("storage_upload" as const);
+      const info = classifyAttachmentError(err, storageBackend, phase);
+      logAttachmentFailure({ messageId: msg.id, senderId, recipientId }, info);
+
       return {
         ok: false,
         reason: "VALIDATION",
         message:
-          "Impossible d’enregistrer la pièce jointe. Vérifiez le stockage (Supabase) ou la migration DB.",
+          info.phase === "db_insert" && info.code === "P2021"
+            ? "Table pièces jointes absente en base. Contactez l'administrateur (migration InternalMessageAttachment)."
+            : "Impossible d'enregistrer la pièce jointe. Vérifiez le stockage Supabase ou la migration DB.",
       };
     }
   }

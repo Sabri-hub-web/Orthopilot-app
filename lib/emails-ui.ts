@@ -107,6 +107,41 @@ export function countEmailsForFilter(emails: PriorityEmail[], tab: EmailFilterTa
   return emails.filter((e) => matchesEmailFilter(e, tab)).length;
 }
 
+export type EmailSourceFilter = "all" | "gmail" | "manual";
+
+export const EMAIL_SOURCE_FILTERS: { id: EmailSourceFilter; label: string }[] = [
+  { id: "all", label: "Tous" },
+  { id: "gmail", label: "Gmail" },
+  { id: "manual", label: "Manuel" },
+];
+
+export function isGmailEmail(email: PriorityEmail): boolean {
+  return email.importedFrom === "GMAIL";
+}
+
+export function matchesEmailSource(email: PriorityEmail, source: EmailSourceFilter): boolean {
+  if (source === "all") return true;
+  if (source === "gmail") return isGmailEmail(email);
+  return !isGmailEmail(email);
+}
+
+/** Lien d'ouverture du fil dans Gmail (nouvel onglet). */
+export function gmailThreadUrl(email: PriorityEmail): string | null {
+  if (!isGmailEmail(email)) return null;
+  if (email.gmailThreadId) {
+    return `https://mail.google.com/mail/u/0/#inbox/${email.gmailThreadId}`;
+  }
+  if (email.gmailMessageId) {
+    return `https://mail.google.com/mail/u/0/#search/rfc822msgid:${encodeURIComponent(email.gmailMessageId)}`;
+  }
+  return "https://mail.google.com/mail/u/0/#inbox";
+}
+
+/** Lien de réponse dans Gmail (ouvre le fil, l'utilisateur répond dans Gmail). */
+export function gmailReplyUrl(email: PriorityEmail): string | null {
+  return gmailThreadUrl(email);
+}
+
 export function initialsFromEmail(from: string): string {
   const namePart = from.includes("@") ? from.split("@")[0] ?? from : from;
   const words = namePart.replace(/[._-]/g, " ").trim().split(/\s+/).filter(Boolean);

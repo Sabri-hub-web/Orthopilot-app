@@ -10,7 +10,12 @@ import { EmailSidebar } from "@/components/emails/email-sidebar";
 import { EmailViewer } from "@/components/emails/email-viewer";
 import { EmailsLayout } from "@/components/emails/emails-layout";
 import { EMAIL_CATEGORY_VALUES, EMAIL_STATUS_VALUES, emailCategoryLabelMap, emailStatusLabelMap } from "@/lib/emails";
-import { matchesEmailFilter, type EmailFilterTab } from "@/lib/emails-ui";
+import {
+  matchesEmailFilter,
+  matchesEmailSource,
+  type EmailFilterTab,
+  type EmailSourceFilter,
+} from "@/lib/emails-ui";
 import { errorMessageFromResponse } from "@/lib/validation/client-errors";
 import {
   EmailFormPayload,
@@ -64,6 +69,8 @@ export function EmailsView() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterTab, setFilterTab] = useState<EmailFilterTab>("all");
+  const [sourceFilter, setSourceFilter] = useState<EmailSourceFilter>("all");
+  const [sourceDefaultApplied, setSourceDefaultApplied] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [replyDraft, setReplyDraft] = useState("");
   const [replySending, setReplySending] = useState(false);
@@ -101,6 +108,12 @@ export function EmailsView() {
   useEffect(() => {
     loadGmailStatus();
   }, [loadGmailStatus]);
+
+  useEffect(() => {
+    if (gmailStatusLoading || sourceDefaultApplied || !gmailStatus) return;
+    setSourceFilter(gmailStatus.connected ? "gmail" : "all");
+    setSourceDefaultApplied(true);
+  }, [gmailStatus, gmailStatusLoading, sourceDefaultApplied]);
 
   function handleConnectGmail() {
     window.location.href = "/api/gmail/connect";
@@ -189,10 +202,14 @@ export function EmailsView() {
     loadOptions();
   }, []);
 
-  const filteredEmails = useMemo(() => {
+  const sourceEmails = useMemo(() => {
     if (!data) return [];
-    return data.items.filter((email) => matchesEmailFilter(email, filterTab));
-  }, [data, filterTab]);
+    return data.items.filter((email) => matchesEmailSource(email, sourceFilter));
+  }, [data, sourceFilter]);
+
+  const filteredEmails = useMemo(() => {
+    return sourceEmails.filter((email) => matchesEmailFilter(email, filterTab));
+  }, [sourceEmails, filterTab]);
 
   const selectedEmail = useMemo(
     () => filteredEmails.find((e) => e.id === selectedId) ?? data?.items.find((e) => e.id === selectedId) ?? null,
@@ -407,7 +424,7 @@ export function EmailsView() {
         }
         categoryBanner={
           <EmailCategoryBanner
-            allEmails={data?.items ?? []}
+            allEmails={sourceEmails}
             activeTab={filterTab}
             onTabChange={setFilterTab}
           />
@@ -418,11 +435,14 @@ export function EmailsView() {
             loading={loading}
             selectedId={selectedId}
             searchQuery={searchQuery}
+            sourceFilter={sourceFilter}
+            gmailConnected={Boolean(gmailStatus?.connected)}
             page={data?.page ?? page}
             totalPages={data?.totalPages ?? 1}
             canGoPrev={canGoPrev}
             canGoNext={canGoNext}
             onSearchChange={setSearchQuery}
+            onSourceChange={setSourceFilter}
             onSelect={setSelectedId}
             onRefresh={handleRefresh}
             onPrevPage={() => setPage((prev) => prev - 1)}

@@ -16,6 +16,8 @@ type EmailRow = {
   snippet: string | null;
   bodyText: string | null;
   importedFrom: "MANUAL" | "GMAIL";
+  gmailMessageId: string | null;
+  gmailThreadId: string | null;
   patientId: string | null;
   patient: { firstName: string; lastName: string } | null;
   assigneeId: string | null;
@@ -48,6 +50,8 @@ export function toPriorityEmail(item: EmailRow): PriorityEmail {
     snippet: item.snippet,
     bodyText: item.bodyText,
     importedFrom: item.importedFrom,
+    gmailMessageId: item.gmailMessageId,
+    gmailThreadId: item.gmailThreadId,
     patientId: item.patientId,
     patientName: patientLabel(item.patient),
     assigneeId: item.assigneeId,

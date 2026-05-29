@@ -1,7 +1,8 @@
 "use client";
 
-import { Filter, Loader2, Plus, RefreshCw, Search } from "lucide-react";
+import { Inbox, Loader2, Plus, RefreshCw, Search } from "lucide-react";
 import { EmailListItem } from "@/components/emails/email-list-item";
+import { EMAIL_SOURCE_FILTERS, type EmailSourceFilter } from "@/lib/emails-ui";
 import type { PriorityEmail } from "@/types/domain";
 
 interface EmailSidebarProps {
@@ -9,11 +10,14 @@ interface EmailSidebarProps {
   loading: boolean;
   selectedId: string | null;
   searchQuery: string;
+  sourceFilter: EmailSourceFilter;
+  gmailConnected: boolean;
   page: number;
   totalPages: number;
   canGoPrev: boolean;
   canGoNext: boolean;
   onSearchChange: (q: string) => void;
+  onSourceChange: (source: EmailSourceFilter) => void;
   onSelect: (id: string) => void;
   onRefresh: () => void;
   onPrevPage: () => void;
@@ -26,11 +30,14 @@ export function EmailSidebar({
   loading,
   selectedId,
   searchQuery,
+  sourceFilter,
+  gmailConnected,
   page,
   totalPages,
   canGoPrev,
   canGoNext,
   onSearchChange,
+  onSourceChange,
   onSelect,
   onRefresh,
   onPrevPage,
@@ -49,7 +56,7 @@ export function EmailSidebar({
 
   return (
     <div className="flex h-full min-h-0 flex-col rounded-3xl border border-slate-200 bg-white shadow-sm">
-      <header className="shrink-0 border-b border-slate-100 px-3 py-2.5">
+      <header className="shrink-0 space-y-2 border-b border-slate-100 px-3 py-2.5">
         <div className="flex items-center gap-2">
           <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
@@ -61,13 +68,6 @@ export function EmailSidebar({
               className="h-8 w-full rounded-xl border border-slate-200 bg-slate-50 pl-8 pr-2 text-xs text-slate-800 outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-500/15"
             />
           </div>
-          <button
-            type="button"
-            title="Filtres"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
-          >
-            <Filter className="h-3.5 w-3.5" />
-          </button>
           <button
             type="button"
             title="Actualiser"
@@ -85,6 +85,23 @@ export function EmailSidebar({
             <Plus className="h-3.5 w-3.5" />
           </button>
         </div>
+
+        <div className="flex items-center gap-0.5 rounded-xl bg-slate-100/70 p-0.5">
+          {EMAIL_SOURCE_FILTERS.map((source) => (
+            <button
+              key={source.id}
+              type="button"
+              onClick={() => onSourceChange(source.id)}
+              className={`flex-1 rounded-lg px-2 py-1 text-[11px] font-medium transition-all duration-200 ${
+                sourceFilter === source.id
+                  ? "bg-white text-violet-700 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {source.label}
+            </button>
+          ))}
+        </div>
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2.5 py-2">
@@ -94,9 +111,21 @@ export function EmailSidebar({
             Chargement…
           </div>
         ) : filtered.length === 0 ? (
-          <p className="py-12 text-center text-xs text-slate-400">Aucun email dans cette catégorie.</p>
+          <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-center">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-50 text-slate-300">
+              <Inbox className="h-5 w-5" />
+            </span>
+            <p className="text-sm font-medium text-slate-500">Aucun email</p>
+            <p className="text-xs text-slate-400">
+              {sourceFilter === "gmail"
+                ? gmailConnected
+                  ? "Synchronisez Gmail pour importer vos emails."
+                  : "Connectez Gmail pour voir vos emails."
+                : "Aucun email à afficher pour ce filtre."}
+            </p>
+          </div>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-0.5">
             {filtered.map((email) => (
               <EmailListItem
                 key={email.id}

@@ -52,6 +52,8 @@ export interface PriorityEmail {
   snippet?: string | null;
   bodyText?: string | null;
   importedFrom?: "MANUAL" | "GMAIL";
+  gmailMessageId?: string | null;
+  gmailThreadId?: string | null;
   patientId: string | null;
   patientName: string | null;
   assigneeId: string | null;

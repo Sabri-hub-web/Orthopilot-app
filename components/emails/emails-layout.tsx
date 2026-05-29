@@ -8,7 +8,6 @@ interface EmailsLayoutProps {
   gmailBar?: ReactNode;
   sidebar: ReactNode;
   viewer: ReactNode;
-  aiPanel: ReactNode;
   success?: string | null;
   error?: string | null;
 }
@@ -18,7 +17,6 @@ export function EmailsLayout({
   gmailBar,
   sidebar,
   viewer,
-  aiPanel,
   success,
   error,
 }: EmailsLayoutProps) {
@@ -51,11 +49,10 @@ export function EmailsLayout({
 
       <div
         className="grid min-h-0 w-full flex-1 gap-3 overflow-hidden px-3 pb-3 pt-1"
-        style={{ gridTemplateColumns: "24% 46% 30%" }}
+        style={{ gridTemplateColumns: "30% 70%" }}
       >
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">{sidebar}</div>
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">{viewer}</div>
-        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">{aiPanel}</div>
       </div>
     </div>
   );

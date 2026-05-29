@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { EmailAiPanel } from "@/components/emails/email-ai-panel";
 import { EmailCategoryBanner } from "@/components/emails/email-category-banner";
 import { EmailComposeModal } from "@/components/emails/email-compose-modal";
 import { EmailGmailBar } from "@/components/emails/email-gmail-bar";
@@ -74,7 +73,6 @@ export function EmailsView() {
   const [sourceFilter, setSourceFilter] = useState<EmailSourceFilter>("all");
   const [sourceDefaultApplied, setSourceDefaultApplied] = useState(false);
   const [sortOption, setSortOption] = useState<EmailSortOption>("recent");
-  const [aiLoading, setAiLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [replyDraft, setReplyDraft] = useState("");
   const [replySending, setReplySending] = useState(false);
@@ -290,25 +288,6 @@ export function EmailsView() {
     }
   }
 
-  async function handleDelete(emailId: string) {
-    if (!window.confirm("Supprimer cet email ? Cette action est definitive.")) return;
-    try {
-      setError(null);
-      const response = await fetch(`/api/emails/${emailId}`, { method: "DELETE" });
-      if (!response.ok) {
-        setError(await errorMessageFromResponse(response));
-        return;
-      }
-      await loadEmails();
-      if (editingEmailId === emailId) closeCompose();
-      if (selectedId === emailId) setSelectedId(null);
-      setSuccess("Email supprime.");
-    } catch (deleteError) {
-      const message = deleteError instanceof Error ? deleteError.message : "Erreur inconnue.";
-      setError(message);
-    }
-  }
-
   function startEdit(item: EmailsListResponse["items"][number]) {
     const categoryValue =
       categoryOptions.find((o) => o.label === item.category)?.value ?? ("ADMINISTRATIF" as EmailCategoryApi);
@@ -397,26 +376,6 @@ export function EmailsView() {
     }
   }
 
-  async function handleGenerateAiSummary() {
-    if (!selectedEmail) return;
-    try {
-      setAiLoading(true);
-      setError(null);
-      const response = await fetch(`/api/emails/${selectedEmail.id}/ai-summary`, { method: "POST" });
-      if (!response.ok) {
-        setError(await errorMessageFromResponse(response));
-        return;
-      }
-      await loadEmails();
-      setSuccess("Resume IA genere.");
-    } catch (aiError) {
-      const message = aiError instanceof Error ? aiError.message : "Erreur inconnue.";
-      setError(message);
-    } finally {
-      setAiLoading(false);
-    }
-  }
-
   async function handleRefresh() {
     try {
       setLoading(true);
@@ -480,28 +439,17 @@ export function EmailsView() {
         viewer={
           <EmailViewer
             email={selectedEmail}
+            users={users}
             replyDraft={replyDraft}
             replySending={replySending}
             onReplyChange={setReplyDraft}
             onReplySubmit={handleReplySubmit}
             onMarkTreated={() => selectedEmail && quickStatusUpdate(selectedEmail.id, "TRAITE")}
-            onEdit={() => selectedEmail && startEdit(selectedEmail)}
-            onDelete={() => selectedEmail && handleDelete(selectedEmail.id)}
-          />
-        }
-        aiPanel={
-          <EmailAiPanel
-            email={selectedEmail}
-            users={users}
-            aiLoading={aiLoading}
-            onGenerateAiSummary={handleGenerateAiSummary}
-            onMarkTreated={() => selectedEmail && quickStatusUpdate(selectedEmail.id, "TRAITE")}
-            onAddComment={() => document.getElementById("email-reply-input")?.focus()}
-            onCreateTask={() => setSuccess("Creation de tache bientot disponible.")}
             onAssignChange={(assigneeId) =>
               selectedEmail && quickAssignUpdate(selectedEmail.id, assigneeId)
             }
-            onStatusChange={(status) => selectedEmail && quickStatusUpdate(selectedEmail.id, status)}
+            onCreateTask={() => setSuccess("Creation de tache bientot disponible.")}
+            onEdit={() => selectedEmail && startEdit(selectedEmail)}
           />
         }
       />

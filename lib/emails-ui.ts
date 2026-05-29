@@ -89,7 +89,12 @@ export function matchesEmailFilter(email: PriorityEmail, tab: EmailFilterTab): b
     case "devis":
       return text.includes("devis");
     case "documents":
-      return text.includes("document") || text.includes("pièce") || text.includes("piece");
+      return (
+        Boolean(email.hasAttachments) ||
+        text.includes("document") ||
+        text.includes("pièce") ||
+        text.includes("piece")
+      );
     case "rdv":
       return text.includes("rdv") || text.includes("rendez");
     case "mutuelle":
@@ -173,6 +178,78 @@ export function emailPreviewText(email: PriorityEmail): string {
 
 export function isEmailTreated(email: PriorityEmail): boolean {
   return email.status === "Traite" || email.status === "Archive";
+}
+
+export function emailHasAttachments(email: PriorityEmail): boolean {
+  return Boolean(email.hasAttachments) || (email.attachments?.length ?? 0) > 0;
+}
+
+export function formatAttachmentSize(bytes: number): string {
+  if (!bytes || bytes <= 0) return "";
+  if (bytes < 1024) return `${bytes} o`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} Ko`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} Mo`;
+}
+
+export type EmailSortOption =
+  | "recent"
+  | "oldest"
+  | "urgent"
+  | "untreated"
+  | "attachments"
+  | "category";
+
+export const EMAIL_SORT_OPTIONS: { id: EmailSortOption; label: string }[] = [
+  { id: "recent", label: "Plus récents" },
+  { id: "oldest", label: "Plus anciens" },
+  { id: "urgent", label: "Urgents d'abord" },
+  { id: "untreated", label: "Non traités d'abord" },
+  { id: "attachments", label: "Avec pièces jointes" },
+  { id: "category", label: "Par catégorie" },
+];
+
+function receivedTimestamp(email: PriorityEmail): number {
+  const t = new Date(`${email.receivedDate}T${email.receivedAt || "00:00"}`).getTime();
+  return Number.isFinite(t) ? t : 0;
+}
+
+export function sortEmails(emails: PriorityEmail[], sort: EmailSortOption): PriorityEmail[] {
+  const list = [...emails];
+  switch (sort) {
+    case "recent":
+      return list.sort((a, b) => receivedTimestamp(b) - receivedTimestamp(a));
+    case "oldest":
+      return list.sort((a, b) => receivedTimestamp(a) - receivedTimestamp(b));
+    case "urgent":
+      return list.sort((a, b) => {
+        const ua = a.category === "Urgent" ? 0 : 1;
+        const ub = b.category === "Urgent" ? 0 : 1;
+        if (ua !== ub) return ua - ub;
+        return receivedTimestamp(b) - receivedTimestamp(a);
+      });
+    case "untreated":
+      return list.sort((a, b) => {
+        const ta = isEmailTreated(a) ? 1 : 0;
+        const tb = isEmailTreated(b) ? 1 : 0;
+        if (ta !== tb) return ta - tb;
+        return receivedTimestamp(b) - receivedTimestamp(a);
+      });
+    case "attachments":
+      return list.sort((a, b) => {
+        const aa = emailHasAttachments(a) ? 0 : 1;
+        const ab = emailHasAttachments(b) ? 0 : 1;
+        if (aa !== ab) return aa - ab;
+        return receivedTimestamp(b) - receivedTimestamp(a);
+      });
+    case "category":
+      return list.sort((a, b) => {
+        const cmp = a.category.localeCompare(b.category, "fr");
+        if (cmp !== 0) return cmp;
+        return receivedTimestamp(b) - receivedTimestamp(a);
+      });
+    default:
+      return list;
+  }
 }
 
 /** Résumé IA heuristique côté client (pas de backend IA) */

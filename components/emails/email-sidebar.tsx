@@ -1,8 +1,13 @@
 "use client";
 
-import { Inbox, Loader2, Plus, RefreshCw, Search } from "lucide-react";
+import { ArrowUpDown, Inbox, Loader2, Plus, RefreshCw, Search } from "lucide-react";
 import { EmailListItem } from "@/components/emails/email-list-item";
-import { EMAIL_SOURCE_FILTERS, type EmailSourceFilter } from "@/lib/emails-ui";
+import {
+  EMAIL_SORT_OPTIONS,
+  EMAIL_SOURCE_FILTERS,
+  type EmailSortOption,
+  type EmailSourceFilter,
+} from "@/lib/emails-ui";
 import type { PriorityEmail } from "@/types/domain";
 
 interface EmailSidebarProps {
@@ -11,6 +16,7 @@ interface EmailSidebarProps {
   selectedId: string | null;
   searchQuery: string;
   sourceFilter: EmailSourceFilter;
+  sortOption: EmailSortOption;
   gmailConnected: boolean;
   page: number;
   totalPages: number;
@@ -18,6 +24,7 @@ interface EmailSidebarProps {
   canGoNext: boolean;
   onSearchChange: (q: string) => void;
   onSourceChange: (source: EmailSourceFilter) => void;
+  onSortChange: (sort: EmailSortOption) => void;
   onSelect: (id: string) => void;
   onRefresh: () => void;
   onPrevPage: () => void;
@@ -31,6 +38,7 @@ export function EmailSidebar({
   selectedId,
   searchQuery,
   sourceFilter,
+  sortOption,
   gmailConnected,
   page,
   totalPages,
@@ -38,6 +46,7 @@ export function EmailSidebar({
   canGoNext,
   onSearchChange,
   onSourceChange,
+  onSortChange,
   onSelect,
   onRefresh,
   onPrevPage,
@@ -86,21 +95,38 @@ export function EmailSidebar({
           </button>
         </div>
 
-        <div className="flex items-center gap-0.5 rounded-xl bg-slate-100/70 p-0.5">
-          {EMAIL_SOURCE_FILTERS.map((source) => (
-            <button
-              key={source.id}
-              type="button"
-              onClick={() => onSourceChange(source.id)}
-              className={`flex-1 rounded-lg px-2 py-1 text-[11px] font-medium transition-all duration-200 ${
-                sourceFilter === source.id
-                  ? "bg-white text-violet-700 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
+        <div className="flex items-center gap-2">
+          <div className="flex flex-1 items-center gap-0.5 rounded-xl bg-slate-100/70 p-0.5">
+            {EMAIL_SOURCE_FILTERS.map((source) => (
+              <button
+                key={source.id}
+                type="button"
+                onClick={() => onSourceChange(source.id)}
+                className={`flex-1 rounded-lg px-2 py-1 text-[11px] font-medium transition-all duration-200 ${
+                  sourceFilter === source.id
+                    ? "bg-white text-violet-700 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {source.label}
+              </button>
+            ))}
+          </div>
+          <div className="relative shrink-0">
+            <ArrowUpDown className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" />
+            <select
+              value={sortOption}
+              onChange={(e) => onSortChange(e.target.value as EmailSortOption)}
+              title="Trier"
+              className="h-7 appearance-none rounded-lg border border-slate-200 bg-white pl-7 pr-2 text-[11px] font-medium text-slate-600 outline-none transition focus:border-violet-300"
             >
-              {source.label}
-            </button>
-          ))}
+              {EMAIL_SORT_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </header>
 

@@ -13,7 +13,9 @@ import { EMAIL_CATEGORY_VALUES, EMAIL_STATUS_VALUES, emailCategoryLabelMap, emai
 import {
   matchesEmailFilter,
   matchesEmailSource,
+  sortEmails,
   type EmailFilterTab,
+  type EmailSortOption,
   type EmailSourceFilter,
 } from "@/lib/emails-ui";
 import { errorMessageFromResponse } from "@/lib/validation/client-errors";
@@ -71,6 +73,8 @@ export function EmailsView() {
   const [filterTab, setFilterTab] = useState<EmailFilterTab>("all");
   const [sourceFilter, setSourceFilter] = useState<EmailSourceFilter>("all");
   const [sourceDefaultApplied, setSourceDefaultApplied] = useState(false);
+  const [sortOption, setSortOption] = useState<EmailSortOption>("recent");
+  const [aiLoading, setAiLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [replyDraft, setReplyDraft] = useState("");
   const [replySending, setReplySending] = useState(false);
@@ -208,8 +212,9 @@ export function EmailsView() {
   }, [data, sourceFilter]);
 
   const filteredEmails = useMemo(() => {
-    return sourceEmails.filter((email) => matchesEmailFilter(email, filterTab));
-  }, [sourceEmails, filterTab]);
+    const byCategory = sourceEmails.filter((email) => matchesEmailFilter(email, filterTab));
+    return sortEmails(byCategory, sortOption);
+  }, [sourceEmails, filterTab, sortOption]);
 
   const selectedEmail = useMemo(
     () => filteredEmails.find((e) => e.id === selectedId) ?? data?.items.find((e) => e.id === selectedId) ?? null,
@@ -392,6 +397,26 @@ export function EmailsView() {
     }
   }
 
+  async function handleGenerateAiSummary() {
+    if (!selectedEmail) return;
+    try {
+      setAiLoading(true);
+      setError(null);
+      const response = await fetch(`/api/emails/${selectedEmail.id}/ai-summary`, { method: "POST" });
+      if (!response.ok) {
+        setError(await errorMessageFromResponse(response));
+        return;
+      }
+      await loadEmails();
+      setSuccess("Resume IA genere.");
+    } catch (aiError) {
+      const message = aiError instanceof Error ? aiError.message : "Erreur inconnue.";
+      setError(message);
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   async function handleRefresh() {
     try {
       setLoading(true);
@@ -436,6 +461,7 @@ export function EmailsView() {
             selectedId={selectedId}
             searchQuery={searchQuery}
             sourceFilter={sourceFilter}
+            sortOption={sortOption}
             gmailConnected={Boolean(gmailStatus?.connected)}
             page={data?.page ?? page}
             totalPages={data?.totalPages ?? 1}
@@ -443,6 +469,7 @@ export function EmailsView() {
             canGoNext={canGoNext}
             onSearchChange={setSearchQuery}
             onSourceChange={setSourceFilter}
+            onSortChange={setSortOption}
             onSelect={setSelectedId}
             onRefresh={handleRefresh}
             onPrevPage={() => setPage((prev) => prev - 1)}
@@ -466,6 +493,8 @@ export function EmailsView() {
           <EmailAiPanel
             email={selectedEmail}
             users={users}
+            aiLoading={aiLoading}
+            onGenerateAiSummary={handleGenerateAiSummary}
             onMarkTreated={() => selectedEmail && quickStatusUpdate(selectedEmail.id, "TRAITE")}
             onAddComment={() => document.getElementById("email-reply-input")?.focus()}
             onCreateTask={() => setSuccess("Creation de tache bientot disponible.")}

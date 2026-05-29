@@ -6,7 +6,13 @@ import {
   GMAIL_SYNC_MAX_RESULTS,
   isGmailConfigured,
 } from "@/lib/gmail/config";
-import { inferEmailCategory, parseGmailMessage, type GmailMessagePayload } from "@/lib/gmail/message-parser";
+import {
+  inferEmailCategory,
+  isDocumentAttachment,
+  parseGmailMessage,
+  type GmailMessagePayload,
+  type ParsedGmailMessage,
+} from "@/lib/gmail/message-parser";
 import { writeActivityLog } from "@/server/activity-log";
 import type { EmailCategory } from "@prisma/client";
 
@@ -205,10 +211,26 @@ async function fetchGmailMessage(accessToken: string, messageId: string): Promis
   return response.json() as Promise<GmailMessagePayload>;
 }
 
-async function upsertImportedEmail(parsed: ReturnType<typeof parseGmailMessage>, category: EmailCategory) {
+async function syncEmailAttachments(emailId: string, parsed: ParsedGmailMessage) {
+  // Remplace proprement les métadonnées de pièces jointes (évite les doublons à la resync).
+  await prisma.emailAttachment.deleteMany({ where: { emailId } });
+  if (parsed.attachments.length === 0) return;
+  await prisma.emailAttachment.createMany({
+    data: parsed.attachments.map((att) => ({
+      emailId,
+      fileName: att.fileName,
+      mimeType: att.mimeType,
+      sizeBytes: att.sizeBytes,
+      gmailAttachmentId: att.gmailAttachmentId,
+      gmailMessageId: parsed.gmailMessageId,
+    })),
+  });
+}
+
+async function upsertImportedEmail(parsed: ParsedGmailMessage, category: EmailCategory) {
   const existing = await prisma.email.findUnique({
     where: { gmailMessageId: parsed.gmailMessageId },
-    select: { id: true, comment: true, status: true, category: true, assigneeId: true, patientId: true },
+    select: { id: true, categoryManual: true },
   });
 
   if (existing) {
@@ -220,12 +242,16 @@ async function upsertImportedEmail(parsed: ReturnType<typeof parseGmailMessage>,
         receivedAt: parsed.receivedAt,
         snippet: parsed.snippet,
         bodyText: parsed.bodyText,
+        hasAttachments: parsed.hasAttachments,
+        // Ne pas écraser une catégorie modifiée manuellement par l'utilisateur.
+        ...(existing.categoryManual ? {} : { category }),
       },
     });
+    await syncEmailAttachments(existing.id, parsed);
     return { created: false };
   }
 
-  await prisma.email.create({
+  const created = await prisma.email.create({
     data: {
       sender: parsed.sender,
       subject: parsed.subject,
@@ -234,11 +260,13 @@ async function upsertImportedEmail(parsed: ReturnType<typeof parseGmailMessage>,
       status: "A_TRAITER",
       snippet: parsed.snippet,
       bodyText: parsed.bodyText,
+      hasAttachments: parsed.hasAttachments,
       gmailMessageId: parsed.gmailMessageId,
       gmailThreadId: parsed.gmailThreadId,
       importedFrom: "GMAIL",
     },
   });
+  await syncEmailAttachments(created.id, parsed);
   return { created: true };
 }
 
@@ -267,7 +295,8 @@ export async function syncGmailForUser(userId: string) {
     try {
       const raw = await fetchGmailMessage(accessToken, ref.id);
       const parsed = parseGmailMessage(raw);
-      const category = inferEmailCategory(parsed.subject, parsed.bodyText);
+      const hasDocumentAttachment = parsed.attachments.some((a) => isDocumentAttachment(a.mimeType));
+      const category = inferEmailCategory(parsed.subject, parsed.bodyText, { hasDocumentAttachment });
       const result = await upsertImportedEmail(parsed, category);
       if (result.created) created += 1;
       else updated += 1;

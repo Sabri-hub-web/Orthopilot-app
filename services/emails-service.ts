@@ -4,6 +4,14 @@ import { writeActivityLog } from "@/server/activity-log";
 import { emailCategoryLabelMap, emailStatusLabelMap } from "@/lib/emails";
 import type { EmailCategory, EmailStatus } from "@prisma/client";
 import { createNotificationsForRoles } from "@/services/notifications-service";
+import { buildAiSummary } from "@/services/email-ai";
+
+type EmailAttachmentRow = {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+};
 
 type EmailRow = {
   id: string;
@@ -18,10 +26,16 @@ type EmailRow = {
   importedFrom: "MANUAL" | "GMAIL";
   gmailMessageId: string | null;
   gmailThreadId: string | null;
+  hasAttachments: boolean;
+  aiSummary: string | null;
+  aiCategory: string | null;
+  aiPriority: string | null;
+  aiGeneratedAt: Date | null;
   patientId: string | null;
   patient: { firstName: string; lastName: string } | null;
   assigneeId: string | null;
   assignedUser: { fullName: string } | null;
+  attachments?: EmailAttachmentRow[];
 };
 
 function formatDate(date: Date): string {
@@ -52,6 +66,17 @@ export function toPriorityEmail(item: EmailRow): PriorityEmail {
     importedFrom: item.importedFrom,
     gmailMessageId: item.gmailMessageId,
     gmailThreadId: item.gmailThreadId,
+    hasAttachments: item.hasAttachments,
+    attachments: (item.attachments ?? []).map((a) => ({
+      id: a.id,
+      fileName: a.fileName,
+      mimeType: a.mimeType,
+      sizeBytes: a.sizeBytes,
+    })),
+    aiSummary: item.aiSummary,
+    aiCategory: item.aiCategory,
+    aiPriority: item.aiPriority,
+    aiGeneratedAt: item.aiGeneratedAt ? item.aiGeneratedAt.toISOString() : null,
     patientId: item.patientId,
     patientName: patientLabel(item.patient),
     assigneeId: item.assigneeId,
@@ -66,6 +91,10 @@ async function createEmailLog(message: string, patientId?: string | null) {
 const emailInclude = {
   patient: { select: { firstName: true, lastName: true } },
   assignedUser: { select: { fullName: true } },
+  attachments: {
+    select: { id: true, fileName: true, mimeType: true, sizeBytes: true },
+    orderBy: { createdAt: "asc" },
+  },
 } as const;
 
 const statusSortWeight: Record<EmailStatus, number> = {
@@ -143,6 +172,9 @@ export async function updateEmail(emailId: string, payload: Partial<EmailFormPay
   });
   if (!before) return null;
 
+  const categoryChangedManually =
+    payload.category !== undefined && payload.category !== before.category;
+
   const updated = await prisma.email.update({
     where: { id: emailId },
     data: {
@@ -150,6 +182,8 @@ export async function updateEmail(emailId: string, payload: Partial<EmailFormPay
       subject: payload.subject,
       receivedAt: payload.receivedAt ? new Date(payload.receivedAt) : undefined,
       category: payload.category,
+      // Marque la catégorie comme manuelle pour ne pas l'écraser lors des resync Gmail.
+      ...(categoryChangedManually ? { categoryManual: true } : {}),
       status: payload.status,
       comment: payload.comment,
       patientId: payload.patientId,
@@ -204,4 +238,41 @@ export async function deleteEmail(emailId: string) {
   await prisma.email.delete({ where: { id: emailId } });
   await createEmailLog(`Suppression email: ${row.subject}`, row.patientId);
   return { id: row.id };
+}
+
+export async function getEmailById(emailId: string) {
+  const row = await prisma.email.findUnique({
+    where: { id: emailId },
+    include: emailInclude,
+  });
+  if (!row) return null;
+  return toPriorityEmail(row);
+}
+
+export async function generateEmailAiSummary(emailId: string) {
+  const email = await prisma.email.findUnique({
+    where: { id: emailId },
+    include: emailInclude,
+  });
+  if (!email) return null;
+
+  const result = buildAiSummary({
+    subject: email.subject,
+    sender: email.sender,
+    bodyText: email.bodyText ?? email.snippet ?? "",
+    category: email.category,
+  });
+
+  const updated = await prisma.email.update({
+    where: { id: emailId },
+    data: {
+      aiSummary: result.summary,
+      aiCategory: result.category,
+      aiPriority: result.priority,
+      aiGeneratedAt: new Date(),
+    },
+    include: emailInclude,
+  });
+
+  return toPriorityEmail(updated);
 }

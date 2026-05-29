@@ -40,6 +40,13 @@ export type EmailCategoryApi = "URGENT" | "ADMINISTRATIF" | "SUIVI_CLINIQUE";
 
 export type EmailStatusApi = "A_TRAITER" | "EN_COURS" | "TRAITE" | "ARCHIVE";
 
+export interface EmailAttachmentInfo {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
 export interface PriorityEmail {
   id: string;
   from: string;
@@ -54,6 +61,12 @@ export interface PriorityEmail {
   importedFrom?: "MANUAL" | "GMAIL";
   gmailMessageId?: string | null;
   gmailThreadId?: string | null;
+  hasAttachments?: boolean;
+  attachments?: EmailAttachmentInfo[];
+  aiSummary?: string | null;
+  aiCategory?: string | null;
+  aiPriority?: string | null;
+  aiGeneratedAt?: string | null;
   patientId: string | null;
   patientName: string | null;
   assigneeId: string | null;

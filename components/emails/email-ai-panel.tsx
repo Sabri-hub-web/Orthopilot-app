@@ -3,6 +3,7 @@
 import {
   CheckCircle2,
   ListTodo,
+  Loader2,
   MessageSquarePlus,
   Sparkles,
 } from "lucide-react";
@@ -11,13 +12,14 @@ import {
   emailCategoryBadgeClass,
   emailPriorityLabel,
   emailStatusBadgeClass,
-  generateAiSummary,
 } from "@/lib/emails-ui";
 import type { EmailStatusApi, PriorityEmail, UsersListItem } from "@/types/domain";
 
 interface EmailAiPanelProps {
   email: PriorityEmail | null;
   users: UsersListItem[];
+  aiLoading: boolean;
+  onGenerateAiSummary: () => void;
   onMarkTreated: () => void;
   onAddComment: () => void;
   onCreateTask: () => void;
@@ -35,6 +37,8 @@ const historyDotClass = {
 export function EmailAiPanel({
   email,
   users,
+  aiLoading,
+  onGenerateAiSummary,
   onMarkTreated,
   onAddComment,
   onCreateTask,
@@ -49,20 +53,62 @@ export function EmailAiPanel({
     );
   }
 
-  const summary = generateAiSummary(email);
   const history = buildEmailHistory(email);
+  const hasSummary = Boolean(email.aiSummary?.trim());
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto pr-0.5">
       {/* Résumé IA */}
       <section className="shrink-0 rounded-3xl border border-violet-100 bg-gradient-to-br from-violet-50/80 to-white p-4 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
-            <Sparkles className="h-3.5 w-3.5" />
-          </span>
-          <h3 className="text-sm font-semibold text-[#0F172A]">Résumé IA</h3>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
+              <Sparkles className="h-3.5 w-3.5" />
+            </span>
+            <h3 className="text-sm font-semibold text-[#0F172A]">Résumé IA</h3>
+          </div>
+          {hasSummary ? (
+            <button
+              type="button"
+              onClick={onGenerateAiSummary}
+              disabled={aiLoading}
+              className="text-[11px] font-medium text-violet-600 transition hover:text-violet-800 disabled:opacity-50"
+            >
+              {aiLoading ? "…" : "Régénérer"}
+            </button>
+          ) : null}
         </div>
-        <p className="mt-3 text-sm leading-relaxed text-[#475569]">{summary}</p>
+
+        {hasSummary ? (
+          <>
+            <p className="mt-3 text-sm leading-relaxed text-[#475569]">{email.aiSummary}</p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {email.aiCategory ? (
+                <span className="rounded-lg bg-white/70 px-2 py-0.5 text-[10px] font-medium text-violet-700">
+                  {email.aiCategory}
+                </span>
+              ) : null}
+              {email.aiPriority ? (
+                <span className="rounded-lg bg-white/70 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+                  Priorité : {email.aiPriority}
+                </span>
+              ) : null}
+            </div>
+          </>
+        ) : (
+          <div className="mt-3 space-y-3">
+            <p className="text-sm text-slate-400">Résumé IA non généré</p>
+            <button
+              type="button"
+              onClick={onGenerateAiSummary}
+              disabled={aiLoading}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:opacity-90 disabled:opacity-50"
+            >
+              {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              Générer résumé IA
+            </button>
+          </div>
+        )}
       </section>
 
       {/* Métadonnées */}

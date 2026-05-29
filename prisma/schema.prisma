@@ -158,12 +158,18 @@ model Email {
   subject        String
   receivedAt     DateTime
   category       EmailCategory
+  categoryManual Boolean            @default(false)
   status         EmailStatus        @default(A_TRAITER)
   comment        String?
   gmailMessageId String?            @unique
   gmailThreadId  String?
   snippet        String?
   bodyText       String?
+  hasAttachments Boolean            @default(false)
+  aiSummary      String?
+  aiCategory     String?
+  aiPriority     String?
+  aiGeneratedAt  DateTime?
   importedFrom   EmailImportSource  @default(MANUAL)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @default(now()) @updatedAt
@@ -171,6 +177,21 @@ model Email {
   patient        Patient?           @relation(fields: [patientId], references: [id], onDelete: SetNull)
   assigneeId     String?
   assignedUser   User?              @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  attachments    EmailAttachment[]
+}
+
+model EmailAttachment {
+  id                String   @id @default(cuid())
+  emailId           String
+  email             Email    @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  fileName          String
+  mimeType          String
+  sizeBytes         Int      @default(0)
+  gmailAttachmentId String?
+  gmailMessageId    String?
+  createdAt         DateTime @default(now())
+
+  @@index([emailId])
 }
 
 model Task {

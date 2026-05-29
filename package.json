@@ -13,6 +13,7 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "db:gmail-migrate": "tsx scripts/apply-gmail-migration.ts",
+    "db:emails-phase2-migrate": "tsx scripts/apply-email-phase2-migration.ts",
     "vercel-build": "next build"
   },
   "dependencies": {

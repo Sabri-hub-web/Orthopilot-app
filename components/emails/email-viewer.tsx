@@ -140,10 +140,12 @@ export function EmailViewer({
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-        <div className="whitespace-pre-wrap text-sm leading-relaxed text-[#475569]">{bodyText}</div>
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-4">
+        <div className="whitespace-pre-wrap break-words text-sm leading-7 text-[#334155] [overflow-wrap:anywhere]">
+          {bodyText}
+        </div>
         <div className="mt-6">
-          <EmailAttachments subject={email.subject} comment={email.comment} />
+          <EmailAttachments attachments={email.attachments ?? []} gmailThreadUrl={threadUrl} />
         </div>
       </div>
 

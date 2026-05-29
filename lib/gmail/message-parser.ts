@@ -1,3 +1,5 @@
+import { htmlToCleanText } from "@/lib/email-html";
+
 type GmailHeader = { name: string; value: string };
 
 type GmailPart = {
@@ -46,62 +48,6 @@ function decodeBase64Url(data: string): string {
 function headerValue(headers: GmailHeader[] | undefined, name: string): string {
   const found = headers?.find((h) => h.name.toLowerCase() === name.toLowerCase());
   return found?.value?.trim() ?? "";
-}
-
-const HTML_ENTITIES: Record<string, string> = {
-  "&nbsp;": " ",
-  "&amp;": "&",
-  "&lt;": "<",
-  "&gt;": ">",
-  "&quot;": '"',
-  "&#39;": "'",
-  "&apos;": "'",
-  "&eacute;": "é",
-  "&egrave;": "è",
-  "&agrave;": "à",
-  "&ccedil;": "ç",
-  "&ugrave;": "ù",
-  "&ocirc;": "ô",
-  "&euro;": "€",
-};
-
-function decodeHtmlEntities(input: string): string {
-  let out = input;
-  for (const [entity, char] of Object.entries(HTML_ENTITIES)) {
-    out = out.split(entity).join(char);
-  }
-  out = out.replace(/&#(\d+);/g, (_, code) => {
-    const n = Number(code);
-    return Number.isFinite(n) ? String.fromCodePoint(n) : "";
-  });
-  out = out.replace(/&#x([0-9a-fA-F]+);/g, (_, code) => {
-    const n = parseInt(code, 16);
-    return Number.isFinite(n) ? String.fromCodePoint(n) : "";
-  });
-  return out;
-}
-
-/** Convertit du HTML d'email en texte propre et lisible (sans balises, sans styles). */
-export function htmlToCleanText(html: string): string {
-  let text = html;
-  // Retirer les blocs non visibles
-  text = text.replace(/<style[\s\S]*?<\/style>/gi, " ");
-  text = text.replace(/<script[\s\S]*?<\/script>/gi, " ");
-  text = text.replace(/<head[\s\S]*?<\/head>/gi, " ");
-  // Sauts de ligne sémantiques
-  text = text.replace(/<\/(p|div|tr|li|h[1-6]|table|blockquote)>/gi, "\n");
-  text = text.replace(/<br\s*\/?>/gi, "\n");
-  // Listes
-  text = text.replace(/<li[^>]*>/gi, "• ");
-  // Retirer toutes les balises restantes
-  text = text.replace(/<[^>]+>/g, " ");
-  // Entités
-  text = decodeHtmlEntities(text);
-  // Nettoyage des espaces : préserver les retours à la ligne
-  text = text.replace(/[ \t\f\v]+/g, " ");
-  text = text.replace(/ *\n */g, "\n");
-  text = text.replace(/\n{3,}/g, "\n\n");
-  return text.trim();
 }
 
 function extractPlainText(part: GmailPart | undefined): string {
@@ -211,11 +157,14 @@ export function inferEmailCategory(
 
   if (
     text.includes("urgent") ||
+    text.includes("urgence") ||
     text.includes("douleur") ||
     text.includes("probleme") ||
     text.includes("problème") ||
     text.includes("impay") ||
-    text.includes("relance")
+    text.includes("relance") ||
+    text.includes("retard") ||
+    text.includes("plainte")
   ) {
     return "URGENT";
   }

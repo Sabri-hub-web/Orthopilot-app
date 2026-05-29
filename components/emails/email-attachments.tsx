@@ -41,7 +41,7 @@ export function EmailAttachments({ attachments, gmailThreadUrl }: EmailAttachmen
     <div className="space-y-2">
       <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
         <Paperclip className="h-3.5 w-3.5 text-slate-400" />
-        Pièces jointes ({attachments.length})
+        Pièces jointes détectées ({attachments.length})
       </p>
       {attachments.map((file) => {
         const size = formatAttachmentSize(file.sizeBytes);
@@ -64,11 +64,21 @@ export function EmailAttachments({ attachments, gmailThreadUrl }: EmailAttachmen
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Ouvrir dans Gmail"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50"
+                className="flex h-8 shrink-0 items-center gap-1 rounded-lg border border-slate-200 px-2 text-[11px] font-medium text-slate-600 transition hover:bg-slate-50"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
+                Ouvrir
               </a>
-            ) : null}
+            ) : (
+              <button
+                type="button"
+                disabled
+                title="Téléchargement bientôt disponible"
+                className="flex h-8 shrink-0 cursor-not-allowed items-center rounded-lg border border-slate-200 px-2 text-[11px] font-medium text-slate-400"
+              >
+                Bientôt
+              </button>
+            )}
           </div>
         );
       })}

@@ -10,6 +10,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { EmailAttachments } from "@/components/emails/email-attachments";
+import { cleanEmailBody } from "@/lib/email-html";
 import {
   displaySenderName,
   gmailReplyUrl,
@@ -58,10 +59,11 @@ export function EmailViewer({
   const threadUrl = gmailThreadUrl(email);
   const replyUrl = gmailReplyUrl(email);
 
-  const bodyText =
-    email.bodyText?.trim() ||
+  const cleanedBody =
+    cleanEmailBody(email.bodyText) ||
     email.comment?.trim() ||
-    "Aucun contenu détaillé enregistré pour cet email.";
+    cleanEmailBody(email.snippet);
+  const bodyText = cleanedBody || "Aucun contenu lisible pour cet email.";
 
   return (
     <div className="flex h-full min-h-0 flex-col rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -141,7 +143,7 @@ export function EmailViewer({
       </header>
 
       <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-4">
-        <div className="whitespace-pre-wrap break-words text-sm leading-7 text-[#334155] [overflow-wrap:anywhere]">
+        <div className="max-w-none whitespace-pre-wrap break-words text-sm leading-7 text-slate-700 [overflow-wrap:anywhere]">
           {bodyText}
         </div>
         <div className="mt-6">

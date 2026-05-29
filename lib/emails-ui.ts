@@ -77,6 +77,43 @@ export function getEmailAccentType(email: PriorityEmail): EmailAccentType {
   return "default";
 }
 
+function matchesAny(text: string, keywords: string[]): boolean {
+  return keywords.some((k) => text.includes(k));
+}
+
+const URGENT_KEYWORDS = [
+  "urgent",
+  "urgence",
+  "douleur",
+  "probleme",
+  "problème",
+  "impaye",
+  "impayé",
+  "relance",
+  "retard",
+  "plainte",
+];
+const DEVIS_KEYWORDS = ["devis", "estimation", "proposition", "tarif", "prix"];
+const DOCUMENTS_KEYWORDS = [
+  "document",
+  "fichier",
+  "pièce jointe",
+  "piece jointe",
+  "pièce",
+  "piece",
+  "pdf",
+  "facture",
+  "radio",
+  "compte rendu",
+  "ordonnance",
+];
+const RDV_KEYWORDS = ["rdv", "rendez-vous", "rendez vous", "rendez", "doctolib", "consultation", "appointment"];
+const MUTUELLE_KEYWORDS = ["mutuelle", "remboursement", "prise en charge", "assurance", "santéclair", "santeclair"];
+
+export function isUrgentEmail(email: PriorityEmail): boolean {
+  return email.category === "Urgent" || matchesAny(emailSearchText(email), URGENT_KEYWORDS);
+}
+
 export function matchesEmailFilter(email: PriorityEmail, tab: EmailFilterTab): boolean {
   const text = emailSearchText(email);
   switch (tab) {
@@ -85,20 +122,15 @@ export function matchesEmailFilter(email: PriorityEmail, tab: EmailFilterTab): b
     case "untreated":
       return email.status === "A traiter" || email.status === "En cours";
     case "urgent":
-      return email.category === "Urgent";
+      return isUrgentEmail(email);
     case "devis":
-      return text.includes("devis");
+      return matchesAny(text, DEVIS_KEYWORDS);
     case "documents":
-      return (
-        Boolean(email.hasAttachments) ||
-        text.includes("document") ||
-        text.includes("pièce") ||
-        text.includes("piece")
-      );
+      return Boolean(email.hasAttachments) || matchesAny(text, DOCUMENTS_KEYWORDS);
     case "rdv":
-      return text.includes("rdv") || text.includes("rendez");
+      return matchesAny(text, RDV_KEYWORDS);
     case "mutuelle":
-      return text.includes("mutuelle");
+      return matchesAny(text, MUTUELLE_KEYWORDS);
     case "administratif":
       return email.category === "Administratif";
     case "treated":

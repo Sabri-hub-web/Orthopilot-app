@@ -144,6 +144,29 @@ export function countEmailsForFilter(emails: PriorityEmail[], tab: EmailFilterTa
   return emails.filter((e) => matchesEmailFilter(e, tab)).length;
 }
 
+export type EmailAssignmentFilter = "all" | "mine" | "unassigned";
+
+export const EMAIL_ASSIGNMENT_FILTERS: { id: EmailAssignmentFilter; label: string }[] = [
+  { id: "all", label: "Tous" },
+  { id: "mine", label: "Mes emails" },
+  { id: "unassigned", label: "Non assignés" },
+];
+
+export function matchesEmailAssignment(
+  email: PriorityEmail,
+  filter: EmailAssignmentFilter,
+  currentUserId: string | null,
+): boolean {
+  switch (filter) {
+    case "mine":
+      return Boolean(currentUserId) && email.assigneeId === currentUserId;
+    case "unassigned":
+      return !email.assigneeId;
+    default:
+      return true;
+  }
+}
+
 export type EmailSourceFilter = "all" | "gmail" | "manual";
 
 export const EMAIL_SOURCE_FILTERS: { id: EmailSourceFilter; label: string }[] = [

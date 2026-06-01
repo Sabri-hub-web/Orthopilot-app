@@ -3,8 +3,10 @@
 import { ArrowUpDown, Inbox, Loader2, Plus, RefreshCw, Search } from "lucide-react";
 import { EmailListItem } from "@/components/emails/email-list-item";
 import {
+  EMAIL_ASSIGNMENT_FILTERS,
   EMAIL_SORT_OPTIONS,
   EMAIL_SOURCE_FILTERS,
+  type EmailAssignmentFilter,
   type EmailSortOption,
   type EmailSourceFilter,
 } from "@/lib/emails-ui";
@@ -16,6 +18,7 @@ interface EmailSidebarProps {
   selectedId: string | null;
   searchQuery: string;
   sourceFilter: EmailSourceFilter;
+  assignmentFilter: EmailAssignmentFilter;
   sortOption: EmailSortOption;
   gmailConnected: boolean;
   page: number;
@@ -24,6 +27,7 @@ interface EmailSidebarProps {
   canGoNext: boolean;
   onSearchChange: (q: string) => void;
   onSourceChange: (source: EmailSourceFilter) => void;
+  onAssignmentChange: (filter: EmailAssignmentFilter) => void;
   onSortChange: (sort: EmailSortOption) => void;
   onSelect: (id: string) => void;
   onRefresh: () => void;
@@ -38,6 +42,7 @@ export function EmailSidebar({
   selectedId,
   searchQuery,
   sourceFilter,
+  assignmentFilter,
   sortOption,
   gmailConnected,
   page,
@@ -46,6 +51,7 @@ export function EmailSidebar({
   canGoNext,
   onSearchChange,
   onSourceChange,
+  onAssignmentChange,
   onSortChange,
   onSelect,
   onRefresh,
@@ -127,6 +133,23 @@ export function EmailSidebar({
               ))}
             </select>
           </div>
+        </div>
+
+        <div className="flex items-center gap-0.5 rounded-xl bg-slate-100/70 p-0.5">
+          {EMAIL_ASSIGNMENT_FILTERS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onAssignmentChange(item.id)}
+              className={`flex-1 rounded-lg px-2 py-1 text-[11px] font-medium transition-all duration-200 ${
+                assignmentFilter === item.id
+                  ? "bg-white text-violet-700 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
       </header>
 

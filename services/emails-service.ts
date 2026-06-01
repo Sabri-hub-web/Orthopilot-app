@@ -3,7 +3,7 @@ import { prisma } from "@/server/db/client";
 import { writeActivityLog } from "@/server/activity-log";
 import { emailCategoryLabelMap, emailStatusLabelMap } from "@/lib/emails";
 import type { EmailCategory, EmailStatus } from "@prisma/client";
-import { createNotificationsForRoles } from "@/services/notifications-service";
+import { createNotification, createNotificationsForRoles } from "@/services/notifications-service";
 import { buildAiSummary } from "@/services/email-ai";
 
 type EmailAttachmentRow = {
@@ -238,6 +238,39 @@ export async function deleteEmail(emailId: string) {
   await prisma.email.delete({ where: { id: emailId } });
   await createEmailLog(`Suppression email: ${row.subject}`, row.patientId);
   return { id: row.id };
+}
+
+export async function assignEmail(emailId: string, assigneeId: string | null) {
+  const before = await prisma.email.findUnique({
+    where: { id: emailId },
+    include: emailInclude,
+  });
+  if (!before) return null;
+
+  const updated = await prisma.email.update({
+    where: { id: emailId },
+    data: { assigneeId },
+    include: emailInclude,
+  });
+
+  if (assigneeId && assigneeId !== before.assigneeId) {
+    await createEmailLog(
+      `Assignation email (${updated.subject}) a ${updated.assignedUser?.fullName ?? "?"}`,
+      updated.patientId,
+    );
+    await createNotification({
+      userId: assigneeId,
+      title: "Nouvel email assigné",
+      message: `Un email vous a été assigné : ${updated.subject}`,
+      type: "EMAIL_ASSIGNED",
+      relatedEntityType: "Email",
+      relatedEntityId: updated.id,
+    });
+  } else if (!assigneeId && before.assigneeId) {
+    await createEmailLog(`Desassignation email (${updated.subject})`, updated.patientId);
+  }
+
+  return toPriorityEmail(updated);
 }
 
 export async function getEmailById(emailId: string) {

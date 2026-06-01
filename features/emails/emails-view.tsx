@@ -10,9 +10,11 @@ import { EmailViewer } from "@/components/emails/email-viewer";
 import { EmailsLayout } from "@/components/emails/emails-layout";
 import { EMAIL_CATEGORY_VALUES, EMAIL_STATUS_VALUES, emailCategoryLabelMap, emailStatusLabelMap } from "@/lib/emails";
 import {
+  matchesEmailAssignment,
   matchesEmailFilter,
   matchesEmailSource,
   sortEmails,
+  type EmailAssignmentFilter,
   type EmailFilterTab,
   type EmailSortOption,
   type EmailSourceFilter,
@@ -56,7 +58,11 @@ const defaultForm: EmailFormPayload = {
   assigneeId: null,
 };
 
-export function EmailsView() {
+interface EmailsViewProps {
+  currentUserId: string;
+}
+
+export function EmailsView({ currentUserId }: EmailsViewProps) {
   const [page, setPage] = useState(1);
   const [data, setData] = useState<EmailsListResponse | null>(null);
   const [patients, setPatients] = useState<PatientListItem[]>([]);
@@ -72,6 +78,7 @@ export function EmailsView() {
   const [filterTab, setFilterTab] = useState<EmailFilterTab>("all");
   const [sourceFilter, setSourceFilter] = useState<EmailSourceFilter>("all");
   const [sourceDefaultApplied, setSourceDefaultApplied] = useState(false);
+  const [assignmentFilter, setAssignmentFilter] = useState<EmailAssignmentFilter>("all");
   const [sortOption, setSortOption] = useState<EmailSortOption>("recent");
   const [searchQuery, setSearchQuery] = useState("");
   const [replyDraft, setReplyDraft] = useState("");
@@ -89,6 +96,17 @@ export function EmailsView() {
       window.history.replaceState({}, "", "/emails");
     } else if (gmailParam === "error") {
       setError("Connexion Gmail echouee. Reessayez.");
+      window.history.replaceState({}, "", "/emails");
+    }
+
+    const emailIdParam = searchParams.get("emailId");
+    if (emailIdParam) {
+      // Lien depuis une notification : on retire les filtres pour garantir l'affichage.
+      setSelectedId(emailIdParam);
+      setSourceFilter("all");
+      setFilterTab("all");
+      setAssignmentFilter("all");
+      setSourceDefaultApplied(true);
       window.history.replaceState({}, "", "/emails");
     }
   }, [searchParams]);
@@ -210,9 +228,13 @@ export function EmailsView() {
   }, [data, sourceFilter]);
 
   const filteredEmails = useMemo(() => {
-    const byCategory = sourceEmails.filter((email) => matchesEmailFilter(email, filterTab));
+    const byCategory = sourceEmails.filter(
+      (email) =>
+        matchesEmailFilter(email, filterTab) &&
+        matchesEmailAssignment(email, assignmentFilter, currentUserId),
+    );
     return sortEmails(byCategory, sortOption);
-  }, [sourceEmails, filterTab, sortOption]);
+  }, [sourceEmails, filterTab, assignmentFilter, currentUserId, sortOption]);
 
   const selectedEmail = useMemo(
     () => filteredEmails.find((e) => e.id === selectedId) ?? data?.items.find((e) => e.id === selectedId) ?? null,
@@ -330,7 +352,7 @@ export function EmailsView() {
   async function quickAssignUpdate(emailId: string, assigneeId: string | null) {
     try {
       setError(null);
-      const response = await fetch(`/api/emails/${emailId}`, {
+      const response = await fetch(`/api/emails/${emailId}/assign`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ assigneeId }),
@@ -340,7 +362,7 @@ export function EmailsView() {
         return;
       }
       await loadEmails();
-      setSuccess("Assignation mise a jour.");
+      setSuccess(assigneeId ? "Email assigne." : "Assignation retiree.");
     } catch (assignError) {
       const message = assignError instanceof Error ? assignError.message : "Erreur inconnue.";
       setError(message);
@@ -420,6 +442,7 @@ export function EmailsView() {
             selectedId={selectedId}
             searchQuery={searchQuery}
             sourceFilter={sourceFilter}
+            assignmentFilter={assignmentFilter}
             sortOption={sortOption}
             gmailConnected={Boolean(gmailStatus?.connected)}
             page={data?.page ?? page}
@@ -428,6 +451,7 @@ export function EmailsView() {
             canGoNext={canGoNext}
             onSearchChange={setSearchQuery}
             onSourceChange={setSourceFilter}
+            onAssignmentChange={setAssignmentFilter}
             onSortChange={setSortOption}
             onSelect={setSelectedId}
             onRefresh={handleRefresh}

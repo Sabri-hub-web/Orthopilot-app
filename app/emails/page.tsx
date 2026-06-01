@@ -15,7 +15,7 @@ export default async function EmailsPage() {
       currentUserRole={roleLabel(user.role)}
       currentUserRoleKey={user.role}
     >
-      <EmailsView />
+      <EmailsView currentUserId={user.id} />
     </DashboardLayout>
   );
 }

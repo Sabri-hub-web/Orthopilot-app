@@ -22,8 +22,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!content) {
       return NextResponse.json({ message: "Contenu du commentaire requis." }, { status: 400 });
     }
+    const recipientIdRaw = (raw as { recipientId?: unknown }).recipientId;
+    const recipientId =
+      typeof recipientIdRaw === "string" && recipientIdRaw.trim().length > 0 ? recipientIdRaw : null;
     const { id } = await params;
-    const comment = await addPatientComment(id, content, { id: auth.user.id, fullName: auth.user.fullName });
+    const comment = await addPatientComment(id, content, {
+      author: { id: auth.user.id, fullName: auth.user.fullName },
+      recipientId,
+    });
     return NextResponse.json(comment, { status: 201 });
   } catch (error) {
     console.error("POST /api/patients/:id/comments failed", error);

@@ -6,11 +6,18 @@ CREATE TABLE IF NOT EXISTS "PatientComment" (
   "id" TEXT NOT NULL,
   "patientId" TEXT NOT NULL,
   "authorId" TEXT,
+  "recipientId" TEXT,
   "content" TEXT NOT NULL,
+  "isDone" BOOLEAN NOT NULL DEFAULT false,
+  "doneAt" TIMESTAMP(3),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "PatientComment_pkey" PRIMARY KEY ("id")
 );
+
+ALTER TABLE "PatientComment" ADD COLUMN IF NOT EXISTS "recipientId" TEXT;
+ALTER TABLE "PatientComment" ADD COLUMN IF NOT EXISTS "isDone" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "PatientComment" ADD COLUMN IF NOT EXISTS "doneAt" TIMESTAMP(3);
 
 CREATE TABLE IF NOT EXISTS "PatientDocument" (
   "id" TEXT NOT NULL,
@@ -41,6 +48,12 @@ BEGIN
     ALTER TABLE "PatientComment"
       ADD CONSTRAINT "PatientComment_authorId_fkey"
       FOREIGN KEY ("authorId") REFERENCES "User"("id")
+      ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'PatientComment_recipientId_fkey') THEN
+    ALTER TABLE "PatientComment"
+      ADD CONSTRAINT "PatientComment_recipientId_fkey"
+      FOREIGN KEY ("recipientId") REFERENCES "User"("id")
       ON DELETE SET NULL ON UPDATE CASCADE;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'PatientDocument_patientId_fkey') THEN

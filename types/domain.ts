@@ -218,7 +218,11 @@ export interface PatientCommentLine {
   id: string;
   authorId: string | null;
   authorName: string;
+  recipientId: string | null;
+  recipientName: string | null;
   content: string;
+  isDone: boolean;
+  doneAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

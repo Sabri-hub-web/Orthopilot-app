@@ -96,7 +96,8 @@ model User {
   messagesSent     InternalMessage[] @relation("MessageSent")
   messagesReceived InternalMessage[] @relation("MessageReceived")
   gmailAccount     GmailAccount?
-  patientComments  PatientComment[]
+  patientCommentsAuthored  PatientComment[] @relation("PatientCommentAuthor")
+  patientCommentsReceived  PatientComment[] @relation("PatientCommentRecipient")
   patientDocuments PatientDocument[]
 }
 
@@ -141,9 +142,13 @@ model PatientComment {
   id        String   @id @default(cuid())
   patientId String
   patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  authorId  String?
-  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorId    String?
+  author      User?    @relation("PatientCommentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  recipientId String?
+  recipient   User?    @relation("PatientCommentRecipient", fields: [recipientId], references: [id], onDelete: SetNull)
   content   String
+  isDone    Boolean  @default(false)
+  doneAt    DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

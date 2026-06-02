@@ -222,7 +222,10 @@ export async function getPatientHub(patientId: string): Promise<PatientHubRespon
       },
       comments: {
         orderBy: { createdAt: "desc" },
-        include: { author: { select: { id: true, fullName: true } } },
+        include: {
+          author: { select: { id: true, fullName: true } },
+          recipient: { select: { id: true, fullName: true } },
+        },
       },
       documents: {
         orderBy: { createdAt: "desc" },
@@ -259,7 +262,11 @@ export async function getPatientHub(patientId: string): Promise<PatientHubRespon
     id: c.id,
     authorId: c.authorId ?? null,
     authorName: c.author?.fullName ?? "Équipe cabinet",
+    recipientId: c.recipientId ?? null,
+    recipientName: c.recipient?.fullName ?? null,
     content: c.content,
+    isDone: c.isDone,
+    doneAt: c.doneAt ? c.doneAt.toISOString() : null,
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
   }));
@@ -305,18 +312,26 @@ export async function getPatientHub(patientId: string): Promise<PatientHubRespon
   };
 }
 
-export async function addPatientComment(patientId: string, content: string, author?: { id: string; fullName: string }) {
+export async function addPatientComment(
+  patientId: string,
+  content: string,
+  options?: { author?: { id: string; fullName: string }; recipientId?: string | null },
+) {
   const created = await prisma.patientComment.create({
     data: {
       patientId,
-      content,
-      authorId: author?.id ?? null,
+      content: content.trim(),
+      authorId: options?.author?.id ?? null,
+      recipientId: options?.recipientId ?? null,
     },
-    include: { author: { select: { id: true, fullName: true } } },
+    include: {
+      author: { select: { id: true, fullName: true } },
+      recipient: { select: { id: true, fullName: true } },
+    },
   });
 
   await writeActivityLog({
-    actor: author?.fullName ?? "Systeme",
+    actor: options?.author?.fullName ?? "Systeme",
     message: "Commentaire patient ajouté",
     patientId,
   });
@@ -324,10 +339,55 @@ export async function addPatientComment(patientId: string, content: string, auth
   return {
     id: created.id,
     authorId: created.authorId ?? null,
-    authorName: created.author?.fullName ?? author?.fullName ?? "Équipe cabinet",
+    authorName: created.author?.fullName ?? options?.author?.fullName ?? "Équipe cabinet",
+    recipientId: created.recipientId ?? null,
+    recipientName: created.recipient?.fullName ?? null,
     content: created.content,
+    isDone: created.isDone,
+    doneAt: created.doneAt ? created.doneAt.toISOString() : null,
     createdAt: created.createdAt.toISOString(),
     updatedAt: created.updatedAt.toISOString(),
+  } satisfies PatientCommentLine;
+}
+
+export async function updatePatientCommentStatus(
+  patientId: string,
+  commentId: string,
+  isDone: boolean,
+  actor?: { fullName: string },
+) {
+  const updated = await prisma.patientComment.updateMany({
+    where: { id: commentId, patientId },
+    data: { isDone, doneAt: isDone ? new Date() : null },
+  });
+  if (updated.count === 0) return null;
+
+  const row = await prisma.patientComment.findUnique({
+    where: { id: commentId },
+    include: {
+      author: { select: { id: true, fullName: true } },
+      recipient: { select: { id: true, fullName: true } },
+    },
+  });
+  if (!row) return null;
+
+  await writeActivityLog({
+    actor: actor?.fullName ?? "Systeme",
+    message: isDone ? "Commentaire patient marqué terminé" : "Commentaire patient réactivé",
+    patientId,
+  });
+
+  return {
+    id: row.id,
+    authorId: row.authorId ?? null,
+    authorName: row.author?.fullName ?? "Équipe cabinet",
+    recipientId: row.recipientId ?? null,
+    recipientName: row.recipient?.fullName ?? null,
+    content: row.content,
+    isDone: row.isDone,
+    doneAt: row.doneAt ? row.doneAt.toISOString() : null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   } satisfies PatientCommentLine;
 }
 

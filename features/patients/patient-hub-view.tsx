@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
-  Activity,
   CalendarClock,
   CheckCircle2,
   Clock3,
@@ -18,7 +17,7 @@ import {
   User,
 } from "lucide-react";
 import { errorMessageFromResponse } from "@/lib/validation/client-errors";
-import { PatientFormPayload, PatientHubResponse, PatientHubStatusApi } from "@/types/domain";
+import { PatientFormPayload, PatientHubResponse, PatientHubStatusApi, UsersListItem } from "@/types/domain";
 import { PATIENT_HUB_STATUS_VALUES, patientHubStatusLabelMap } from "@/lib/patients";
 
 const hubStatusOptions = PATIENT_HUB_STATUS_VALUES.map((value) => ({
@@ -69,6 +68,7 @@ interface PatientHubViewProps {
 }
 
 type HubTab = "overview" | "reglements" | "rendezvous" | "documents" | "commentaires";
+type CommentFilter = "active" | "done" | "all";
 
 export function PatientHubView({ patientId }: PatientHubViewProps) {
   const [hub, setHub] = useState<PatientHubResponse | null>(null);
@@ -82,6 +82,9 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
   const [docNameDraft, setDocNameDraft] = useState("");
   const [commentLoading, setCommentLoading] = useState(false);
   const [docLoading, setDocLoading] = useState(false);
+  const [commentRecipientId, setCommentRecipientId] = useState("");
+  const [commentFilter, setCommentFilter] = useState<CommentFilter>("active");
+  const [users, setUsers] = useState<UsersListItem[]>([]);
 
   useEffect(() => {
     if (!success) return;
@@ -127,6 +130,20 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
     run();
   }, [loadHub]);
 
+  useEffect(() => {
+    async function loadUsers() {
+      try {
+        const response = await fetch("/api/users", { cache: "no-store" });
+        if (!response.ok) return;
+        const payload = await response.json();
+        setUsers(payload.items ?? []);
+      } catch {
+        // optionnel
+      }
+    }
+    loadUsers();
+  }, []);
+
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
     if (!form) return;
@@ -171,7 +188,10 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
       const response = await fetch(`/api/patients/${patientId}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: commentDraft.trim() }),
+        body: JSON.stringify({
+          content: commentDraft.trim(),
+          recipientId: commentRecipientId || null,
+        }),
       });
       if (!response.ok) {
         setError(await errorMessageFromResponse(response));
@@ -187,10 +207,36 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
           : prev,
       );
       setCommentDraft("");
+      setCommentRecipientId("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur ajout commentaire.");
     } finally {
       setCommentLoading(false);
+    }
+  }
+
+  async function handleToggleCommentDone(commentId: string, isDone: boolean) {
+    try {
+      const response = await fetch(`/api/patients/${patientId}/comments/${commentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isDone }),
+      });
+      if (!response.ok) {
+        setError(await errorMessageFromResponse(response));
+        return;
+      }
+      const updated = await response.json();
+      setHub((prev) =>
+        prev
+          ? {
+              ...prev,
+              comments: prev.comments.map((c) => (c.id === commentId ? updated : c)),
+            }
+          : prev,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur mise à jour commentaire.");
     }
   }
 
@@ -497,24 +543,6 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
               </div>
             </section>
 
-            <aside className="space-y-3">
-              <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
-                  <Activity className="h-4 w-4 text-violet-600" />
-                  Activité récente
-                </h3>
-                <ol className="mt-3 space-y-2">
-                  {hub.logs.slice(0, 5).map((log) => (
-                    <li key={log.id} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                      <p className="text-[11px] text-slate-500">{formatLogDate(log.createdAt)}</p>
-                      <p className="mt-0.5 text-xs font-medium text-slate-800">{log.actor}</p>
-                      <p className="text-xs text-slate-700">{log.message}</p>
-                    </li>
-                  ))}
-                  {hub.logs.length === 0 ? <p className="text-xs text-slate-500">Aucune activité récente.</p> : null}
-                </ol>
-              </article>
-            </aside>
           </div>
         ) : null}
 
@@ -550,23 +578,66 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
               <MessageSquare className="h-4 w-4 text-violet-600" />
               Commentaires
             </h3>
-            <form onSubmit={handleAddComment} className="mb-4 flex gap-2">
+            <form onSubmit={handleAddComment} className="mb-4 grid gap-2 md:grid-cols-[1fr_220px_auto]">
               <input
                 value={commentDraft}
                 onChange={(e) => setCommentDraft(e.target.value)}
                 placeholder="Ajouter un commentaire patient..."
                 className="h-10 flex-1 rounded-xl border border-slate-200 px-3 text-sm"
               />
+              <select
+                value={commentRecipientId}
+                onChange={(e) => setCommentRecipientId(e.target.value)}
+                className="h-10 rounded-xl border border-slate-200 px-3 text-sm"
+              >
+                <option value="">Destinataire (optionnel)</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.fullName}
+                  </option>
+                ))}
+              </select>
               <button type="submit" disabled={commentLoading || !commentDraft.trim()} className="rounded-xl bg-violet-600 px-3 text-xs font-semibold text-white disabled:opacity-50">
                 Ajouter
               </button>
             </form>
+            <div className="mb-3 flex items-center gap-2">
+              {[
+                { id: "active" as const, label: "Actifs" },
+                { id: "done" as const, label: "Terminés" },
+                { id: "all" as const, label: "Tous" },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setCommentFilter(f.id)}
+                  className={`rounded-full border px-2.5 py-1 text-xs ${commentFilter === f.id ? "border-violet-200 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600"}`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
             <div className="space-y-2">
-              {hub.comments.map((comment) => (
-                <div key={comment.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+              {hub.comments
+                .filter((comment) =>
+                  commentFilter === "all" ? true : commentFilter === "done" ? comment.isDone : !comment.isDone,
+                )
+                .map((comment) => (
+                <div key={comment.id} className={`rounded-xl border border-slate-100 p-3 ${comment.isDone ? "bg-slate-50/60 opacity-80" : "bg-slate-50"}`}>
                   <p className="text-sm font-medium text-slate-800">{comment.authorName}</p>
+                  {comment.recipientName ? (
+                    <p className="text-xs text-slate-500">→ {comment.recipientName}</p>
+                  ) : null}
                   <p className="text-xs text-slate-500">{formatLogDate(comment.createdAt)}</p>
                   <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{comment.content}</p>
+                  <label className="mt-2 inline-flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={comment.isDone}
+                      onChange={(e) => handleToggleCommentDone(comment.id, e.target.checked)}
+                    />
+                    Marquer comme lu / terminé
+                  </label>
                 </div>
               ))}
               {hub.comments.length === 0 ? <p className="text-xs text-slate-500">Aucun commentaire.</p> : null}
@@ -580,6 +651,7 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
               <FileText className="h-4 w-4 text-violet-600" />
               Documents
             </h3>
+            <p className="mb-3 text-xs text-slate-500">Ajout de document bientôt disponible.</p>
             <form onSubmit={handleAddDocumentPlaceholder} className="mb-4 flex gap-2">
               <input
                 value={docNameDraft}

@@ -204,56 +204,73 @@ export function PatientsView({ canImportCsv = false }: PatientsViewProps) {
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-lg font-semibold text-slate-900">Patients</h3>
+    <section className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-xl font-semibold tracking-tight text-[#0F172A]">Patients</h3>
+          <p className="mt-0.5 text-sm text-slate-500">Recherchez et gérez les informations de vos patients.</p>
+        </div>
         <p className="text-xs text-slate-500">Page {data?.page ?? page}</p>
       </div>
 
+      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3 md:grid-cols-[1fr_auto]">
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-slate-600">Recherche</label>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-300"
+            placeholder="Rechercher un patient, email, téléphone…"
+          />
+        </div>
+        <div className="flex items-end">
+          <button
+            type="button"
+            onClick={() => document.getElementById("new-patient-form")?.scrollIntoView({ behavior: "smooth" })}
+            className="h-10 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] px-4 text-sm font-semibold text-white shadow-sm"
+          >
+            Nouveau patient
+          </button>
+        </div>
+      </div>
+
       <form
+        id="new-patient-form"
         onSubmit={handleCreate}
-        className="mt-4 flex flex-wrap items-end gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3"
+        className="grid gap-2 rounded-2xl border border-slate-200 bg-white p-3 md:grid-cols-[1fr_1fr_1fr_1fr_auto]"
       >
-        <div className="flex min-w-[8rem] flex-1 flex-col gap-1">
-          <label className="text-xs text-slate-500">Prenom</label>
-          <input
-            value={createForm.firstName}
-            onChange={(e) => setCreateForm((f) => ({ ...f, firstName: e.target.value }))}
-            className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm"
-            required
-          />
-        </div>
-        <div className="flex min-w-[8rem] flex-1 flex-col gap-1">
-          <label className="text-xs text-slate-500">Nom</label>
-          <input
-            value={createForm.lastName}
-            onChange={(e) => setCreateForm((f) => ({ ...f, lastName: e.target.value }))}
-            className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm"
-            required
-          />
-        </div>
-        <div className="flex min-w-[10rem] flex-1 flex-col gap-1">
-          <label className="text-xs text-slate-500">Email</label>
-          <input
-            value={createForm.email ?? ""}
-            onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
-            className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm"
-          />
-        </div>
-        <div className="flex min-w-[8rem] flex-1 flex-col gap-1">
-          <label className="text-xs text-slate-500">Telephone</label>
-          <input
-            value={createForm.phone ?? ""}
-            onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))}
-            className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm"
-          />
-        </div>
+        <input
+          value={createForm.firstName}
+          onChange={(e) => setCreateForm((f) => ({ ...f, firstName: e.target.value }))}
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+          placeholder="Prénom"
+          required
+        />
+        <input
+          value={createForm.lastName}
+          onChange={(e) => setCreateForm((f) => ({ ...f, lastName: e.target.value }))}
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+          placeholder="Nom"
+          required
+        />
+        <input
+          value={createForm.email ?? ""}
+          onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+          placeholder="Email"
+        />
+        <input
+          value={createForm.phone ?? ""}
+          onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))}
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+          placeholder="Téléphone"
+        />
         <button
           type="submit"
           disabled={creating}
-          className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
+          className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-medium text-white disabled:opacity-50"
         >
-          Nouveau patient
+          {creating ? "Création..." : "Créer"}
         </button>
       </form>
 
@@ -302,16 +319,6 @@ export function PatientsView({ canImportCsv = false }: PatientsViewProps) {
           ) : null}
         </div>
       ) : null}
-
-      <div className="mt-4">
-        <label className="block text-xs font-medium text-slate-600">Recherche (nom, prenom, email, tel.)</label>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="mt-1 w-full max-w-md rounded-lg border border-slate-200 px-3 py-2 text-sm"
-          placeholder="Tapez pour filtrer..."
-        />
-      </div>
 
       <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/80 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -455,36 +462,36 @@ export function PatientsView({ canImportCsv = false }: PatientsViewProps) {
 
       {data ? (
         <>
-          <div className="mt-4 overflow-x-auto">
+          <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200">
             <table className="min-w-full text-sm">
-              <thead className="text-left text-xs text-slate-500">
+              <thead className="bg-slate-50 text-left text-xs text-slate-500">
                 <tr>
-                  <th className="pb-2 font-medium">Patient</th>
-                  <th className="pb-2 font-medium">Email</th>
-                  <th className="pb-2 font-medium">Telephone</th>
-                  <th className="pb-2 font-medium">Prochain RDV</th>
-                  <th className="pb-2 font-medium">Statut hub</th>
-                  <th className="pb-2 font-medium">Regl.</th>
-                  <th className="pb-2 font-medium">Taches</th>
-                  <th className="pb-2 font-medium">Emails</th>
-                  <th className="pb-2 font-medium">Fiche</th>
+                  <th className="px-3 py-2 font-medium">Patient</th>
+                  <th className="px-3 py-2 font-medium">Email</th>
+                  <th className="px-3 py-2 font-medium">Téléphone</th>
+                  <th className="px-3 py-2 font-medium">Prochain RDV</th>
+                  <th className="px-3 py-2 font-medium">Statut</th>
+                  <th className="px-3 py-2 font-medium">Règl.</th>
+                  <th className="px-3 py-2 font-medium">Tâches</th>
+                  <th className="px-3 py-2 font-medium">Emails</th>
+                  <th className="px-3 py-2 font-medium">Fiche</th>
                 </tr>
               </thead>
               <tbody>
                 {data.items.map((patient) => (
-                  <tr key={patient.id} className="border-t border-slate-100">
-                    <td className="py-2 font-medium text-slate-900">{patient.fullName}</td>
-                    <td className="py-2 text-slate-700">{patient.email ?? "-"}</td>
-                    <td className="py-2 text-slate-700">{patient.phone ?? "-"}</td>
-                    <td className="py-2 text-slate-700">{patient.nextAppointmentAt ?? "—"}</td>
-                    <td className="py-2 text-slate-600">{patient.hubStatus}</td>
-                    <td className="py-2 text-slate-700">{patient.reglementsCount}</td>
-                    <td className="py-2 text-slate-700">{patient.tasksCount}</td>
-                    <td className="py-2 text-slate-700">{patient.emailsCount}</td>
-                    <td className="py-2">
+                  <tr key={patient.id} className="border-t border-slate-100 bg-white hover:bg-slate-50/50">
+                    <td className="px-3 py-2 font-medium text-slate-900">{patient.fullName}</td>
+                    <td className="px-3 py-2 text-slate-700">{patient.email ?? "-"}</td>
+                    <td className="px-3 py-2 text-slate-700">{patient.phone ?? "-"}</td>
+                    <td className="px-3 py-2 text-slate-700">{patient.nextAppointmentAt ?? "—"}</td>
+                    <td className="px-3 py-2 text-slate-600">{patient.hubStatus}</td>
+                    <td className="px-3 py-2 text-slate-700">{patient.reglementsCount}</td>
+                    <td className="px-3 py-2 text-slate-700">{patient.tasksCount}</td>
+                    <td className="px-3 py-2 text-slate-700">{patient.emailsCount}</td>
+                    <td className="px-3 py-2">
                       <Link
                         href={`/patients/${patient.id}`}
-                        className="text-xs font-medium text-emerald-700 hover:underline"
+                        className="rounded-lg bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100"
                       >
                         Ouvrir
                       </Link>

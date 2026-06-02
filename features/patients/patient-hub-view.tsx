@@ -9,10 +9,11 @@ import {
   Clock3,
   CreditCard,
   Download,
+  FileText,
   Mail,
+  MessageSquare,
   MoreHorizontal,
   Phone,
-  Plus,
   Shield,
   User,
 } from "lucide-react";
@@ -67,6 +68,8 @@ interface PatientHubViewProps {
   patientId: string;
 }
 
+type HubTab = "overview" | "reglements" | "rendezvous" | "documents" | "commentaires";
+
 export function PatientHubView({ patientId }: PatientHubViewProps) {
   const [hub, setHub] = useState<PatientHubResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,6 +77,11 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<PatientFormPayload | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<HubTab>("overview");
+  const [commentDraft, setCommentDraft] = useState("");
+  const [docNameDraft, setDocNameDraft] = useState("");
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [docLoading, setDocLoading] = useState(false);
 
   useEffect(() => {
     if (!success) return;
@@ -155,6 +163,72 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
     }
   }
 
+  async function handleAddComment(event: React.FormEvent) {
+    event.preventDefault();
+    if (!commentDraft.trim()) return;
+    try {
+      setCommentLoading(true);
+      const response = await fetch(`/api/patients/${patientId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: commentDraft.trim() }),
+      });
+      if (!response.ok) {
+        setError(await errorMessageFromResponse(response));
+        return;
+      }
+      const created = await response.json();
+      setHub((prev) =>
+        prev
+          ? {
+              ...prev,
+              comments: [created, ...prev.comments],
+            }
+          : prev,
+      );
+      setCommentDraft("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur ajout commentaire.");
+    } finally {
+      setCommentLoading(false);
+    }
+  }
+
+  async function handleAddDocumentPlaceholder(event: React.FormEvent) {
+    event.preventDefault();
+    if (!docNameDraft.trim()) return;
+    try {
+      setDocLoading(true);
+      const response = await fetch(`/api/patients/${patientId}/documents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: docNameDraft.trim(),
+          mimeType: "application/octet-stream",
+          sizeBytes: 0,
+        }),
+      });
+      if (!response.ok) {
+        setError(await errorMessageFromResponse(response));
+        return;
+      }
+      const created = await response.json();
+      setHub((prev) =>
+        prev
+          ? {
+              ...prev,
+              documents: [created, ...prev.documents],
+            }
+          : prev,
+      );
+      setDocNameDraft("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur ajout document.");
+    } finally {
+      setDocLoading(false);
+    }
+  }
+
   if (loading) {
     return <p className="text-sm text-slate-500">Chargement de la fiche patient...</p>;
   }
@@ -179,10 +253,32 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
   const prochainRdv = hub.patient.nextAppointmentAt
     ? new Date(hub.patient.nextAppointmentAt).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" })
     : "Aucun rendez-vous planifié";
-  const hasRetard = hub.reglements.some((r) => r.status === "En retard");
-  const reglementHealth = hasRetard ? "À surveiller" : "Stable";
-  const reglementBadge = hasRetard ? "2e mois (orange)" : "Cycle normal";
+  const enRetardCount = hub.reglements.filter((r) => r.status === "En retard").length;
+  const reglementsPayesCount = hub.reglements.filter((r) => r.status === "Regle").length;
+  const totalReglements = Math.max(1, hub.reglements.length);
+  const retardRatio = enRetardCount / totalReglements;
+  const reglementHealth =
+    enRetardCount === 0
+      ? "Payé"
+      : retardRatio > 0.5
+        ? "Retard > 2 mois"
+        : "Retard 1 mois";
+  const reglementBadge =
+    enRetardCount === 0
+      ? `${reglementsPayesCount} payé(s)`
+      : retardRatio > 0.5
+        ? "Retard critique"
+        : "Retard modéré";
+  const reglementTone =
+    enRetardCount === 0 ? "text-emerald-700" : retardRatio > 0.5 ? "text-red-700" : "text-amber-700";
   const firstLog = hub.logs[0];
+  const tabs: { id: HubTab; label: string }[] = [
+    { id: "overview", label: "Vue d'ensemble" },
+    { id: "reglements", label: "Règlements" },
+    { id: "rendezvous", label: "Rendez-vous" },
+    { id: "documents", label: "Documents" },
+    { id: "commentaires", label: "Commentaires" },
+  ];
 
   return (
     <div className="space-y-4 pb-4">
@@ -262,6 +358,7 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
             value: reglementBadge,
             sub: reglementHealth,
             icon: CreditCard,
+            valueClass: reglementTone,
           },
           {
             title: "Montant total traitement",
@@ -274,6 +371,7 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
             value: euro(reglementsRegles),
             sub: `${progress}% du total`,
             icon: CheckCircle2,
+            valueClass: progress >= 90 ? "text-emerald-700" : progress >= 50 ? "text-amber-700" : "text-red-700",
           },
           {
             title: "Semestre en cours",
@@ -289,7 +387,7 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
                 <kpi.icon className="h-3.5 w-3.5" />
               </span>
             </div>
-            <p className="mt-2 text-sm font-semibold leading-snug text-slate-900">{kpi.value}</p>
+            <p className={`mt-2 text-sm font-semibold leading-snug ${kpi.valueClass ?? "text-slate-900"}`}>{kpi.value}</p>
             <p className="mt-1 text-[11px] text-slate-500">{kpi.sub}</p>
           </article>
         ))}
@@ -297,198 +395,226 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
 
       <section className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
         <div className="flex flex-wrap items-center gap-1">
-          {[
-            "Vue d’ensemble",
-            "Règlements",
-            "Rendez-vous",
-            "Commentaires",
-            "Documents",
-            "Tâches",
-            "Emails",
-            "Historique",
-          ].map((tab, idx) => (
+          {tabs.map((tab) => (
             <button
-              key={tab}
+              key={tab.id}
               type="button"
+              onClick={() => setActiveTab(tab.id)}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-                idx === 0 ? "border-b-2 border-violet-600 text-violet-700" : "text-slate-500 hover:text-slate-700"
+                activeTab === tab.id
+                  ? "border-b-2 border-violet-600 text-violet-700"
+                  : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              {tab}
+              {tab.label}
             </button>
           ))}
         </div>
       </section>
 
-      <form id="patient-hub-form" onSubmit={handleSave} className="grid gap-3 xl:grid-cols-[1.2fr_1fr_1fr_1.1fr]">
-        <section className="space-y-3 xl:col-span-3">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-2">
-              <h3 className="text-sm font-semibold text-slate-900">Informations générales</h3>
-              <div className="mt-3 grid gap-2 md:grid-cols-2">
-                <input value={form.firstName} onChange={(e) => setForm((f) => (f ? { ...f, firstName: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Prénom" required />
-                <input value={form.lastName} onChange={(e) => setForm((f) => (f ? { ...f, lastName: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Nom" required />
-                <input value={form.phone ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, phone: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Téléphone" />
-                <input value={form.email ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, email: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Email" />
-                <input value={form.mutuelle ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, mutuelle: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Mutuelle" />
-                <input value={form.legalGuardian ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, legalGuardian: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Responsable légal" />
-                <input type="datetime-local" value={form.nextAppointmentAt ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, nextAppointmentAt: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-                <select value={form.hubStatus ?? "ACTIF"} onChange={(e) => setForm((f) => (f ? { ...f, hubStatus: e.target.value as PatientHubStatusApi } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
-                  {hubStatusOptions.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
+      <form id="patient-hub-form" onSubmit={handleSave}>
+        {activeTab === "overview" ? (
+          <div className="grid gap-3 xl:grid-cols-[1.2fr_1fr_1fr_1.1fr]">
+            <section className="space-y-3 xl:col-span-3">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-2">
+                  <h3 className="text-sm font-semibold text-slate-900">Informations générales</h3>
+                  <div className="mt-3 grid gap-2 md:grid-cols-2">
+                    <input value={form.firstName} onChange={(e) => setForm((f) => (f ? { ...f, firstName: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Prénom" required />
+                    <input value={form.lastName} onChange={(e) => setForm((f) => (f ? { ...f, lastName: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Nom" required />
+                    <input value={form.phone ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, phone: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Téléphone" />
+                    <input value={form.email ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, email: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Email" />
+                    <input value={form.mutuelle ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, mutuelle: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Mutuelle" />
+                    <input value={form.legalGuardian ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, legalGuardian: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Responsable légal" />
+                    <input type="datetime-local" value={form.nextAppointmentAt ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, nextAppointmentAt: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
+                    <select value={form.hubStatus ?? "ACTIF"} onChange={(e) => setForm((f) => (f ? { ...f, hubStatus: e.target.value as PatientHubStatusApi } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                      {hubStatusOptions.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                    <textarea value={form.internalComment ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, internalComment: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm md:col-span-2" rows={3} placeholder="Notes importantes" />
+                  </div>
+                </article>
+
+                <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-slate-900">Derniers commentaires</h3>
+                    <button type="button" onClick={() => setActiveTab("commentaires")} className="text-xs font-medium text-violet-700 hover:underline">Voir tout</button>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {hub.comments.slice(0, 3).map((comment) => (
+                      <div key={comment.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs">
+                        <p className="font-medium text-slate-800">{comment.authorName}</p>
+                        <p className="text-[11px] text-slate-500">{formatLogDate(comment.createdAt)}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-slate-700">{comment.content}</p>
+                      </div>
+                    ))}
+                    {hub.comments.length === 0 ? <p className="text-xs text-slate-500">Aucun commentaire.</p> : null}
+                  </div>
+                </article>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-slate-900">Derniers règlements</h3>
+                    <button type="button" onClick={() => setActiveTab("reglements")} className="text-xs font-medium text-violet-700 hover:underline">Voir tout</button>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {hub.reglements.slice(0, 5).map((r) => (
+                      <div key={r.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 p-2">
+                        <div>
+                          <p className="text-xs font-medium text-slate-800">{r.dueDate}</p>
+                          <p className="text-[11px] text-slate-500">{r.status}</p>
+                        </div>
+                        <span className="text-xs font-semibold text-slate-800">{euro(r.amountDue)}</span>
+                      </div>
+                    ))}
+                    {hub.reglements.length === 0 ? <p className="text-xs text-slate-500">Aucun règlement lié.</p> : null}
+                  </div>
+                </article>
+
+                <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-slate-900">Derniers documents</h3>
+                    <button type="button" onClick={() => setActiveTab("documents")} className="text-xs font-medium text-violet-700 hover:underline">Voir tout</button>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {hub.documents.slice(0, 5).map((doc) => (
+                      <div key={doc.id} className="flex items-center justify-between rounded-xl border border-slate-100 p-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-medium text-slate-800">{doc.name}</p>
+                          <p className="text-[11px] text-slate-500">{formatLogDate(doc.createdAt)}</p>
+                        </div>
+                        <button type="button" disabled={!doc.downloadUrl} className="rounded-lg border border-slate-200 p-1.5 text-slate-500 disabled:cursor-not-allowed disabled:opacity-50">
+                          <Download className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    {hub.documents.length === 0 ? <p className="text-xs text-slate-500">Aucun document récent.</p> : null}
+                  </div>
+                </article>
+              </div>
+            </section>
+
+            <aside className="space-y-3">
+              <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+                  <Activity className="h-4 w-4 text-violet-600" />
+                  Activité récente
+                </h3>
+                <ol className="mt-3 space-y-2">
+                  {hub.logs.slice(0, 5).map((log) => (
+                    <li key={log.id} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                      <p className="text-[11px] text-slate-500">{formatLogDate(log.createdAt)}</p>
+                      <p className="mt-0.5 text-xs font-medium text-slate-800">{log.actor}</p>
+                      <p className="text-xs text-slate-700">{log.message}</p>
+                    </li>
                   ))}
-                </select>
-                <textarea value={form.internalComment ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, internalComment: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm md:col-span-2" rows={3} placeholder="Notes importantes" />
-              </div>
-            </article>
-
-            <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-slate-900">Commentaires récents</h3>
-                <button type="button" className="text-xs font-medium text-violet-700 hover:underline">Ajouter un commentaire</button>
-              </div>
-              <div className="mt-3 space-y-2">
-                {hub.patient.internalComment ? (
-                  <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-700">
-                    <p className="font-medium text-slate-800">Équipe cabinet</p>
-                    <p className="mt-1 whitespace-pre-wrap">{hub.patient.internalComment}</p>
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-500">Aucun commentaire récent.</p>
-                )}
-              </div>
-            </article>
+                  {hub.logs.length === 0 ? <p className="text-xs text-slate-500">Aucune activité récente.</p> : null}
+                </ol>
+              </article>
+            </aside>
           </div>
+        ) : null}
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-slate-900">Documents récents</h3>
-                <button type="button" className="text-xs font-medium text-violet-700 hover:underline">Ajouter un document</button>
-              </div>
-              <div className="mt-3 space-y-2">
-                {hub.logs.filter((l) => /document/i.test(l.message)).slice(0, 3).length ? (
-                  hub.logs.filter((l) => /document/i.test(l.message)).slice(0, 3).map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between rounded-xl border border-slate-100 p-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-medium text-slate-800">{doc.message}</p>
-                        <p className="text-[11px] text-slate-500">{formatLogDate(doc.createdAt)}</p>
-                      </div>
-                      <button type="button" className="rounded-lg border border-slate-200 p-1.5 text-slate-500"><Download className="h-3.5 w-3.5" /></button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">Aucun document récent.</div>
-                )}
-              </div>
-            </article>
-
-            <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-slate-900">Derniers règlements</h3>
-                <Link href="/reglements" className="text-xs font-medium text-violet-700 hover:underline">Voir tout</Link>
-              </div>
-              <div className="mt-3 space-y-2">
-                {hub.reglements.length ? (
-                  hub.reglements.slice(0, 4).map((r) => (
-                    <div key={r.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 p-2">
-                      <div>
-                        <p className="text-xs font-medium text-slate-800">{r.dueDate}</p>
-                        <p className="text-[11px] text-slate-500">{r.status}</p>
-                      </div>
-                      <span className="text-xs font-semibold text-slate-800">{euro(r.amountDue)}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-slate-500">Aucun règlement lié.</p>
-                )}
-              </div>
-            </article>
-
-            <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-slate-900">Tâches en cours</h3>
-                <Link href="/tasks" className="text-xs font-medium text-violet-700 hover:underline">Voir tout</Link>
-              </div>
-              <div className="mt-3 space-y-2">
-                {hub.tasks.length ? (
-                  hub.tasks.slice(0, 4).map((t) => (
-                    <div key={t.id} className="rounded-xl border border-slate-100 p-2">
-                      <p className="text-xs font-medium text-slate-800">{t.title}</p>
-                      <p className="mt-1 text-[11px] text-slate-500">{t.assignee} · {t.priority} · {t.dueDate}</p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-slate-500">Aucune tâche en cours.</p>
-                )}
-              </div>
-            </article>
-          </div>
-
+        {activeTab === "reglements" ? (
           <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-900">Derniers emails</h3>
-              <Link href="/emails" className="text-xs font-medium text-violet-700 hover:underline">Ouvrir module Emails</Link>
-            </div>
+            <h3 className="text-sm font-semibold text-slate-900">Règlements</h3>
             <div className="mt-3 space-y-2">
-              {hub.emails.length ? (
-                hub.emails.slice(0, 5).map((m) => (
-                  <div key={m.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 p-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-medium text-slate-800">{m.subject}</p>
-                      <p className="truncate text-[11px] text-slate-500">{m.from}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[11px] text-slate-500">{m.receivedDate}</p>
-                      <span className="rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">{m.category}</span>
-                    </div>
+              {hub.reglements.map((r) => (
+                <div key={r.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 p-3">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{r.dueDate}</p>
+                    <p className="text-xs text-slate-500">{r.status}</p>
                   </div>
-                ))
-              ) : (
-                <p className="text-xs text-slate-500">Aucun email lié.</p>
-              )}
+                  <span className="text-sm font-semibold text-slate-900">{euro(r.amountDue)}</span>
+                </div>
+              ))}
             </div>
           </article>
-        </section>
+        ) : null}
 
-        <aside className="space-y-3">
+        {activeTab === "rendezvous" ? (
           <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
-              <Activity className="h-4 w-4 text-violet-600" />
-              Activité récente
+            <h3 className="text-sm font-semibold text-slate-900">Rendez-vous</h3>
+            <p className="mt-3 text-sm text-slate-700">
+              Prochain rendez-vous : {hub.patient.nextAppointmentAt ? formatLogDate(hub.patient.nextAppointmentAt) : "Aucun rendez-vous"}
+            </p>
+          </article>
+        ) : null}
+
+        {activeTab === "commentaires" ? (
+          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+              <MessageSquare className="h-4 w-4 text-violet-600" />
+              Commentaires
             </h3>
-            <ol className="mt-3 space-y-2">
-              {hub.logs.length ? (
-                hub.logs.slice(0, 10).map((log) => (
-                  <li key={log.id} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                    <p className="text-[11px] text-slate-500">{formatLogDate(log.createdAt)}</p>
-                    <p className="mt-0.5 text-xs font-medium text-slate-800">{log.actor}</p>
-                    <p className="text-xs text-slate-700">{log.message}</p>
-                  </li>
-                ))
-              ) : (
-                <p className="text-xs text-slate-500">Aucune activité récente.</p>
-              )}
-            </ol>
-          </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900">Raccourcis</h3>
-            <div className="mt-3 space-y-2">
-              <Link href="/emails" className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">
-                <Mail className="h-3.5 w-3.5 text-violet-600" />
-                Ouvrir les emails
-              </Link>
-              <Link href="/tasks" className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">
-                <Plus className="h-3.5 w-3.5 text-violet-600" />
-                Créer une tâche
-              </Link>
-              <Link href="/reglements" className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">
-                <CreditCard className="h-3.5 w-3.5 text-violet-600" />
-                Voir règlements
-              </Link>
+            <form onSubmit={handleAddComment} className="mb-4 flex gap-2">
+              <input
+                value={commentDraft}
+                onChange={(e) => setCommentDraft(e.target.value)}
+                placeholder="Ajouter un commentaire patient..."
+                className="h-10 flex-1 rounded-xl border border-slate-200 px-3 text-sm"
+              />
+              <button type="submit" disabled={commentLoading || !commentDraft.trim()} className="rounded-xl bg-violet-600 px-3 text-xs font-semibold text-white disabled:opacity-50">
+                Ajouter
+              </button>
+            </form>
+            <div className="space-y-2">
+              {hub.comments.map((comment) => (
+                <div key={comment.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                  <p className="text-sm font-medium text-slate-800">{comment.authorName}</p>
+                  <p className="text-xs text-slate-500">{formatLogDate(comment.createdAt)}</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{comment.content}</p>
+                </div>
+              ))}
+              {hub.comments.length === 0 ? <p className="text-xs text-slate-500">Aucun commentaire.</p> : null}
             </div>
           </article>
-        </aside>
+        ) : null}
+
+        {activeTab === "documents" ? (
+          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+              <FileText className="h-4 w-4 text-violet-600" />
+              Documents
+            </h3>
+            <form onSubmit={handleAddDocumentPlaceholder} className="mb-4 flex gap-2">
+              <input
+                value={docNameDraft}
+                onChange={(e) => setDocNameDraft(e.target.value)}
+                placeholder="Nom du document (préparation upload)"
+                className="h-10 flex-1 rounded-xl border border-slate-200 px-3 text-sm"
+              />
+              <button type="submit" disabled={docLoading || !docNameDraft.trim()} className="rounded-xl bg-violet-600 px-3 text-xs font-semibold text-white disabled:opacity-50">
+                Ajouter
+              </button>
+            </form>
+            <div className="space-y-2">
+              {hub.documents.map((doc) => (
+                <div key={doc.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 p-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-slate-800">{doc.name}</p>
+                    <p className="text-xs text-slate-500">
+                      {formatLogDate(doc.createdAt)}{doc.uploadedByName ? ` · ${doc.uploadedByName}` : ""}
+                    </p>
+                  </div>
+                  {doc.downloadUrl ? (
+                    <a href={doc.downloadUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-slate-200 p-1.5 text-slate-500">
+                      <Download className="h-3.5 w-3.5" />
+                    </a>
+                  ) : (
+                    <button type="button" disabled className="rounded-lg border border-slate-200 p-1.5 text-slate-400" title="Téléchargement bientôt disponible">
+                      <Download className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {hub.documents.length === 0 ? <p className="text-xs text-slate-500">Aucun document.</p> : null}
+            </div>
+          </article>
+        ) : null}
       </form>
     </div>
   );

@@ -96,6 +96,8 @@ model User {
   messagesSent     InternalMessage[] @relation("MessageSent")
   messagesReceived InternalMessage[] @relation("MessageReceived")
   gmailAccount     GmailAccount?
+  patientComments  PatientComment[]
+  patientDocuments PatientDocument[]
 }
 
 model GmailAccount {
@@ -131,6 +133,38 @@ model Patient {
   tasks        Task[]
   activityLogs ActivityLog[]
   calendarEvents CalendarEvent[]
+  comments      PatientComment[]
+  documents     PatientDocument[]
+}
+
+model PatientComment {
+  id        String   @id @default(cuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId, createdAt])
+}
+
+model PatientDocument {
+  id           String   @id @default(cuid())
+  patientId    String
+  patient      Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  uploadedById String?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  name         String
+  mimeType     String?
+  sizeBytes    Int      @default(0)
+  storagePath  String?
+  downloadUrl  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([patientId, createdAt])
 }
 
 model Reglement {

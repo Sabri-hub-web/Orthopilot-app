@@ -1,5 +1,7 @@
 import {
   InternalTask,
+  PatientCommentLine,
+  PatientDocumentLine,
   PatientFormPayload,
   PatientHubResponse,
   PatientListItem,
@@ -218,6 +220,20 @@ export async function getPatientHub(patientId: string): Promise<PatientHubRespon
           assignedUser: { select: { fullName: true } },
         },
       },
+      comments: {
+        orderBy: { createdAt: "desc" },
+        include: { author: { select: { id: true, fullName: true } } },
+      },
+      documents: {
+        orderBy: { createdAt: "desc" },
+        include: { uploadedBy: { select: { id: true, fullName: true } } },
+      },
+      calendarEvents: {
+        where: { startAt: { gte: new Date() } },
+        orderBy: { startAt: "asc" },
+        take: 1,
+        select: { startAt: true },
+      },
     },
   });
   if (!patient) return null;
@@ -239,6 +255,27 @@ export async function getPatientHub(patientId: string): Promise<PatientHubRespon
   const tasks: InternalTask[] = patient.tasks.map((t) => toInternalTask(t));
 
   const emails: PriorityEmail[] = patient.emails.map((e) => toPriorityEmail(e));
+  const comments: PatientCommentLine[] = patient.comments.map((c) => ({
+    id: c.id,
+    authorId: c.authorId ?? null,
+    authorName: c.author?.fullName ?? "Équipe cabinet",
+    content: c.content,
+    createdAt: c.createdAt.toISOString(),
+    updatedAt: c.updatedAt.toISOString(),
+  }));
+  const documents: PatientDocumentLine[] = patient.documents.map((d) => ({
+    id: d.id,
+    name: d.name,
+    mimeType: d.mimeType ?? null,
+    sizeBytes: d.sizeBytes,
+    storagePath: d.storagePath ?? null,
+    downloadUrl: d.downloadUrl ?? null,
+    uploadedById: d.uploadedById ?? null,
+    uploadedByName: d.uploadedBy?.fullName ?? null,
+    createdAt: d.createdAt.toISOString(),
+  }));
+  const nextAppointmentFromCalendar = patient.calendarEvents[0]?.startAt ?? null;
+  const nextAppointmentAt = nextAppointmentFromCalendar ?? patient.nextAppointmentAt;
 
   return {
     patient: {
@@ -249,7 +286,7 @@ export async function getPatientHub(patientId: string): Promise<PatientHubRespon
       email: patient.email,
       phone: patient.phone,
       legalGuardian: patient.legalGuardian,
-      nextAppointmentAt: patient.nextAppointmentAt ? patient.nextAppointmentAt.toISOString() : null,
+      nextAppointmentAt: nextAppointmentAt ? nextAppointmentAt.toISOString() : null,
       mutuelle: patient.mutuelle,
       internalComment: patient.internalComment,
       hubStatus: hubStatusLabel(patient.hubStatus),
@@ -257,6 +294,8 @@ export async function getPatientHub(patientId: string): Promise<PatientHubRespon
     reglements,
     tasks,
     emails,
+    comments,
+    documents,
     logs: logs.map((log) => ({
       id: log.id,
       actor: log.actor,
@@ -264,6 +303,69 @@ export async function getPatientHub(patientId: string): Promise<PatientHubRespon
       createdAt: log.createdAt.toISOString(),
     })),
   };
+}
+
+export async function addPatientComment(patientId: string, content: string, author?: { id: string; fullName: string }) {
+  const created = await prisma.patientComment.create({
+    data: {
+      patientId,
+      content,
+      authorId: author?.id ?? null,
+    },
+    include: { author: { select: { id: true, fullName: true } } },
+  });
+
+  await writeActivityLog({
+    actor: author?.fullName ?? "Systeme",
+    message: "Commentaire patient ajouté",
+    patientId,
+  });
+
+  return {
+    id: created.id,
+    authorId: created.authorId ?? null,
+    authorName: created.author?.fullName ?? author?.fullName ?? "Équipe cabinet",
+    content: created.content,
+    createdAt: created.createdAt.toISOString(),
+    updatedAt: created.updatedAt.toISOString(),
+  } satisfies PatientCommentLine;
+}
+
+export async function addPatientDocumentPlaceholder(
+  patientId: string,
+  input: { name: string; mimeType?: string | null; sizeBytes?: number; storagePath?: string | null; downloadUrl?: string | null },
+  author?: { id: string; fullName: string },
+) {
+  const created = await prisma.patientDocument.create({
+    data: {
+      patientId,
+      uploadedById: author?.id ?? null,
+      name: input.name,
+      mimeType: input.mimeType ?? null,
+      sizeBytes: input.sizeBytes ?? 0,
+      storagePath: input.storagePath ?? null,
+      downloadUrl: input.downloadUrl ?? null,
+    },
+    include: { uploadedBy: { select: { id: true, fullName: true } } },
+  });
+
+  await writeActivityLog({
+    actor: author?.fullName ?? "Systeme",
+    message: `Document ajouté: ${created.name}`,
+    patientId,
+  });
+
+  return {
+    id: created.id,
+    name: created.name,
+    mimeType: created.mimeType ?? null,
+    sizeBytes: created.sizeBytes,
+    storagePath: created.storagePath ?? null,
+    downloadUrl: created.downloadUrl ?? null,
+    uploadedById: created.uploadedById ?? null,
+    uploadedByName: created.uploadedBy?.fullName ?? null,
+    createdAt: created.createdAt.toISOString(),
+  } satisfies PatientDocumentLine;
 }
 
 export async function createPatient(payload: PatientFormPayload) {

@@ -214,11 +214,34 @@ export interface PatientHubLogLine {
   createdAt: string;
 }
 
+export interface PatientCommentLine {
+  id: string;
+  authorId: string | null;
+  authorName: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PatientDocumentLine {
+  id: string;
+  name: string;
+  mimeType: string | null;
+  sizeBytes: number;
+  storagePath: string | null;
+  downloadUrl: string | null;
+  uploadedById: string | null;
+  uploadedByName: string | null;
+  createdAt: string;
+}
+
 export interface PatientHubResponse {
   patient: PatientHubDetail;
   reglements: PaymentFollowUp[];
   tasks: InternalTask[];
   emails: PriorityEmail[];
+  comments: PatientCommentLine[];
+  documents: PatientDocumentLine[];
   logs: PatientHubLogLine[];
 }
 

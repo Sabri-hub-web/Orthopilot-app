@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -78,21 +79,21 @@ const bucketMeta: Record<
     health: "Paiement à jour",
   },
   green: {
-    label: "1er mois",
+    label: "À jour",
     badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
     bar: "bg-emerald-500",
     tone: "text-emerald-700",
     health: "Paiement à jour",
   },
   orange: {
-    label: "2e mois",
+    label: "À surveiller",
     badge: "bg-orange-50 text-orange-700 border-orange-200",
     bar: "bg-orange-500",
     tone: "text-orange-700",
     health: "Retard modéré",
   },
   red: {
-    label: "+2 mois",
+    label: "Retard critique",
     badge: "bg-red-50 text-red-700 border-red-200",
     bar: "bg-red-500",
     tone: "text-red-700",
@@ -270,12 +271,14 @@ export function ReglementsView() {
     const orange = nonPaid.filter((i) => paymentBucket(i) === "orange").length;
     const red = nonPaid.filter((i) => paymentBucket(i) === "red").length;
     const relance = nonPaid.filter((i) => i.daysLate > 0).length;
+    const remainingTotal = nonPaid.reduce((acc, i) => acc + Number(i.amountDue || 0), 0);
     const denom = Math.max(1, nonPaid.length);
     return {
       green,
       orange,
       red,
       relance,
+      remainingTotal,
       greenPct: Math.round((green / denom) * 100),
       orangePct: Math.round((orange / denom) * 100),
       redPct: Math.round((red / denom) * 100),
@@ -525,7 +528,7 @@ export function ReglementsView() {
   const kpiCards = [
     {
       key: "green" as const,
-      title: "1er mois",
+      title: "À jour",
       count: kpi.green,
       pct: kpi.greenPct,
       bar: "bg-emerald-500",
@@ -535,7 +538,7 @@ export function ReglementsView() {
     },
     {
       key: "orange" as const,
-      title: "2e mois",
+      title: "À surveiller",
       count: kpi.orange,
       pct: kpi.orangePct,
       bar: "bg-orange-500",
@@ -545,7 +548,7 @@ export function ReglementsView() {
     },
     {
       key: "red" as const,
-      title: "+2 mois",
+      title: "Retard critique",
       count: kpi.red,
       pct: kpi.redPct,
       bar: "bg-red-500",
@@ -569,6 +572,22 @@ export function ReglementsView() {
       {error ? (
         <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       ) : null}
+
+      {/* KPI global — Reste à encaisser */}
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 to-white p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
+            <Wallet className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-xs font-medium text-slate-500">Reste à encaisser</p>
+            <p className="text-2xl font-bold text-slate-900">{euro(kpi.remainingTotal)}</p>
+          </div>
+        </div>
+        <p className="text-xs text-slate-500">
+          Sur {items.filter((i) => i.status !== "Regle").length} règlement(s) non soldé(s)
+        </p>
+      </section>
 
       {/* Zone 1 — KPI */}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -785,10 +804,17 @@ export function ReglementsView() {
                 const isSelected = selectedId === item.id;
                 return (
                   <li key={item.id}>
-                    <button
-                      type="button"
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => handleSelect(item)}
-                      className={`flex w-full flex-col gap-2 px-4 py-3 text-left transition md:grid md:grid-cols-[1.6fr_0.9fr_1.3fr_1fr_1fr_0.9fr_auto] md:items-center md:gap-2 ${
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleSelect(item);
+                        }
+                      }}
+                      className={`flex w-full cursor-pointer flex-col gap-2 px-4 py-3 text-left transition md:grid md:grid-cols-[1.6fr_0.9fr_1.3fr_1fr_1fr_0.9fr_auto] md:items-center md:gap-2 ${
                         isSelected ? "bg-violet-50/60" : "hover:bg-slate-50"
                       }`}
                     >
@@ -838,18 +864,17 @@ export function ReglementsView() {
                       </div>
 
                       <div className="flex justify-end">
-                        <span
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border transition ${
-                            isSelected
-                              ? "border-violet-200 bg-violet-100 text-violet-700"
-                              : "border-slate-200 bg-white text-slate-500"
-                          }`}
-                          title="Ouvrir la fiche de suivi"
+                        <Link
+                          href={`/patients/${item.patientId}?tab=reglements`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
+                          title="Ouvrir la fiche patient"
                         >
                           <Eye className="h-4 w-4" />
-                        </span>
+                          <span className="md:hidden xl:inline">Ouvrir</span>
+                        </Link>
                       </div>
-                    </button>
+                    </div>
                   </li>
                 );
               })}

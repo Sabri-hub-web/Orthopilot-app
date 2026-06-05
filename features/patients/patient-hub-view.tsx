@@ -3,22 +3,64 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
+  BadgeCheck,
   CalendarClock,
   CheckCircle2,
   Clock3,
   CreditCard,
   Download,
   FileText,
+  History,
   Mail,
   MessageSquare,
   MoreHorizontal,
   Phone,
+  Plus,
+  Send,
   Shield,
   User,
+  Wallet,
+  X,
 } from "lucide-react";
 import { errorMessageFromResponse } from "@/lib/validation/client-errors";
-import { PatientFormPayload, PatientHubResponse, PatientHubStatusApi, UsersListItem } from "@/types/domain";
+import {
+  PatientFormPayload,
+  PatientHubResponse,
+  PatientHubStatusApi,
+  ReglementFormPayload,
+  ReglementStatusApi,
+  UsersListItem,
+} from "@/types/domain";
 import { PATIENT_HUB_STATUS_VALUES, patientHubStatusLabelMap } from "@/lib/patients";
+import { REGLEMENT_STATUS_VALUES, reglementStatusLabelMap } from "@/lib/reglements";
+
+const reglementStatusOptions = REGLEMENT_STATUS_VALUES.map((value) => ({
+  value,
+  label: reglementStatusLabelMap[value],
+}));
+
+const defaultReglementForm: ReglementFormPayload = {
+  patientId: "",
+  amountDue: 0,
+  dueDate: "",
+  status: "EN_ATTENTE",
+  comment: "",
+};
+
+function paymentHealth(reglements: PatientHubResponse["reglements"]): {
+  label: "À jour" | "À surveiller" | "Retard critique";
+  className: string;
+} {
+  const nonPaid = reglements.filter((r) => r.status !== "Regle");
+  const worst = nonPaid.reduce((acc, r) => Math.max(acc, r.daysLate), 0);
+  if (nonPaid.length === 0 || worst <= 30) {
+    return { label: "À jour", className: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+  }
+  if (worst <= 60) {
+    return { label: "À surveiller", className: "bg-orange-50 text-orange-700 border-orange-200" };
+  }
+  return { label: "Retard critique", className: "bg-red-50 text-red-700 border-red-200" };
+}
 
 const hubStatusOptions = PATIENT_HUB_STATUS_VALUES.map((value) => ({
   value,
@@ -49,6 +91,13 @@ function initials(fullName: string): string {
 
 function euro(value: number): string {
   return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(value);
+}
+
+function frDate(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("fr-FR");
 }
 
 function patientStatusUiLabel(status: PatientHubResponse["patient"]["hubStatus"]): "Actif" | "En pause" | "Terminé" {
@@ -85,6 +134,16 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
   const [commentRecipientId, setCommentRecipientId] = useState("");
   const [commentFilter, setCommentFilter] = useState<CommentFilter>("active");
   const [users, setUsers] = useState<UsersListItem[]>([]);
+  const [reglementModalOpen, setReglementModalOpen] = useState(false);
+  const [reglementForm, setReglementForm] = useState<ReglementFormPayload>(defaultReglementForm);
+  const [reglementSubmitting, setReglementSubmitting] = useState(false);
+
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab && ["overview", "reglements", "rendezvous", "documents", "commentaires"].includes(tab)) {
+      setActiveTab(tab as HubTab);
+    }
+  }, []);
 
   useEffect(() => {
     if (!success) return;
@@ -180,8 +239,8 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
     }
   }
 
-  async function handleAddComment(event: React.FormEvent) {
-    event.preventDefault();
+  async function handleAddComment(event?: React.FormEvent) {
+    event?.preventDefault();
     if (!commentDraft.trim()) return;
     try {
       setCommentLoading(true);
@@ -272,6 +331,75 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
       setError(e instanceof Error ? e.message : "Erreur ajout document.");
     } finally {
       setDocLoading(false);
+    }
+  }
+
+  function openAddReglement() {
+    setReglementForm({ ...defaultReglementForm, patientId, dueDate: new Date().toISOString().slice(0, 10) });
+    setReglementModalOpen(true);
+  }
+
+  async function handleCreateReglement(event: React.FormEvent) {
+    event.preventDefault();
+    try {
+      setReglementSubmitting(true);
+      setError(null);
+      const response = await fetch("/api/reglements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patientId,
+          amountDue: reglementForm.amountDue,
+          dueDate: reglementForm.dueDate,
+          status: reglementForm.status,
+          comment: reglementForm.comment === "" ? null : reglementForm.comment,
+        }),
+      });
+      if (!response.ok) {
+        setError(await errorMessageFromResponse(response));
+        return;
+      }
+      await loadHub();
+      setReglementModalOpen(false);
+      setSuccess("Règlement ajouté.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur ajout règlement.");
+    } finally {
+      setReglementSubmitting(false);
+    }
+  }
+
+  async function handleReglementRelance(reglementId: string) {
+    try {
+      setError(null);
+      const response = await fetch(`/api/reglements/${reglementId}/relance`, { method: "POST" });
+      if (!response.ok) {
+        setError(await errorMessageFromResponse(response));
+        return;
+      }
+      await loadHub();
+      setSuccess("Relance enregistrée.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur relance.");
+    }
+  }
+
+  async function handleMarkRegle(reglementId: string) {
+    try {
+      setError(null);
+      const response = await fetch(`/api/reglements/${reglementId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "REGLE" }),
+      });
+      if (!response.ok) {
+        setError(await errorMessageFromResponse(response));
+        return;
+      }
+      await loadHub();
+      setSuccess("Règlement marqué comme réglé.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur mise à jour règlement.");
     }
   }
 
@@ -546,22 +674,224 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
           </div>
         ) : null}
 
-        {activeTab === "reglements" ? (
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900">Règlements</h3>
-            <div className="mt-3 space-y-2">
-              {hub.reglements.map((r) => (
-                <div key={r.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 p-3">
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">{r.dueDate}</p>
-                    <p className="text-xs text-slate-500">{r.status}</p>
+        {activeTab === "reglements"
+          ? (() => {
+              const regs = hub.reglements;
+              const total = regs.reduce((acc, r) => acc + Number(r.amountDue || 0), 0);
+              const paid = regs
+                .filter((r) => r.status === "Regle")
+                .reduce((acc, r) => acc + Number(r.amountDue || 0), 0);
+              const remaining = Math.max(0, total - paid);
+              const health = paymentHealth(regs);
+              const nonPaidSorted = regs
+                .filter((r) => r.status !== "Regle")
+                .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+              const target = nonPaidSorted[0] ?? null;
+              const relanceLogs = hub.logs.filter((l) => /relance/i.test(l.message));
+              return (
+                <div className="space-y-3">
+                  {/* Bandeau financier + actions */}
+                  <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+                        <Wallet className="h-4 w-4 text-violet-600" />
+                        Suivi financier
+                        <span className={`ml-1 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${health.className}`}>
+                          {health.label}
+                        </span>
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={openAddReglement}
+                          className="inline-flex h-8 items-center gap-1 rounded-lg bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] px-3 text-xs font-semibold text-white shadow-sm"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Ajouter un règlement
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => target && handleReglementRelance(target.id)}
+                          disabled={!target}
+                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 text-xs font-medium text-amber-800 disabled:opacity-40"
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                          Ajouter une relance
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => target && handleMarkRegle(target.id)}
+                          disabled={!target}
+                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-medium text-emerald-700 disabled:opacity-40"
+                        >
+                          <BadgeCheck className="h-3.5 w-3.5" />
+                          Marquer comme réglé
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                      <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                        <p className="text-[11px] text-slate-500">Montant total</p>
+                        <p className="text-lg font-bold text-slate-900">{euro(total)}</p>
+                      </div>
+                      <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+                        <p className="text-[11px] text-emerald-600">Montant réglé</p>
+                        <p className="text-lg font-bold text-emerald-700">{euro(paid)}</p>
+                      </div>
+                      <div className="rounded-xl border border-red-100 bg-red-50 p-3">
+                        <p className="text-[11px] text-red-600">Reste à payer</p>
+                        <p className="text-lg font-bold text-red-700">{euro(remaining)}</p>
+                      </div>
+                    </div>
+                  </article>
+
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    {/* Historique des paiements */}
+                    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <h3 className="text-sm font-semibold text-slate-900">Historique des paiements</h3>
+                      <div className="mt-3 space-y-2">
+                        {regs.map((r) => {
+                          const statusValue =
+                            reglementStatusOptions.find((o) => o.label === r.status)?.value ?? "EN_ATTENTE";
+                          return (
+                            <div key={r.id} className="rounded-xl border border-slate-100 p-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <div>
+                                  <p className="text-sm font-medium text-slate-800">{frDate(r.dueDate)}</p>
+                                  <p className="text-xs text-slate-500">{r.status}</p>
+                                </div>
+                                <span className="text-sm font-semibold text-slate-900">{euro(r.amountDue)}</span>
+                              </div>
+                              {statusValue !== "REGLE" ? (
+                                <div className="mt-2 flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleReglementRelance(r.id)}
+                                    className="inline-flex h-7 items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2 text-[11px] font-medium text-amber-800"
+                                  >
+                                    <Send className="h-3 w-3" />
+                                    Relance
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMarkRegle(r.id)}
+                                    className="inline-flex h-7 items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 text-[11px] font-medium text-emerald-700"
+                                  >
+                                    <BadgeCheck className="h-3 w-3" />
+                                    Réglé
+                                  </button>
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                        {regs.length === 0 ? <p className="text-xs text-slate-500">Aucun règlement.</p> : null}
+                      </div>
+                    </article>
+
+                    {/* Historique des relances */}
+                    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+                        <History className="h-4 w-4 text-violet-600" />
+                        Historique des relances
+                      </h3>
+                      {relanceLogs.length === 0 ? (
+                        <p className="mt-3 text-xs text-slate-500">Aucune relance enregistrée.</p>
+                      ) : (
+                        <ol className="mt-3 space-y-3 border-l border-slate-200 pl-4">
+                          {relanceLogs.slice(0, 12).map((log) => (
+                            <li key={log.id} className="relative">
+                              <span className="absolute -left-[1.30rem] top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500" />
+                              <p className="text-[11px] font-medium text-slate-400">{formatLogDate(log.createdAt)}</p>
+                              <p className="text-sm text-slate-700">{log.message}</p>
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </article>
                   </div>
-                  <span className="text-sm font-semibold text-slate-900">{euro(r.amountDue)}</span>
+
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    {/* Commentaires internes */}
+                    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+                        <MessageSquare className="h-4 w-4 text-violet-600" />
+                        Commentaires internes
+                      </h3>
+                      <div className="mb-3 flex gap-2">
+                        <input
+                          value={commentDraft}
+                          onChange={(e) => setCommentDraft(e.target.value)}
+                          placeholder="Ajouter un commentaire…"
+                          className="h-9 flex-1 rounded-xl border border-slate-200 px-3 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleAddComment()}
+                          disabled={commentLoading || !commentDraft.trim()}
+                          className="rounded-xl bg-violet-600 px-3 text-xs font-semibold text-white disabled:opacity-50"
+                        >
+                          Ajouter
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {hub.comments.filter((c) => !c.isDone).slice(0, 5).map((c) => (
+                          <div key={c.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-medium text-slate-800">{c.authorName}</p>
+                              <p className="text-[11px] text-slate-400">{formatLogDate(c.createdAt)}</p>
+                            </div>
+                            <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{c.content}</p>
+                            <label className="mt-2 inline-flex cursor-pointer items-center gap-2 text-[11px] text-slate-600">
+                              <input
+                                type="checkbox"
+                                checked={c.isDone}
+                                onChange={(e) => handleToggleCommentDone(c.id, e.target.checked)}
+                              />
+                              Marquer comme traité
+                            </label>
+                          </div>
+                        ))}
+                        {hub.comments.filter((c) => !c.isDone).length === 0 ? (
+                          <p className="text-xs text-slate-500">Aucun commentaire actif.</p>
+                        ) : null}
+                      </div>
+                    </article>
+
+                    {/* Documents financiers */}
+                    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+                        <FileText className="h-4 w-4 text-violet-600" />
+                        Documents financiers
+                      </h3>
+                      <div className="space-y-2">
+                        {hub.documents.map((doc) => (
+                          <div key={doc.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 p-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-slate-800">{doc.name}</p>
+                              <p className="text-[11px] text-slate-500">{formatLogDate(doc.createdAt)}</p>
+                            </div>
+                            {doc.downloadUrl ? (
+                              <a href={doc.downloadUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-slate-200 p-1.5 text-slate-500">
+                                <Download className="h-3.5 w-3.5" />
+                              </a>
+                            ) : (
+                              <button type="button" disabled className="rounded-lg border border-slate-200 p-1.5 text-slate-400" title="Téléchargement bientôt disponible">
+                                <Download className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        {hub.documents.length === 0 ? (
+                          <p className="text-xs text-slate-500">Aucun document financier.</p>
+                        ) : null}
+                      </div>
+                    </article>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </article>
-        ) : null}
+              );
+            })()
+          : null}
 
         {activeTab === "rendezvous" ? (
           <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -688,6 +1018,93 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
           </article>
         ) : null}
       </form>
+
+      {reglementModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-xl">
+            <header className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                <CreditCard className="h-4 w-4 text-violet-600" />
+                Nouveau règlement
+              </h3>
+              <button
+                type="button"
+                onClick={() => setReglementModalOpen(false)}
+                className="rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:bg-slate-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </header>
+            <form onSubmit={handleCreateReglement} className="grid gap-3 p-4 sm:grid-cols-2">
+              <label className="flex flex-col gap-1 text-xs text-slate-500">
+                Montant (€)
+                <input
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  value={reglementForm.amountDue || ""}
+                  onChange={(e) =>
+                    setReglementForm((p) => ({ ...p, amountDue: Number.parseFloat(e.target.value) || 0 }))
+                  }
+                  className="h-9 rounded-xl border border-slate-200 px-3 text-sm text-slate-800"
+                  required
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-slate-500">
+                Échéance
+                <input
+                  type="date"
+                  value={reglementForm.dueDate}
+                  onChange={(e) => setReglementForm((p) => ({ ...p, dueDate: e.target.value }))}
+                  className="h-9 rounded-xl border border-slate-200 px-3 text-sm text-slate-800"
+                  required
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-slate-500 sm:col-span-2">
+                Statut
+                <select
+                  value={reglementForm.status}
+                  onChange={(e) =>
+                    setReglementForm((p) => ({ ...p, status: e.target.value as ReglementStatusApi }))
+                  }
+                  className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800"
+                >
+                  {reglementStatusOptions.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-slate-500 sm:col-span-2">
+                Commentaire interne
+                <textarea
+                  value={reglementForm.comment ?? ""}
+                  onChange={(e) => setReglementForm((p) => ({ ...p, comment: e.target.value }))}
+                  rows={2}
+                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
+                />
+              </label>
+              <div className="flex items-center justify-end gap-2 sm:col-span-2">
+                <button
+                  type="button"
+                  onClick={() => setReglementModalOpen(false)}
+                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={reglementSubmitting}
+                  className="rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50"
+                >
+                  {reglementSubmitting ? "Enregistrement…" : "Créer"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

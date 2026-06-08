@@ -104,6 +104,7 @@ export interface InternalTask {
   dueDate: string;
   priority: PriorityLevel;
   status: "A faire" | "En cours" | "En attente" | "Terminee";
+  createdAt?: string | null;
 }
 
 export interface ActivityLog {

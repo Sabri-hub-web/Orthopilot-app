@@ -24,6 +24,7 @@ export function toInternalTask(item: {
   dueDate: Date;
   priority: keyof typeof taskPriorityLabelMap;
   status: keyof typeof taskStatusLabelMap;
+  createdAt?: Date | null;
 }): InternalTask {
   return {
     id: item.id,
@@ -36,6 +37,7 @@ export function toInternalTask(item: {
     dueDate: formatTaskDueDate(item.dueDate),
     priority: taskPriorityLabelMap[item.priority],
     status: taskStatusLabelMap[item.status],
+    createdAt: item.createdAt ? item.createdAt.toISOString() : null,
   };
 }
 

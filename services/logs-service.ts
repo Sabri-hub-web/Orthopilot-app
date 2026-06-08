@@ -12,12 +12,20 @@ function formatRelativeTime(date: Date): string {
   return `Il y a ${days} j`;
 }
 
-function toActivityLog(item: { id: string; actor: string; message: string; createdAt: Date }): ActivityLog {
+function toActivityLog(item: {
+  id: string;
+  actor: string;
+  message: string;
+  createdAt: Date;
+  patientId?: string | null;
+}): ActivityLog {
   return {
     id: item.id,
     actor: item.actor,
     message: item.message,
     createdAt: formatRelativeTime(item.createdAt),
+    createdAtIso: item.createdAt.toISOString(),
+    patientId: item.patientId ?? null,
   };
 }
 

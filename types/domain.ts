@@ -112,6 +112,8 @@ export interface ActivityLog {
   message: string;
   actor: string;
   createdAt: string;
+  createdAtIso?: string;
+  patientId?: string | null;
 }
 
 export interface DashboardPatientsSummary {

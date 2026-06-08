@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await requireApiPermission(request, "settings:view");
     if (auth.response) return auth.response;
-    const data = await getSettingsOverview();
+    const data = await getSettingsOverview(auth.user.id, auth.user.email);
     return NextResponse.json(data, { status: 200 });
   } catch (error) {
     console.error("GET /api/settings failed", error);

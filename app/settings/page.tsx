@@ -12,7 +12,7 @@ export default async function SettingsPage() {
   }
   return (
     <DashboardLayout
-      title="Parametres"
+      title="Paramètres"
       currentUserName={user.fullName}
       currentUserRole={roleLabel(user.role)}
       currentUserRoleKey={user.role}

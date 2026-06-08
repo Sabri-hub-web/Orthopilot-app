@@ -415,6 +415,32 @@ export interface SettingsOverviewResponse {
     emails: number;
     tasks: number;
     logs: number;
+    documents: number;
   };
   modules: SettingModuleStatus[];
+  billing?: {
+    plan: string;
+    documentsStored: number;
+    emailsSynced: number;
+    storageUsedMb: number;
+  };
+  security?: {
+    activeSessions: number;
+    lastLoginAt: string | null;
+  };
+  backups?: {
+    lastBackupAt: string | null;
+    totalBackups: number;
+    estimatedSizeMb: number;
+  };
+  gmail?: GmailConnectionStatus;
+}
+
+export interface SettingsUserItem {
+  id: string;
+  fullName: string;
+  email: string;
+  role: "ADMIN" | "RESPONSABLE" | "SECRETAIRE" | "PRATICIEN" | "ASSISTANTE";
+  presenceStatus: "DISPONIBLE" | "EN_CONSULTATION" | "EN_REUNION" | "ABSENT";
+  createdAt: string;
 }

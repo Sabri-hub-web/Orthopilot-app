@@ -3,11 +3,10 @@ import { computePaymentDistribution } from "@/lib/dashboard-ui";
 import { DashboardQuickAccess } from "@/components/dashboard/dashboard-quick-access";
 import { DashboardTeamPresence } from "@/components/dashboard/dashboard-team-presence";
 import { PaymentsDonut } from "@/components/dashboard/payments-donut";
-import type { InternalTask, PaymentFollowUp, PriorityEmail } from "@/types/domain";
+import type { InternalTask, PaymentFollowUp } from "@/types/domain";
 
 interface DashboardWidgetsProps {
   payments: PaymentFollowUp[];
-  emails: PriorityEmail[];
   tasks: InternalTask[];
 }
 
@@ -40,19 +39,6 @@ function SectionPanel({
   );
 }
 
-const emailCategoryStyles = {
-  Urgent: "bg-rose-50 text-rose-700 ring-rose-100/80",
-  Administratif: "bg-orange-50 text-orange-800 ring-orange-100/80",
-  "Suivi clinique": "bg-emerald-50 text-emerald-800 ring-emerald-100/80",
-};
-
-const emailStatusStyles = {
-  "A traiter": "bg-amber-50 text-amber-900 ring-amber-100/80",
-  "En cours": "bg-sky-50 text-sky-800 ring-sky-100/80",
-  Traite: "bg-slate-100 text-slate-600 ring-slate-200/80",
-  Archive: "bg-slate-50 text-slate-500 ring-slate-100/80",
-};
-
 const taskStatusStyles = {
   "A faire": "bg-orange-50 text-orange-800 ring-orange-100/80",
   "En cours": "bg-emerald-50 text-emerald-800 ring-emerald-100/80",
@@ -80,7 +66,7 @@ function EmptyHint({ message }: { message: string }) {
   );
 }
 
-export function DashboardWidgets({ payments, emails, tasks }: DashboardWidgetsProps) {
+export function DashboardWidgets({ payments, tasks }: DashboardWidgetsProps) {
   const latePayments = payments.filter(isLatePayment).slice(0, 5);
 
   const openTasks = tasks.filter((t) =>
@@ -88,22 +74,13 @@ export function DashboardWidgets({ payments, emails, tasks }: DashboardWidgetsPr
   );
   const topTasks = openTasks.slice(0, 5);
 
-  const prioritizedEmails = [...emails].sort((a, b) => {
-    if (a.category === "Urgent" && b.category !== "Urgent") return -1;
-    if (a.category !== "Urgent" && b.category === "Urgent") return 1;
-    return 0;
-  });
-  const openEmails = prioritizedEmails.filter((e) => ["A traiter", "En cours"].includes(e.status));
-  const topEmails = openEmails.slice(0, 5);
-
   const distribution = computePaymentDistribution(payments);
   const distributionTotal = distribution.reduce((s, x) => s + x.amount, 0);
 
   return (
     <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,3.15fr)_minmax(0,2.55fr)] gap-1.5 overflow-hidden lg:gap-2">
-      {/* Milieu : 3 colonnes — règlements en retard | tâches | emails */}
-      <div className="grid min-h-0 grid-cols-1 gap-1.5 overflow-hidden lg:grid-cols-3 lg:gap-2">
-        <SectionPanel title="Règlements en retard" href="/reglements" className="min-h-0">
+      <div className="grid min-h-0 grid-cols-1 gap-1.5 overflow-hidden lg:grid-cols-2 lg:gap-2">
+        <SectionPanel title="Règlements à traiter" href="/reglements" className="min-h-0">
           {latePayments.length ? (
             <ul className="flex h-full min-h-0 flex-col justify-start gap-1 overflow-hidden">
               {latePayments.map((payment) => (
@@ -178,41 +155,6 @@ export function DashboardWidgets({ payments, emails, tasks }: DashboardWidgetsPr
             </ul>
           ) : (
             <EmptyHint message="Aucune tâche ouverte pour le moment." />
-          )}
-        </SectionPanel>
-
-        <SectionPanel title="Emails non traités" href="/emails" className="min-h-0">
-          {topEmails.length ? (
-            <ul className="flex h-full min-h-0 flex-col gap-1 overflow-hidden">
-              {topEmails.map((email) => (
-                <li
-                  key={email.id}
-                  className="shrink-0 rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-1.5"
-                >
-                  <p className="line-clamp-1 text-[11px] font-medium text-slate-900">{email.subject}</p>
-                  <p className="mt-0.5 truncate text-[9px] text-slate-500">
-                    {email.from} · {email.assignee}
-                  </p>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-0.5">
-                    <span
-                      className={`rounded px-1 py-px text-[8px] font-semibold ring-1 ${emailCategoryStyles[email.category]}`}
-                    >
-                      {email.category}
-                    </span>
-                    <span
-                      className={`rounded px-1 py-px text-[8px] font-medium ring-1 ${emailStatusStyles[email.status]}`}
-                    >
-                      {email.status}
-                    </span>
-                    <span className="ml-auto text-[9px] tabular-nums text-slate-400">
-                      {email.receivedDate.slice(5)} {email.receivedAt}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyHint message="Aucun email en attente de traitement." />
           )}
         </SectionPanel>
       </div>

@@ -3,8 +3,6 @@
 import {
   Banknote,
   CreditCard,
-  MessageSquare,
-  Send,
   Stethoscope,
   UserPlus,
 } from "lucide-react";
@@ -14,15 +12,13 @@ const shortcuts = [
   { label: "Nouveau patient", href: "/patients", icon: UserPlus, accent: "from-emerald-400/90 to-teal-500" },
   { label: "Nouvelle tâche", href: "/tasks", icon: Stethoscope, accent: "from-sky-400/90 to-blue-600" },
   { label: "Relance rapide", href: "/reglements", icon: CreditCard, accent: "from-amber-400/90 to-orange-500" },
-  { label: "Envoyer email", href: "/emails", icon: Send, accent: "from-violet-400/90 to-indigo-600" },
   { label: "Règlement reçu", href: "/reglements", icon: Banknote, accent: "from-teal-400/90 to-emerald-600" },
-  { label: "Commentaire patient", href: "/messages", icon: MessageSquare, accent: "from-slate-500/90 to-slate-700" },
 ];
 
 export function DashboardQuickAccess({ compact = false }: { compact?: boolean }) {
   if (compact) {
     return (
-      <div className="grid h-full min-h-0 grid-cols-3 grid-rows-2 gap-1">
+      <div className="grid h-full min-h-0 grid-cols-2 grid-rows-2 gap-1">
         {shortcuts.map(({ label, href, icon: Icon, accent }) => (
           <Link
             key={label}

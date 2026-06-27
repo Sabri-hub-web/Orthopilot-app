@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CreditCard, Mail, Stethoscope } from "lucide-react";
+import { AlertCircle, CreditCard, Stethoscope } from "lucide-react";
 import Link from "next/link";
 import type { DashboardKpis } from "@/lib/dashboard-ui";
 import { MiniSparkline } from "@/components/dashboard/mini-sparkline";
@@ -54,7 +54,7 @@ function KpiCard({
 
 export function DashboardKpiRow({ kpis }: { kpis: DashboardKpis }) {
   return (
-    <section className="grid shrink-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+    <section className="grid shrink-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
       <KpiCard
         title="Règlements en retard"
         value={kpis.latePayments.count}
@@ -89,15 +89,6 @@ export function DashboardKpiRow({ kpis }: { kpis: DashboardKpis }) {
         icon={Stethoscope}
         accent="bg-gradient-to-br from-sky-400 to-blue-600"
         sparkKey="tasks"
-      />
-      <KpiCard
-        title="Emails non traités"
-        value={kpis.emails.count}
-        subtitle={kpis.emails.urgent > 0 ? `${kpis.emails.urgent} urgents` : "Boîte à jour"}
-        href="/emails"
-        icon={Mail}
-        accent="bg-gradient-to-br from-violet-400 to-indigo-600"
-        sparkKey="emails"
       />
     </section>
   );

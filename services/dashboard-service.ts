@@ -1,14 +1,9 @@
 import { prisma } from "@/server/db/client";
 import { taskPriorityLabelMap, taskStatusLabelMap } from "@/lib/tasks";
 import { reglementStatusLabelMap } from "@/lib/reglements";
-import { emailCategoryLabelMap, emailStatusLabelMap } from "@/lib/emails";
 
 function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
-}
-
-function formatHour(date: Date): string {
-  return date.toISOString().slice(11, 16);
 }
 
 function getDaysLate(dueDate: Date): number {
@@ -21,19 +16,11 @@ function formatTaskDueDate(date: Date): string {
 }
 
 export async function getDashboardData() {
-  const [paymentsRaw, emailsRaw, tasksRaw, patientTotal, attentionAdminCount] = await Promise.all([
+  const [paymentsRaw, tasksRaw, patientTotal, attentionAdminCount] = await Promise.all([
     prisma.reglement.findMany({
       include: { patient: true },
       orderBy: { dueDate: "asc" },
       take: 12,
-    }),
-    prisma.email.findMany({
-      include: {
-        patient: { select: { firstName: true, lastName: true } },
-        assignedUser: { select: { fullName: true } },
-      },
-      orderBy: { receivedAt: "desc" },
-      take: 20,
     }),
     prisma.task.findMany({
       include: {
@@ -60,20 +47,7 @@ export async function getDashboardData() {
     lastRelanceAt: payment.lastRelanceAt ? payment.lastRelanceAt.toISOString() : null,
   }));
 
-  const emails = emailsRaw.map((email) => ({
-    id: email.id,
-    from: email.sender,
-    subject: email.subject,
-    receivedDate: formatDate(email.receivedAt),
-    receivedAt: formatHour(email.receivedAt),
-    category: emailCategoryLabelMap[email.category],
-    status: emailStatusLabelMap[email.status],
-    comment: email.comment,
-    patientId: email.patientId,
-    patientName: email.patient ? `${email.patient.firstName} ${email.patient.lastName}` : null,
-    assigneeId: email.assigneeId,
-    assignee: email.assignedUser?.fullName ?? "Non assignee",
-  }));
+  const emails = [] as const;
 
   const tasks = tasksRaw.map((task) => ({
     id: task.id,

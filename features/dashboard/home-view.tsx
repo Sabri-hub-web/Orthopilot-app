@@ -11,13 +11,12 @@ function DashboardSkeleton() {
   return (
     <div className="space-y-2 animate-pulse">
       <div className="h-12 rounded-2xl bg-slate-200/70" />
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+        {[1, 2, 3].map((i) => (
           <div key={i} className="h-[128px] rounded-2xl bg-slate-200/60" />
         ))}
       </div>
-      <div className="grid min-h-[200px] gap-2 lg:grid-cols-3">
-        <div className="rounded-2xl bg-slate-200/50" />
+      <div className="grid min-h-[200px] gap-2 lg:grid-cols-2">
         <div className="rounded-2xl bg-slate-200/50" />
         <div className="rounded-2xl bg-slate-200/50" />
       </div>
@@ -87,7 +86,7 @@ export function HomeView({
       {data && kpis ? (
         <div className="animate-dashboard-in flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden lg:gap-2">
           <DashboardKpiRow kpis={kpis} />
-          <DashboardWidgets payments={data.payments} emails={data.emails} tasks={data.tasks} />
+          <DashboardWidgets payments={data.payments} tasks={data.tasks} />
         </div>
       ) : null}
     </div>

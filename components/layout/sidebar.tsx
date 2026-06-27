@@ -3,12 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Activity,
-  CalendarDays,
   CreditCard,
   Home,
-  Mail,
-  MessageSquare,
   PanelLeftClose,
   PanelLeft,
   Settings,
@@ -30,17 +26,7 @@ type NavItem = {
 const navSections: { heading: string; items: NavItem[] }[] = [
   {
     heading: "Principal",
-    items: [
-      { label: "Dashboard", href: "/", icon: Home, permission: "dashboard:view" },
-      { label: "Calendrier", href: "/calendar", icon: CalendarDays, permission: "calendar:view" },
-    ],
-  },
-  {
-    heading: "Communication",
-    items: [
-      { label: "Messages", href: "/messages", icon: MessageSquare, permission: "messages:view" },
-      { label: "Emails", href: "/emails", icon: Mail, permission: "emails:view" },
-    ],
+    items: [{ label: "Dashboard", href: "/", icon: Home, permission: "dashboard:view" }],
   },
   {
     heading: "Gestion",
@@ -48,7 +34,6 @@ const navSections: { heading: string; items: NavItem[] }[] = [
       { label: "Suivi des règlements", href: "/reglements", icon: CreditCard, permission: "reglements:view" },
       { label: "Patients", href: "/patients", icon: Users, permission: "patients:view" },
       { label: "Tâches internes", href: "/tasks", icon: Stethoscope, permission: "tasks:view" },
-      { label: "Logs & activité", href: "/logs", icon: Activity, permission: "logs:view" },
     ],
   },
   {

@@ -89,7 +89,7 @@ export function Sidebar({
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-white/[0.08] bg-gradient-to-b from-[#080f1c] via-[#0c1526] to-[#050910] text-slate-100 shadow-xl shadow-black/40 transition-transform duration-300 ease-out lg:sticky lg:top-0 lg:z-20 lg:max-h-screen lg:translate-x-0 lg:shadow-none ${widthClass} ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen min-h-screen flex-col border-r border-white/[0.08] bg-gradient-to-b from-[#080f1c] via-[#0c1526] to-[#050910] text-slate-100 shadow-xl shadow-black/40 transition-transform duration-300 ease-out lg:sticky lg:top-0 lg:z-20 lg:translate-x-0 lg:shadow-none ${widthClass} ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -131,20 +131,20 @@ export function Sidebar({
           ) : null}
         </div>
 
-        <nav className="flex-1 space-y-4 overflow-y-auto px-1.5 py-2">
+        <nav className="flex flex-1 flex-col justify-evenly overflow-y-auto px-1.5 py-4 lg:py-6">
           {navSections.map((section) => {
             const visible = section.items.filter((item) => hasPermission(role, item.permission));
             if (!visible.length) return null;
             return (
-              <div key={section.heading}>
+              <div key={section.heading} className="shrink-0">
                 {!collapsed ? (
-                  <p className="mb-1 px-1.5 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+                  <p className="mb-2 px-1.5 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
                     {section.heading}
                   </p>
                 ) : (
-                  <div className="my-2 hidden h-px bg-white/10 lg:block" aria-hidden />
+                  <div className="my-3 hidden h-px bg-white/10 lg:block" aria-hidden />
                 )}
-                <ul className="space-y-0.5">
+                <ul className="space-y-1">
                   {visible.map(({ label, href, icon: Icon }) => {
                     const isActive =
                       href === "/"

@@ -85,7 +85,7 @@ export function HomeView({
 
       {data && kpis ? (
         <div className="animate-dashboard-in flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden lg:gap-2">
-          <DashboardKpiRow kpis={kpis} />
+          <DashboardKpiRow kpis={kpis} payments={data.payments} />
           <DashboardWidgets payments={data.payments} tasks={data.tasks} />
         </div>
       ) : null}

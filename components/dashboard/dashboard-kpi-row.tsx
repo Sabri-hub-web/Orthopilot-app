@@ -1,9 +1,12 @@
 "use client";
 
-import { AlertCircle, CreditCard, Stethoscope } from "lucide-react";
+import { CreditCard, Stethoscope } from "lucide-react";
 import Link from "next/link";
-import type { DashboardKpis } from "@/lib/dashboard-ui";
+import { useMemo } from "react";
+import { computePaymentDistribution, type DashboardKpis } from "@/lib/dashboard-ui";
 import { MiniSparkline } from "@/components/dashboard/mini-sparkline";
+import { PaymentsDonut } from "@/components/dashboard/payments-donut";
+import type { PaymentFollowUp } from "@/types/domain";
 
 function formatEur(n: number) {
   return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n);
@@ -52,7 +55,37 @@ function KpiCard({
   );
 }
 
-export function DashboardKpiRow({ kpis }: { kpis: DashboardKpis }) {
+function KpiDonutCard({
+  distribution,
+  total,
+}: {
+  distribution: ReturnType<typeof computePaymentDistribution>;
+  total: number;
+}) {
+  return (
+    <Link
+      href="/reglements"
+      className="group flex h-[128px] flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition hover:border-slate-300/90 hover:shadow-[0_4px_12px_rgba(15,23,42,0.08)]"
+    >
+      <p className="shrink-0 text-[12px] font-medium leading-snug text-slate-600">Répartition règlements</p>
+      <PaymentsDonut kpi slices={distribution} total={total} />
+    </Link>
+  );
+}
+
+export function DashboardKpiRow({
+  kpis,
+  payments,
+}: {
+  kpis: DashboardKpis;
+  payments: PaymentFollowUp[];
+}) {
+  const distribution = useMemo(() => computePaymentDistribution(payments), [payments]);
+  const distributionTotal = useMemo(
+    () => distribution.reduce((sum, slice) => sum + slice.amount, 0),
+    [distribution],
+  );
+
   return (
     <section className="grid shrink-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
       <KpiCard
@@ -69,19 +102,6 @@ export function DashboardKpiRow({ kpis }: { kpis: DashboardKpis }) {
         sparkKey="late-payments"
       />
       <KpiCard
-        title="Rappels à envoyer"
-        value={kpis.reminders.count}
-        subtitle={
-          kpis.reminders.totalEur > 0
-            ? `${formatEur(kpis.reminders.totalEur)} EUR concernés`
-            : "Relances à planifier"
-        }
-        href="/reglements"
-        icon={AlertCircle}
-        accent="bg-gradient-to-br from-amber-400 to-orange-500"
-        sparkKey="reminders"
-      />
-      <KpiCard
         title="Tâches en cours"
         value={kpis.tasks.count}
         subtitle={kpis.tasks.urgent > 0 ? `${kpis.tasks.urgent} urgentes` : "Priorité normale"}
@@ -90,6 +110,7 @@ export function DashboardKpiRow({ kpis }: { kpis: DashboardKpis }) {
         accent="bg-gradient-to-br from-sky-400 to-blue-600"
         sparkKey="tasks"
       />
+      <KpiDonutCard distribution={distribution} total={distributionTotal} />
     </section>
   );
 }

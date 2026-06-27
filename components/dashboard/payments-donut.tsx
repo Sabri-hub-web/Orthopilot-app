@@ -10,15 +10,17 @@ export function PaymentsDonut({
   slices,
   total,
   compact = false,
+  kpi = false,
 }: {
   slices: PaymentDistributionSlice[];
   total: number;
   compact?: boolean;
+  kpi?: boolean;
 }) {
   const cx = 80;
   const cy = 80;
-  const rOuter = compact ? 54 : 52;
-  const rInner = compact ? 32 : 34;
+  const rOuter = kpi ? 48 : compact ? 54 : 52;
+  const rInner = kpi ? 28 : compact ? 32 : 34;
 
   function polar(ang: number, rad: number) {
     return [cx + rad * Math.cos(ang), cy + rad * Math.sin(ang)] as const;
@@ -48,6 +50,39 @@ export function PaymentsDonut({
       paths.push({ d, fill: slice.color });
       angle = a1;
     }
+  }
+
+  if (kpi) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center gap-2 overflow-hidden">
+        <div className="relative h-[4.5rem] w-[4.5rem] shrink-0">
+          <svg viewBox="0 0 160 160" className="absolute inset-0 h-full w-full drop-shadow-sm" aria-hidden>
+            {paths.length ? (
+              paths.map((p, i) => <path key={i} d={p.d} fill={p.fill} stroke="white" strokeWidth="0.75" />)
+            ) : (
+              <circle cx={cx} cy={cy} r={(rOuter + rInner) / 2} fill="#e2e8f0" />
+            )}
+          </svg>
+          <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center px-0.5 text-center">
+            <p className="text-[7px] font-semibold uppercase tracking-wider text-slate-500">Total</p>
+            <p className="text-[11px] font-bold leading-none tabular-nums text-slate-900">{formatEur(total)}</p>
+          </div>
+        </div>
+        <ul className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
+          {slices.length ? (
+            slices.map((s) => (
+              <li key={s.status} className="flex items-center gap-1.5 text-[10px] leading-tight">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
+                <span className="min-w-0 flex-1 truncate font-medium text-slate-600">{s.status}</span>
+                <span className="shrink-0 font-semibold tabular-nums text-slate-900">{formatEur(s.amount)}</span>
+              </li>
+            ))
+          ) : (
+            <li className="text-[10px] text-slate-500">Aucune donnée.</li>
+          )}
+        </ul>
+      </div>
+    );
   }
 
   if (compact) {

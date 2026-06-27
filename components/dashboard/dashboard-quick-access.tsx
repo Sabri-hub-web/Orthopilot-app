@@ -9,51 +9,23 @@ import {
 import Link from "next/link";
 
 const shortcuts = [
-  { label: "Nouveau patient", href: "/patients", icon: UserPlus, accent: "from-emerald-400/90 to-teal-500" },
-  { label: "Nouvelle tâche", href: "/tasks", icon: Stethoscope, accent: "from-sky-400/90 to-blue-600" },
-  { label: "Relance rapide", href: "/reglements", icon: CreditCard, accent: "from-amber-400/90 to-orange-500" },
-  { label: "Règlement reçu", href: "/reglements", icon: Banknote, accent: "from-teal-400/90 to-emerald-600" },
-];
+  { label: "Nouveau patient", href: "/patients", icon: UserPlus },
+  { label: "Nouvelle tâche", href: "/tasks", icon: Stethoscope },
+  { label: "Relance rapide", href: "/reglements", icon: CreditCard },
+  { label: "Règlement reçu", href: "/reglements", icon: Banknote },
+] as const;
 
-export function DashboardQuickAccess({ compact = false }: { compact?: boolean }) {
-  if (compact) {
-    return (
-      <div className="grid h-full min-h-0 grid-cols-2 grid-rows-2 gap-1">
-        {shortcuts.map(({ label, href, icon: Icon, accent }) => (
-          <Link
-            key={label}
-            href={href}
-            title={label}
-            className="group flex aspect-square min-h-0 max-h-full flex-col items-center justify-center gap-0.5 rounded-lg border border-slate-100 bg-slate-50/80 px-0.5 py-1 text-center shadow-sm transition hover:border-slate-200 hover:bg-white hover:shadow-md"
-          >
-            <span
-              className={`flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br ${accent} text-white shadow-sm ring-2 ring-white/40 transition group-hover:ring-white/70`}
-            >
-              <Icon className="h-3.5 w-3.5" strokeWidth={1.6} aria-hidden />
-            </span>
-            <span className="line-clamp-2 max-w-full px-0.5 text-[8px] font-medium leading-tight text-slate-700">
-              {label}
-            </span>
-          </Link>
-        ))}
-      </div>
-    );
-  }
-
+export function DashboardActionChips({ className = "" }: { className?: string }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-      {shortcuts.map(({ label, href, icon: Icon, accent }) => (
+    <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
+      {shortcuts.map(({ label, href, icon: Icon }) => (
         <Link
           key={label}
           href={href}
-          className="group flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200/90 bg-white px-3 py-5 text-center shadow-sm shadow-slate-900/5 transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md motion-reduce:transform-none"
+          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/90 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-sky-200 hover:bg-sky-50/80 hover:text-sky-900"
         >
-          <span
-            className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${accent} text-white shadow-sm transition group-hover:scale-105 motion-reduce:transform-none`}
-          >
-            <Icon className="h-5 w-5" strokeWidth={1.6} aria-hidden />
-          </span>
-          <span className="text-[12px] font-medium leading-tight text-slate-700">{label}</span>
+          <Icon className="h-3.5 w-3.5 shrink-0 text-slate-500" strokeWidth={1.75} aria-hidden />
+          <span className="whitespace-nowrap">{label}</span>
         </Link>
       ))}
     </div>

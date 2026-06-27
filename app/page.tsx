@@ -16,6 +16,7 @@ export default async function Home() {
   return (
     <DashboardLayout
       title="Tableau de bord"
+      fillViewport
       currentUserName={user.fullName}
       currentUserRole={roleLabel(user.role)}
       currentUserRoleKey={user.role}

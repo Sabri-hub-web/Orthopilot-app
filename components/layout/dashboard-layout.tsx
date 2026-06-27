@@ -71,7 +71,7 @@ export function DashboardLayout({
               contentFlush
                 ? "overflow-hidden p-0"
                 : fillViewport
-                  ? "overflow-hidden px-3 py-0 md:px-4"
+                  ? "overflow-hidden px-3 py-1.5 md:px-4 md:py-2"
                   : "overflow-y-auto px-4 py-1.5 md:px-6 md:py-2"
             }`}
           >

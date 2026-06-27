@@ -9,21 +9,15 @@ import type { DashboardSummaryResponse } from "@/types/domain";
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-2 animate-pulse">
-      <div className="h-12 rounded-2xl bg-slate-200/70" />
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden animate-pulse">
+      <div className="grid shrink-0 grid-cols-2 gap-2 lg:grid-cols-3">
         {[1, 2, 3].map((i) => (
           <div key={i} className="h-[128px] rounded-2xl bg-slate-200/60" />
         ))}
       </div>
-      <div className="grid min-h-[200px] gap-2 lg:grid-cols-2">
+      <div className="grid min-h-0 flex-1 gap-2 lg:grid-cols-2">
         <div className="rounded-2xl bg-slate-200/50" />
         <div className="rounded-2xl bg-slate-200/50" />
-      </div>
-      <div className="grid min-h-[180px] gap-2 lg:grid-cols-3">
-        <div className="rounded-2xl bg-slate-200/45" />
-        <div className="rounded-2xl bg-slate-200/45" />
-        <div className="rounded-2xl bg-slate-200/45" />
       </div>
     </div>
   );
@@ -67,9 +61,7 @@ export function HomeView({
   const kpis = useMemo(() => (data ? computeDashboardKpis(data) : null), [data]);
 
   return (
-    <div
-      className={`mx-auto flex w-full max-w-[1680px] flex-col gap-1 px-0 ${data && kpis ? "lg:min-h-0 lg:flex-1 lg:overflow-hidden lg:pb-1" : "pb-2"}`}
-    >
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1680px] flex-col gap-1.5 overflow-hidden px-0">
       <DashboardPageHeader greetingName={greetingName} currentDateLabel={currentDateLabel} />
 
       {loading ? <DashboardSkeleton /> : null}

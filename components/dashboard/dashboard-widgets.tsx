@@ -1,9 +1,7 @@
 import Link from "next/link";
-import { computePaymentDistribution } from "@/lib/dashboard-ui";
-import { DashboardQuickAccess } from "@/components/dashboard/dashboard-quick-access";
-import { DashboardTeamPresence } from "@/components/dashboard/dashboard-team-presence";
-import { PaymentsDonut } from "@/components/dashboard/payments-donut";
 import type { InternalTask, PaymentFollowUp } from "@/types/domain";
+
+const LIST_LIMIT = 4;
 
 interface DashboardWidgetsProps {
   payments: PaymentFollowUp[];
@@ -25,7 +23,7 @@ function SectionPanel({
     <section
       className={`flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)] ${className}`}
     >
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-3 py-2">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-3 py-1.5">
         <h3 className="text-[13px] font-semibold tracking-tight text-slate-900">{title}</h3>
         <Link
           href={href}
@@ -34,7 +32,7 @@ function SectionPanel({
           Voir tout
         </Link>
       </div>
-      <div className="min-h-0 flex-1 overflow-hidden px-2.5 py-1.5">{children}</div>
+      <div className="min-h-0 flex-1 overflow-hidden px-2 py-1">{children}</div>
     </section>
   );
 }
@@ -60,140 +58,99 @@ function isLatePayment(p: PaymentFollowUp) {
 
 function EmptyHint({ message }: { message: string }) {
   return (
-    <p className="flex h-full min-h-[3rem] items-center justify-center px-2 text-center text-[11px] leading-snug text-slate-500">
+    <p className="flex h-full min-h-[2.5rem] items-center justify-center px-2 text-center text-[11px] leading-snug text-slate-500">
       {message}
     </p>
   );
 }
 
 export function DashboardWidgets({ payments, tasks }: DashboardWidgetsProps) {
-  const latePayments = payments.filter(isLatePayment).slice(0, 5);
+  const latePayments = payments.filter(isLatePayment).slice(0, LIST_LIMIT);
 
   const openTasks = tasks.filter((t) =>
     ["A faire", "En cours", "En attente"].includes(t.status),
   );
-  const topTasks = openTasks.slice(0, 5);
-
-  const distribution = computePaymentDistribution(payments);
-  const distributionTotal = distribution.reduce((s, x) => s + x.amount, 0);
+  const topTasks = openTasks.slice(0, LIST_LIMIT);
 
   return (
-    <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,3.15fr)_minmax(0,2.55fr)] gap-1.5 overflow-hidden lg:gap-2">
-      <div className="grid min-h-0 grid-cols-1 gap-1.5 overflow-hidden lg:grid-cols-2 lg:gap-2">
-        <SectionPanel title="Règlements à traiter" href="/reglements" className="min-h-0">
-          {latePayments.length ? (
-            <ul className="flex h-full min-h-0 flex-col justify-start gap-1 overflow-hidden">
-              {latePayments.map((payment) => (
-                <li
-                  key={payment.id}
-                  className="shrink-0 rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-1.5"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={`/patients/${payment.patientId}`}
-                        className="line-clamp-1 text-[11px] font-semibold text-sky-700 hover:underline"
-                      >
-                        {payment.patientName}
-                      </Link>
-                      <p className="mt-0.5 text-[10px] tabular-nums text-slate-600">
-                        <span className="font-semibold text-slate-900">{payment.amountDue}</span> EUR · éch.{" "}
-                        {payment.dueDate.slice(5)}
-                      </p>
-                    </div>
-                    <span className="shrink-0 rounded-md bg-rose-50 px-1 py-0.5 text-[9px] font-semibold tabular-nums text-rose-700 ring-1 ring-rose-100">
-                      {payment.daysLate > 0 ? `+${payment.daysLate}j` : "Retard"}
-                    </span>
-                  </div>
-                  <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="truncate text-[9px] text-slate-500">{payment.status}</span>
+    <div className="grid min-h-0 flex-1 grid-cols-1 gap-1.5 overflow-hidden lg:grid-cols-2 lg:gap-2">
+      <SectionPanel title="Règlements à traiter" href="/reglements" className="min-h-0">
+        {latePayments.length ? (
+          <ul className="flex h-full min-h-0 flex-col justify-start gap-1 overflow-hidden">
+            {latePayments.map((payment) => (
+              <li
+                key={payment.id}
+                className="shrink-0 rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-1"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
                     <Link
-                      href="/reglements"
-                      className="shrink-0 rounded border border-slate-200 bg-white px-1.5 py-px text-[9px] font-semibold text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
+                      href={`/patients/${payment.patientId}`}
+                      className="line-clamp-1 text-[11px] font-semibold text-sky-700 hover:underline"
                     >
-                      Relancer
+                      {payment.patientName}
                     </Link>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyHint message="Aucun règlement en retard. Bonne nouvelle." />
-          )}
-        </SectionPanel>
-
-        <SectionPanel title="Tâches à traiter" href="/tasks" className="min-h-0">
-          {topTasks.length ? (
-            <ul className="flex h-full min-h-0 flex-col gap-1 overflow-hidden">
-              {topTasks.map((task) => (
-                <li
-                  key={task.id}
-                  className="shrink-0 rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-1.5"
-                >
-                  <div className="flex items-start justify-between gap-1.5">
-                    <p className="min-w-0 flex-1 line-clamp-2 text-[11px] font-medium leading-snug text-slate-900">
-                      {task.title}
+                    <p className="mt-0.5 text-[10px] tabular-nums text-slate-600">
+                      <span className="font-semibold text-slate-900">{payment.amountDue}</span> EUR · éch.{" "}
+                      {payment.dueDate.slice(5)}
                     </p>
-                    <span
-                      className={`shrink-0 rounded px-1 py-px text-[8px] font-semibold capitalize leading-none ring-1 ${taskPriorityStyles[task.priority] ?? "bg-slate-100 text-slate-600 ring-slate-200"}`}
-                    >
-                      {task.priority}
-                    </span>
                   </div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[9px] text-slate-500">
-                    <span className="truncate">{task.assignee}</span>
-                    <span className="text-slate-300">·</span>
-                    <span className="tabular-nums">{task.dueDate}</span>
-                    <span
-                      className={`ml-auto rounded px-1 py-px text-[8px] font-medium ring-1 ${taskStatusStyles[task.status]}`}
-                    >
-                      {task.status}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyHint message="Aucune tâche ouverte pour le moment." />
-          )}
-        </SectionPanel>
-      </div>
+                  <span className="shrink-0 rounded-md bg-rose-50 px-1 py-0.5 text-[9px] font-semibold tabular-nums text-rose-700 ring-1 ring-rose-100">
+                    {payment.daysLate > 0 ? `+${payment.daysLate}j` : "Retard"}
+                  </span>
+                </div>
+                <div className="mt-0.5 flex items-center justify-between gap-2">
+                  <span className="truncate text-[9px] text-slate-500">{payment.status}</span>
+                  <Link
+                    href="/reglements"
+                    className="shrink-0 rounded border border-slate-200 bg-white px-1.5 py-px text-[9px] font-semibold text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
+                  >
+                    Relancer
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyHint message="Aucun règlement en retard. Bonne nouvelle." />
+        )}
+      </SectionPanel>
 
-      {/* Bas : présence équipe | donut | accès rapides */}
-      <div className="grid min-h-0 grid-cols-1 gap-1.5 overflow-hidden lg:grid-cols-3 lg:gap-2">
-        <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-          <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-3 py-2">
-            <h3 className="text-[13px] font-semibold tracking-tight text-slate-900">Présence équipe</h3>
-            <Link href="/settings" className="text-[11px] font-semibold text-sky-600 hover:text-sky-700">
-              Voir tout
-            </Link>
-          </div>
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <DashboardTeamPresence />
-          </div>
-        </section>
-
-        <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-          <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-3 py-2">
-            <h3 className="text-[13px] font-semibold tracking-tight text-slate-900">Répartition règlements</h3>
-            <Link href="/reglements" className="text-[11px] font-semibold text-sky-600 hover:text-sky-700">
-              Voir tout
-            </Link>
-          </div>
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden px-1.5 py-0.5">
-            <PaymentsDonut compact slices={distribution} total={distributionTotal} />
-          </div>
-        </section>
-
-        <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-          <div className="shrink-0 border-b border-slate-100 px-3 py-2">
-            <h3 className="text-[13px] font-semibold tracking-tight text-slate-900">Accès rapides</h3>
-          </div>
-          <div className="min-h-0 flex-1 overflow-hidden p-1.5">
-            <DashboardQuickAccess compact />
-          </div>
-        </section>
-      </div>
+      <SectionPanel title="Tâches à traiter" href="/tasks" className="min-h-0">
+        {topTasks.length ? (
+          <ul className="flex h-full min-h-0 flex-col gap-1 overflow-hidden">
+            {topTasks.map((task) => (
+              <li
+                key={task.id}
+                className="shrink-0 rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-1"
+              >
+                <div className="flex items-start justify-between gap-1.5">
+                  <p className="min-w-0 flex-1 line-clamp-1 text-[11px] font-medium leading-snug text-slate-900">
+                    {task.title}
+                  </p>
+                  <span
+                    className={`shrink-0 rounded px-1 py-px text-[8px] font-semibold capitalize leading-none ring-1 ${taskPriorityStyles[task.priority] ?? "bg-slate-100 text-slate-600 ring-slate-200"}`}
+                  >
+                    {task.priority}
+                  </span>
+                </div>
+                <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[9px] text-slate-500">
+                  <span className="truncate">{task.assignee}</span>
+                  <span className="text-slate-300">·</span>
+                  <span className="tabular-nums">{task.dueDate}</span>
+                  <span
+                    className={`ml-auto rounded px-1 py-px text-[8px] font-medium ring-1 ${taskStatusStyles[task.status]}`}
+                  >
+                    {task.status}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyHint message="Aucune tâche ouverte pour le moment." />
+        )}
+      </SectionPanel>
     </div>
   );
 }

@@ -18,7 +18,6 @@ import {
   MessageSquare,
   Pencil,
   Plus,
-  RefreshCw,
   Search,
   Send,
   Trash2,
@@ -498,29 +497,39 @@ export function ReglementsView() {
   }
 
   function exportCsv() {
-    const header = ["Patient", "Montant", "Semestre", "Prochain RDV", "Statut", "Relances", "Jours de retard"];
+    const header = [
+      "Patient",
+      "Montant (€)",
+      "Semestre / Échéance",
+      "Prochain RDV",
+      "Statut",
+      "Jours de retard",
+    ];
     const lines = filtered.map((item) => {
       const start = item.dueDate;
       const end = addMonths(item.dueDate, 6);
       const rdv = patientRdvMap.get(item.patientId) ?? null;
+      const amount = new Intl.NumberFormat("fr-FR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(item.amountDue);
       return [
         item.patientName,
-        String(item.amountDue),
-        `${frDate(start)} -> ${frDate(end)}`,
+        amount,
+        `${frDate(start)} → ${frDate(end)}`,
         frDate(rdv),
         item.status,
-        String(item.relanceCount),
         String(item.daysLate),
       ]
-        .map((cell) => `"${cell.replace(/"/g, '""')}"`)
+        .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
         .join(";");
     });
-    const csv = [header.join(";"), ...lines].join("\n");
-    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
+    const csv = `\uFEFF${[header.join(";"), ...lines].join("\r\n")}`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `reglements-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `reglements_orthopilot_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -712,18 +721,6 @@ export function ReglementsView() {
 
           <button
             type="button"
-            title="Actualiser"
-            onClick={() => {
-              void loadReglements();
-              void loadPatients();
-            }}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-          </button>
-
-          <button
-            type="button"
             onClick={openCreate}
             className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] px-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
           >
@@ -865,7 +862,7 @@ export function ReglementsView() {
 
                       <div className="flex justify-end">
                         <Link
-                          href={`/patients/${item.patientId}?tab=reglements`}
+                          href={`/patients/${item.patientId}?tab=reglements&from=reglements`}
                           onClick={(e) => e.stopPropagation()}
                           className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
                           title="Ouvrir la fiche patient"

@@ -1,0 +1,325 @@
+[33mcommit 08213732eff55e92632f0e0e7ad7c55e04d1e672[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Sun Aug 9 16:25:18 2026 +0200
+
+    refonte dashboard
+
+[33mcommit 794a7381bc3084f0e0ed3c82ebb9f04adb73b035[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Sat Jun 27 13:16:59 2026 +0200
+
+    maj
+
+[33mcommit c6452a76a8896760795d9287f51213de17176cba[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Sat Jun 27 13:07:33 2026 +0200
+
+    new maj kpi & side bar
+
+[33mcommit ade5aed81e9abc62a8a0ce2e50bf791dea6f1d84[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Sat Jun 27 12:47:41 2026 +0200
+
+    new maj
+
+[33mcommit dae445f9a44d294f6eb713538c19c8d22d030be7[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Mon Jun 8 16:10:46 2026 +0200
+
+    settings
+
+[33mcommit f4a02d554c3495932167dd928c06d41d28b8a4c1[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Mon Jun 8 15:37:55 2026 +0200
+
+    logs
+
+[33mcommit 981573093a8853ff9b99daafc79fb2608e2a6c0e[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Mon Jun 8 13:50:47 2026 +0200
+
+    taches internes
+
+[33mcommit a3d63cfc154c8fb797d9c03b6ebe69f4955603ef[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Fri Jun 5 19:41:11 2026 +0200
+
+    reglements v2
+
+[33mcommit 428fb717ff2b0303e9822e74415cf499ff051482[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Fri Jun 5 16:55:17 2026 +0200
+
+    reglements v1
+
+[33mcommit 82109159059f3472d16dd0e7c7ade4924ed7fe67[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue Jun 2 12:51:20 2026 +0200
+
+    patients v3
+
+[33mcommit 4e3842133bf58ca77dda394131592afc8c746696[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue Jun 2 12:20:25 2026 +0200
+
+    patient v2
+
+[33mcommit 4c9e69c9caa70a69c9ff459a200f71349e542765[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue Jun 2 11:21:14 2026 +0200
+
+    patients v1
+
+[33mcommit a147fd4b58e7c4b74e193703b1b134b51c799c9d[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Mon Jun 1 14:52:46 2026 +0200
+
+    mails assigne
+
+[33mcommit e8f51c51d4284f1cd400a8eb76766a3cdd9843d2[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Fri May 29 17:08:57 2026 +0200
+
+    mails
+
+[33mcommit f794928e5d359df736dc095b5a721d78c085acdc[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Fri May 29 16:50:03 2026 +0200
+
+    emails maj
+
+[33mcommit 06db66fee94c1815edae22c0dd4d0be51e8570b6[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Fri May 29 16:29:02 2026 +0200
+
+    emails api
+
+[33mcommit 59093b9ae2ad64f05522112de2bc82c42e5ca04e[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Fri May 29 15:45:46 2026 +0200
+
+    emails sync
+
+[33mcommit 28e6ee5fd9c662f5ae9bf20c1572c84c924bea4a[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue May 26 17:57:27 2026 +0200
+
+    feat: gmail integration phase 1
+
+[33mcommit 02e2b64417a95f86b0c1c6a59ca3f96720a797fe[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue May 26 16:38:53 2026 +0200
+
+    emails v2
+
+[33mcommit 0df1327a238764dd23e4061f2583d65819579c3a[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue May 26 16:07:57 2026 +0200
+
+    emails v1
+
+[33mcommit 2ca788ca4aa691657b28cb4cda73423094657e3c[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue May 26 15:45:51 2026 +0200
+
+    message upgrade
+
+[33mcommit 60561a547837e2dde52759e495f21037eb8fd43e[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Thu May 21 20:15:29 2026 +0200
+
+    message v4
+
+[33mcommit 1dbcfa2bc357fe33b1da21eebb34cc6117491a4d[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Thu May 21 18:37:14 2026 +0200
+
+    message v4
+
+[33mcommit a08fcb21cdf363d223add1a9c1a9c4b0842ce20f[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Thu May 21 18:03:32 2026 +0200
+
+    message v4
+
+[33mcommit 8676295bcd536ffb0759826cde3c2b03142fcf64[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Thu May 21 17:36:18 2026 +0200
+
+    message v3
+
+[33mcommit 9241b39a7ac15020c22b0b4b8032b03d1c7ca2e9[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Thu May 21 17:08:27 2026 +0200
+
+    message v2
+
+[33mcommit e08557298a34ffd3c8f50bb1a41dc579073d82dc[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Thu May 21 16:26:51 2026 +0200
+
+    message v1
+
+[33mcommit b12c698028747e2442b983be19e33512f9ccb67c[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue May 19 16:22:33 2026 +0200
+
+    last v
+
+[33mcommit daf067134579b3874f215a5084071b23ccd28486[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue May 19 16:05:07 2026 +0200
+
+    calendar v7
+
+[33mcommit cc5dc290063bd2300a0162f433991c6635c55bcc[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue May 19 15:46:30 2026 +0200
+
+    calendar v6
+
+[33mcommit f3b6e946e3b5130bc7c6b52edc2ea6158affaadb[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue May 19 15:16:28 2026 +0200
+
+    calendar v5
+
+[33mcommit df4f555b78cbef7817c77ec189ecd56a0738983e[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue May 19 14:49:31 2026 +0200
+
+    calendar v4
+
+[33mcommit 41ba0f834946e28794a15919950db9ca0b04f248[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue May 19 14:21:53 2026 +0200
+
+    calendar v3
+
+[33mcommit a2b272c3490163fb30e320d6a86f247b8ac2700c[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Fri May 15 17:47:12 2026 +0200
+
+    calendar v2
+
+[33mcommit 07f26e9b7b4aaf5999e1b30bd394e08ba086c1f7[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Fri May 15 15:30:30 2026 +0200
+
+    calendar
+
+[33mcommit efd4996818ac5307d58f0e0cb77ceb87ac0ebe96[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Wed May 13 17:42:25 2026 +0200
+
+    dashboard v4
+
+[33mcommit 9c67d1a61f4355693661aa5610702d52957ef68b[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Wed May 13 17:21:42 2026 +0200
+
+    dashboard v3
+
+[33mcommit 24aa8f67957379a85ec878b11a5d74b99c291ff3[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Wed May 13 17:00:30 2026 +0200
+
+    dashboard v3
+
+[33mcommit ea7d50643a5c52903a81e3d14b694b037fe50218[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Wed May 13 16:40:18 2026 +0200
+
+    dashboard v2
+
+[33mcommit 4e1615742acc4d6bf656b128ca944f228ec40a89[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Wed May 13 16:16:58 2026 +0200
+
+    dashboard v1
+
+[33mcommit 61df688ee2153a3734907ab6cfb0116f035a72c1[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Wed May 13 15:07:41 2026 +0200
+
+    v4
+
+[33mcommit 318c607ecb4a37fe460fdcaa2de0c2d967733635[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Wed May 13 14:59:43 2026 +0200
+
+    v3 page de logs
+
+[33mcommit a4e76048e64f8e031a2363e768baa704395c1b4b[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Wed May 13 14:49:04 2026 +0200
+
+    v2 page log
+
+[33mcommit a954206f9ecaf8d9176956fbd80ace78c30e9aac[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Wed May 13 14:36:55 2026 +0200
+
+    ux page de log
+
+[33mcommit 94883bcdbda46a1eb6a4ef860b8527fc2a0a303b[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Wed May 13 14:17:37 2026 +0200
+
+    roll list tache
+
+[33mcommit b7341b49d4e2eedf0ed80188840051741e96d307[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Wed May 13 12:46:36 2026 +0200
+
+    csv maj
+
+[33mcommit 4e2fc25aafc4db78407d75ee206554f10aff813a[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Wed May 13 12:37:40 2026 +0200
+
+    import csv patient
+
+[33mcommit 886d5afb4be2d758446f3a3ee08d1ea84ff68d8c[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Wed May 13 10:47:14 2026 +0200
+
+    fix : calendar event type labels
+
+[33mcommit a5b6afc08e48a40867730497a29c5cb9b2bc454a[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Wed May 13 10:08:23 2026 +0200
+
+    vercel-build maj
+
+[33mcommit cabaa1d551c41a0b9338f5a7e5cf04faa4b5e48e[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue May 12 17:55:24 2026 +0200
+
+    CalendarEventType
+
+[33mcommit f13928ff1379d144bda66c94af1923313dafa9f8[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue May 12 17:45:45 2026 +0200
+
+    fix: generate prisma client before vercel build
+
+[33mcommit 77beb89b69ca044b821452275abad25e2fb59ad3[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue May 12 16:56:58 2026 +0200
+
+    Supabase integration
+
+[33mcommit e6eb6304378cad3132c11850d4946562df3860ef[m
+Author: Sabri - Serradj <sabriserradj@gmail.com>
+Date:   Tue May 12 15:22:19 2026 +0200
+
+    Update README to remove planned features section
+    
+    Removed some planned features from the README.
+
+[33mcommit e1e193825dc1d5b617837092d7a4142c477b4f82[m
+Author: SERRADJ <sabriserradj@gmail.com>
+Date:   Tue May 12 15:20:39 2026 +0200
+
+    Initial OrthoPilot commit

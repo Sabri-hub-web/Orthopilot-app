@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
+  ArrowLeft,
   BadgeCheck,
   CalendarClock,
   CheckCircle2,
@@ -137,12 +138,16 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
   const [reglementModalOpen, setReglementModalOpen] = useState(false);
   const [reglementForm, setReglementForm] = useState<ReglementFormPayload>(defaultReglementForm);
   const [reglementSubmitting, setReglementSubmitting] = useState(false);
+  const [fromReglements, setFromReglements] = useState(false);
 
   useEffect(() => {
-    const tab = new URLSearchParams(window.location.search).get("tab");
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    const from = params.get("from");
     if (tab && ["overview", "reglements", "rendezvous", "documents", "commentaires"].includes(tab)) {
       setActiveTab(tab as HubTab);
     }
+    setFromReglements(from === "reglements" || tab === "reglements");
   }, []);
 
   useEffect(() => {
@@ -456,8 +461,20 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
 
   return (
     <div className="space-y-4 pb-4">
-      <div className="flex items-center justify-between">
-        <Link href="/patients" className="inline-block text-sm font-medium text-violet-700 hover:underline">
+      <div className="flex flex-wrap items-center gap-2">
+        {fromReglements ? (
+          <Link
+            href="/reglements"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-semibold text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-100"
+          >
+            <ArrowLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
+            Retour aux règlements
+          </Link>
+        ) : null}
+        <Link
+          href="/patients"
+          className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+        >
           Retour à la liste patients
         </Link>
       </div>

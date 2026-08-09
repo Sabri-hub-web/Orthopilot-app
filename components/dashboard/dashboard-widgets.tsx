@@ -80,33 +80,24 @@ export function DashboardWidgets({ payments, tasks }: DashboardWidgetsProps) {
             {latePayments.map((payment) => (
               <li
                 key={payment.id}
-                className="shrink-0 rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-1"
+                className="shrink-0 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={`/patients/${payment.patientId}`}
-                      className="line-clamp-1 text-[11px] font-semibold text-sky-700 hover:underline"
-                    >
-                      {payment.patientName}
-                    </Link>
-                    <p className="mt-0.5 text-[10px] tabular-nums text-slate-600">
-                      <span className="font-semibold text-slate-900">{payment.amountDue}</span> EUR · éch.{" "}
-                      {payment.dueDate.slice(5)}
-                    </p>
-                  </div>
-                  <span className="shrink-0 rounded-md bg-rose-50 px-1 py-0.5 text-[9px] font-semibold tabular-nums text-rose-700 ring-1 ring-rose-100">
-                    {payment.daysLate > 0 ? `+${payment.daysLate}j` : "Retard"}
+                <div className="flex items-center justify-between gap-3">
+                  <Link
+                    href={`/patients/${payment.patientId}`}
+                    className="min-w-0 flex-1 truncate text-[12px] font-semibold text-sky-700 hover:underline"
+                  >
+                    {payment.patientName}
+                  </Link>
+                  <span className="shrink-0 rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-rose-700 ring-1 ring-rose-100">
+                    {payment.daysLate > 0 ? `+${payment.daysLate} j` : "Retard"}
                   </span>
                 </div>
-                <div className="mt-0.5 flex items-center justify-between gap-2">
-                  <span className="truncate text-[9px] text-slate-500">{payment.status}</span>
-                  <Link
-                    href="/reglements"
-                    className="shrink-0 rounded border border-slate-200 bg-white px-1.5 py-px text-[9px] font-semibold text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
-                  >
-                    Relancer
-                  </Link>
+                <div className="mt-1 flex items-center justify-between gap-3 text-[11px] tabular-nums text-slate-600">
+                  <span>
+                    <span className="font-semibold text-slate-900">{payment.amountDue}</span> EUR
+                  </span>
+                  <span className="truncate text-slate-500">{payment.status}</span>
                 </div>
               </li>
             ))}

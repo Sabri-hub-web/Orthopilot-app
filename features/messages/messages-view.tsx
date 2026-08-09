@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PendingMessageFile } from "@/components/messages/messages-composer";
 import { MessagesChat } from "@/components/messages/messages-chat";
-import { MessagesDetails } from "@/components/messages/messages-details";
 import { MessagesLayout } from "@/components/messages/messages-layout";
 import { MessagesSidebar, type MessagesListTab } from "@/components/messages/messages-sidebar";
 import {
@@ -335,14 +334,6 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
           onFilesSelected={handleFilesSelected}
           onRemoveFile={handleRemoveFile}
           messagesEndRef={bottomRef}
-        />
-      }
-      details={
-        <MessagesDetails
-          peerId={peerId}
-          peerName={peerName}
-          messages={messages}
-          presence={activePresence}
         />
       }
     />

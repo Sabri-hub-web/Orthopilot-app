@@ -37,7 +37,7 @@ export function DashboardLayout({
 
   return (
     <section
-      className={`bg-[var(--app-surface,#f6f8fb)] text-slate-900 antialiased ${
+      className={`bg-[var(--app-surface,#f6f8fb)] text-slate-900 antialiased dark:text-slate-100 ${
         fillViewport ? "h-screen max-h-screen overflow-hidden" : "min-h-screen"
       }`}
     >

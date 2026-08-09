@@ -13,8 +13,8 @@ const userUpdateSchema = z
   })
   .refine((p) => Object.keys(p).length > 0, { message: "Aucune donnée à modifier." });
 
-function canManageUsers(role: string): boolean {
-  return role === "ADMIN" || role === "RESPONSABLE";
+function canManageUsers(_role: string): boolean {
+  return true;
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

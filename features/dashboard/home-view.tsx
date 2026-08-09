@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CreditCard, Stethoscope, Users } from "lucide-react";
+import { ArrowRight, CreditCard, MessageSquare, Stethoscope, Users } from "lucide-react";
 
 const quickLinks = [
   {
@@ -26,6 +26,14 @@ const quickLinks = [
     accent: "from-indigo-500 to-violet-600",
     ring: "hover:border-indigo-200 hover:shadow-indigo-100/80",
   },
+  {
+    title: "Messagerie Interne",
+    description: "Échanges rapides avec l’équipe du cabinet.",
+    href: "/messages",
+    icon: MessageSquare,
+    accent: "from-sky-500 to-violet-600",
+    ring: "hover:border-sky-200 hover:shadow-sky-100/80",
+  },
 ] as const;
 
 export function HomeView({ greetingName }: { greetingName: string }) {
@@ -46,7 +54,7 @@ export function HomeView({ greetingName }: { greetingName: string }) {
         </p>
       </header>
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:gap-4">
         {quickLinks.map(({ title, description, href, icon: Icon, accent, ring }) => (
           <Link
             key={href}

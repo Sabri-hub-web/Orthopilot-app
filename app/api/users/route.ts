@@ -13,8 +13,8 @@ const userCreateSchema = z.object({
   password: z.string().min(8),
 });
 
-function canManageUsers(role: string): boolean {
-  return role === "ADMIN" || role === "RESPONSABLE";
+function canManageUsers(_role: string): boolean {
+  return true;
 }
 
 export async function GET(request: NextRequest) {

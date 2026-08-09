@@ -142,6 +142,28 @@ export const GENERAL_SETTINGS_STORAGE_KEY = "orthopilot_general_settings";
 export interface GeneralSettingsPrefs {
   cabinetName: string;
   logoDataUrl: string | null;
+  phone: string;
+  email: string;
+  address: string;
+}
+
+export const THEME_STORAGE_KEY = "orthopilot_theme";
+export type AppTheme = "light" | "dark";
+
+export function loadTheme(): AppTheme {
+  if (typeof window === "undefined") return "light";
+  try {
+    const raw = localStorage.getItem(THEME_STORAGE_KEY);
+    return raw === "dark" ? "dark" : "light";
+  } catch {
+    return "light";
+  }
+}
+
+export function saveTheme(theme: AppTheme) {
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+  document.documentElement.classList.toggle("dark", theme === "dark");
+  window.dispatchEvent(new CustomEvent("orthopilot-theme-changed", { detail: theme }));
 }
 
 export function loadNotificationPrefs(): NotificationPrefs {
@@ -165,24 +187,33 @@ export function loadGeneralSettings(): GeneralSettingsPrefs {
     process.env.NEXT_PUBLIC_CABINET_DISPLAY_NAME.trim() !== ""
       ? process.env.NEXT_PUBLIC_CABINET_DISPLAY_NAME.trim()
       : "Cabinet Hippolyte";
-  if (typeof window === "undefined") {
-    return { cabinetName: envName, logoDataUrl: null };
-  }
+  const defaults: GeneralSettingsPrefs = {
+    cabinetName: envName,
+    logoDataUrl: null,
+    phone: "",
+    email: "",
+    address: "",
+  };
+  if (typeof window === "undefined") return defaults;
   try {
     const raw = localStorage.getItem(GENERAL_SETTINGS_STORAGE_KEY);
-    if (!raw) return { cabinetName: envName, logoDataUrl: null };
+    if (!raw) return defaults;
     const parsed = JSON.parse(raw) as Partial<GeneralSettingsPrefs>;
     return {
       cabinetName: parsed.cabinetName ?? envName,
       logoDataUrl: parsed.logoDataUrl ?? null,
+      phone: parsed.phone ?? "",
+      email: parsed.email ?? "",
+      address: parsed.address ?? "",
     };
   } catch {
-    return { cabinetName: envName, logoDataUrl: null };
+    return defaults;
   }
 }
 
 export function saveGeneralSettings(prefs: GeneralSettingsPrefs) {
   localStorage.setItem(GENERAL_SETTINGS_STORAGE_KEY, JSON.stringify(prefs));
+  window.dispatchEvent(new CustomEvent("orthopilot-cabinet-changed", { detail: prefs }));
 }
 
 export function userInitials(fullName: string): string {

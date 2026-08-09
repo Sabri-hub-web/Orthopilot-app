@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   CreditCard,
   Home,
+  MessageSquare,
   PanelLeftClose,
   PanelLeft,
   Settings,
@@ -15,6 +17,7 @@ import {
 import { hasPermission, type AppPermission } from "@/lib/auth/permissions";
 import type { AuthUser } from "@/lib/auth/session";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { loadGeneralSettings } from "@/lib/settings-ui";
 
 type NavItem = {
   label: string;
@@ -27,6 +30,10 @@ const navSections: { heading: string; items: NavItem[] }[] = [
   {
     heading: "Principal",
     items: [{ label: "Dashboard", href: "/", icon: Home, permission: "dashboard:view" }],
+  },
+  {
+    heading: "Communication",
+    items: [{ label: "Messages", href: "/messages", icon: MessageSquare, permission: "messages:view" }],
   },
   {
     heading: "Gestion",
@@ -69,11 +76,23 @@ export function Sidebar({
   currentUserRole,
 }: SidebarProps) {
   const pathname = usePathname();
-  const cabinetDisplay =
+  const envCabinet =
     typeof process.env.NEXT_PUBLIC_CABINET_DISPLAY_NAME === "string" &&
     process.env.NEXT_PUBLIC_CABINET_DISPLAY_NAME.trim() !== ""
       ? process.env.NEXT_PUBLIC_CABINET_DISPLAY_NAME.trim()
       : "Cabinet";
+  const [cabinetDisplay, setCabinetDisplay] = useState(envCabinet);
+
+  useEffect(() => {
+    const prefs = loadGeneralSettings();
+    if (prefs.cabinetName.trim()) setCabinetDisplay(prefs.cabinetName.trim());
+    function onCabinetChanged(e: Event) {
+      const detail = (e as CustomEvent<{ cabinetName?: string }>).detail;
+      if (detail?.cabinetName?.trim()) setCabinetDisplay(detail.cabinetName.trim());
+    }
+    window.addEventListener("orthopilot-cabinet-changed", onCabinetChanged);
+    return () => window.removeEventListener("orthopilot-cabinet-changed", onCabinetChanged);
+  }, []);
 
   const widthClass = collapsed ? "w-[240px] lg:w-[3.25rem]" : "w-[240px] lg:w-[240px]";
 

@@ -107,8 +107,9 @@ const rolePermissions: Record<AuthUser["role"], Set<AppPermission>> = {
   ]),
 };
 
-export function hasPermission(role: AuthUser["role"], permission: AppPermission): boolean {
-  return rolePermissions[role].has(permission);
+/** Accès unifié : tous les utilisateurs connectés ont les mêmes droits (niveau ADMIN). */
+export function hasPermission(_role: AuthUser["role"], permission: AppPermission): boolean {
+  return rolePermissions.ADMIN.has(permission);
 }
 
 export function hasAnyPermission(role: AuthUser["role"], permissions: AppPermission[]): boolean {

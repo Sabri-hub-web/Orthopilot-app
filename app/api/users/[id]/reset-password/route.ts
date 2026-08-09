@@ -10,8 +10,8 @@ const schema = z.object({
   password: z.string().min(8, "Mot de passe : au moins 8 caractères."),
 });
 
-function canManageUsers(role: string): boolean {
-  return role === "ADMIN" || role === "RESPONSABLE";
+function canManageUsers(_role: string): boolean {
+  return true;
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

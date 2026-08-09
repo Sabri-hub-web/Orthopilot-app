@@ -177,6 +177,8 @@ export interface PatientListItem {
   fullName: string;
   email: string | null;
   phone: string | null;
+  legalGuardian: string | null;
+  mutuelle: string | null;
   reglementsCount: number;
   tasksCount: number;
   emailsCount: number;

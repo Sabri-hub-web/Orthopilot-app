@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Filter, Plus, Upload } from "lucide-react";
-import type { PatientListSort } from "@/lib/validation/patients";
+import { Download, Plus } from "lucide-react";
 import { errorMessageFromResponse } from "@/lib/validation/client-errors";
-import type { PatientCsvImportResponse, PatientFormPayload, PatientsListResponse } from "@/types/domain";
+import type { PatientFormPayload, PatientListItem, PatientsListResponse } from "@/types/domain";
 
 const PAGE_SIZE = 10;
 
@@ -14,56 +13,23 @@ const defaultCreate: PatientFormPayload = {
   lastName: "",
   email: "",
   phone: "",
+  legalGuardian: "",
+  mutuelle: "",
 };
 
-type ListFilters = {
-  rdvSoon: boolean;
-  rdvSoonDays: number;
-  noNextRdv: boolean;
-  reglementRetard: boolean;
-  reglementOrange: boolean;
-  openTask: boolean;
-  urgentEmail: boolean;
-  missingEmail: boolean;
-  missingPhone: boolean;
-  hasMutuelle: boolean;
-};
-
-const defaultFilters: ListFilters = {
-  rdvSoon: false,
-  rdvSoonDays: 7,
-  noNextRdv: false,
-  reglementRetard: false,
-  reglementOrange: false,
-  openTask: false,
-  urgentEmail: false,
-  missingEmail: false,
-  missingPhone: false,
-  hasMutuelle: false,
-};
-
-interface PatientsViewProps {
-  canImportCsv?: boolean;
-}
-
-export function PatientsView({ canImportCsv = false }: PatientsViewProps) {
+export function PatientsView() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [filters, setFilters] = useState<ListFilters>(defaultFilters);
-  const [sort, setSort] = useState<PatientListSort>("name_asc");
   const [data, setData] = useState<PatientsListResponse | null>(null);
   const [createForm, setCreateForm] = useState<PatientFormPayload>(defaultCreate);
+  const [hasMutuelle, setHasMutuelle] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [importingCsv, setImportingCsv] = useState(false);
-  const [importReport, setImportReport] = useState<PatientCsvImportResponse | null>(null);
-
   const [createOpen, setCreateOpen] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     if (!success) return;
@@ -83,27 +49,15 @@ export function PatientsView({ canImportCsv = false }: PatientsViewProps) {
     const qs = new URLSearchParams({
       page: String(page),
       pageSize: String(PAGE_SIZE),
-      sort,
+      sort: "name_asc",
     });
     if (debouncedSearch) qs.set("search", debouncedSearch);
-    if (filters.rdvSoon) {
-      qs.set("rdvSoon", "true");
-      qs.set("rdvSoonDays", String(filters.rdvSoonDays));
-    }
-    if (filters.noNextRdv) qs.set("noNextRdv", "true");
-    if (filters.reglementRetard) qs.set("reglementRetard", "true");
-    if (filters.reglementOrange) qs.set("reglementOrange", "true");
-    if (filters.openTask) qs.set("openTask", "true");
-    if (filters.urgentEmail) qs.set("urgentEmail", "true");
-    if (filters.missingEmail) qs.set("missingEmail", "true");
-    if (filters.missingPhone) qs.set("missingPhone", "true");
-    if (filters.hasMutuelle) qs.set("hasMutuelle", "true");
 
     const response = await fetch(`/api/patients?${qs.toString()}`, { cache: "no-store" });
     if (!response.ok) throw new Error("Echec du chargement des patients.");
     const payload: PatientsListResponse = await response.json();
     setData(payload);
-  }, [page, debouncedSearch, filters, sort]);
+  }, [page, debouncedSearch]);
 
   useEffect(() => {
     async function run() {
@@ -121,39 +75,69 @@ export function PatientsView({ canImportCsv = false }: PatientsViewProps) {
     run();
   }, [loadPatients]);
 
-  async function handleImportCsv(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const input = form.elements.namedItem("csv") as HTMLInputElement | null;
-    const file = input?.files?.[0];
-    if (!file) {
-      setError("Choisissez un fichier CSV.");
-      return;
-    }
+  async function fetchAllPatients(): Promise<PatientListItem[]> {
+    const all: PatientListItem[] = [];
+    let currentPage = 1;
+    let totalPages = 1;
+    do {
+      const qs = new URLSearchParams({
+        page: String(currentPage),
+        pageSize: "50",
+        sort: "name_asc",
+      });
+      if (debouncedSearch) qs.set("search", debouncedSearch);
+      const response = await fetch(`/api/patients?${qs.toString()}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("Échec de l’export des patients.");
+      const payload: PatientsListResponse = await response.json();
+      all.push(...payload.items);
+      totalPages = payload.totalPages;
+      currentPage += 1;
+    } while (currentPage <= totalPages);
+    return all;
+  }
+
+  async function handleExport() {
     try {
-      setImportingCsv(true);
+      setExporting(true);
       setError(null);
-      setImportReport(null);
-      setSuccess(null);
-      const body = new FormData();
-      body.append("file", file);
-      const response = await fetch("/api/patients/import", { method: "POST", body });
-      if (!response.ok) {
-        setError(await errorMessageFromResponse(response));
-        return;
-      }
-      const report: PatientCsvImportResponse = await response.json();
-      setImportReport(report);
-      setSuccess(
-        `Import terminé : ${report.created} créés, ${report.updated} mis à jour, ${report.skipped} ignorés, ${report.errors} erreurs.`,
+      const patients = await fetchAllPatients();
+      const header = [
+        "Nom",
+        "Prénom",
+        "Email",
+        "Téléphone",
+        "Mutuelle",
+        "Nom de la mutuelle",
+        "Responsable légal",
+        "Statut",
+      ];
+      const lines = patients.map((p) =>
+        [
+          p.lastName,
+          p.firstName,
+          p.email ?? "",
+          p.phone ?? "",
+          p.mutuelle ? "Oui" : "Non",
+          p.mutuelle ?? "",
+          p.legalGuardian ?? "",
+          p.hubStatus,
+        ]
+          .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+          .join(";"),
       );
-      await loadPatients();
-      form.reset();
-      setImportOpen(false);
+      const csv = `\uFEFF${[header.join(";"), ...lines].join("\r\n")}`;
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `patients_orthopilot_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setSuccess(`Export prêt : ${patients.length} patient(s).`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur import CSV.");
+      setError(e instanceof Error ? e.message : "Erreur export.");
     } finally {
-      setImportingCsv(false);
+      setExporting(false);
     }
   }
 
@@ -163,6 +147,7 @@ export function PatientsView({ canImportCsv = false }: PatientsViewProps) {
       setCreating(true);
       setSuccess(null);
       setError(null);
+      const mutuelleName = (createForm.mutuelle ?? "").trim();
       const response = await fetch("/api/patients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -171,6 +156,11 @@ export function PatientsView({ canImportCsv = false }: PatientsViewProps) {
           lastName: createForm.lastName,
           email: createForm.email === "" ? null : createForm.email,
           phone: createForm.phone === "" ? null : createForm.phone,
+          legalGuardian:
+            createForm.legalGuardian === "" || createForm.legalGuardian == null
+              ? null
+              : createForm.legalGuardian,
+          mutuelle: hasMutuelle && mutuelleName ? mutuelleName : null,
         }),
       });
       if (!response.ok) {
@@ -178,6 +168,7 @@ export function PatientsView({ canImportCsv = false }: PatientsViewProps) {
         return;
       }
       setCreateForm(defaultCreate);
+      setHasMutuelle(false);
       await loadPatients();
       setSuccess("Patient créé avec succès.");
       setCreateOpen(false);
@@ -190,67 +181,6 @@ export function PatientsView({ canImportCsv = false }: PatientsViewProps) {
 
   const canGoPrev = page > 1;
   const canGoNext = data ? page < data.totalPages : false;
-
-  function patchFilters(patch: Partial<ListFilters>) {
-    setFilters((prev) => ({ ...prev, ...patch }));
-    setPage(1);
-  }
-
-  function resetFilters() {
-    setFilters(defaultFilters);
-    setSort("name_asc");
-    setPage(1);
-  }
-
-  const quickChips = [
-    {
-      id: "all",
-      label: "Tous",
-      active:
-        !filters.rdvSoon &&
-        !filters.reglementRetard &&
-        !filters.reglementOrange &&
-        !filters.missingEmail &&
-        !filters.missingPhone,
-      count: data?.total ?? 0,
-      onClick: () => resetFilters(),
-    },
-    {
-      id: "admin",
-      label: "Suivi admin",
-      active: filters.reglementOrange,
-      count: data?.items.filter((p) => p.hubStatus === "Suivi admin").length ?? 0,
-      onClick: () => patchFilters({ reglementOrange: !filters.reglementOrange }),
-    },
-    {
-      id: "rdv",
-      label: "RDV proche",
-      active: filters.rdvSoon,
-      count: data?.items.filter((p) => Boolean(p.nextAppointmentAt)).length ?? 0,
-      onClick: () => patchFilters({ rdvSoon: !filters.rdvSoon }),
-    },
-    {
-      id: "retard",
-      label: "Règlement en retard",
-      active: filters.reglementRetard,
-      count: data?.items.filter((p) => p.reglementsCount > 0).length ?? 0,
-      onClick: () => patchFilters({ reglementRetard: !filters.reglementRetard }),
-    },
-    {
-      id: "noemail",
-      label: "Sans email",
-      active: filters.missingEmail,
-      count: data?.items.filter((p) => !p.email).length ?? 0,
-      onClick: () => patchFilters({ missingEmail: !filters.missingEmail }),
-    },
-    {
-      id: "nophone",
-      label: "Sans téléphone",
-      active: filters.missingPhone,
-      count: data?.items.filter((p) => !p.phone).length ?? 0,
-      onClick: () => patchFilters({ missingPhone: !filters.missingPhone }),
-    },
-  ];
 
   return (
     <section className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -280,47 +210,18 @@ export function PatientsView({ canImportCsv = false }: PatientsViewProps) {
               Nouveau patient
             </span>
           </button>
-          {canImportCsv ? (
-            <button
-              type="button"
-              onClick={() => setImportOpen(true)}
-              className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700"
-            >
-              <span className="inline-flex items-center gap-1.5">
-                <Upload className="h-4 w-4" />
-                Importer CSV
-              </span>
-            </button>
-          ) : null}
           <button
             type="button"
-            onClick={() => setFiltersOpen(true)}
-            className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700"
+            onClick={() => void handleExport()}
+            disabled={exporting}
+            className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 disabled:opacity-50"
           >
             <span className="inline-flex items-center gap-1.5">
-              <Filter className="h-4 w-4" />
-              Filtres
+              <Download className="h-4 w-4" />
+              {exporting ? "Export…" : "Exporter"}
             </span>
           </button>
         </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        {quickChips.map((chip) => (
-          <button
-            key={chip.id}
-            type="button"
-            onClick={chip.onClick}
-            className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition ${
-              chip.active
-                ? "border-violet-200 bg-violet-50 text-violet-700"
-                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-            }`}
-          >
-            {chip.label}
-            <span className="rounded-full bg-white/80 px-1.5 py-0.5 text-[10px]">{chip.count}</span>
-          </button>
-        ))}
       </div>
 
       {loading ? <p className="text-sm text-slate-500">Chargement des patients...</p> : null}
@@ -345,16 +246,13 @@ export function PatientsView({ canImportCsv = false }: PatientsViewProps) {
                   <p className="text-xs text-slate-500">{patient.email ?? "Email non renseigné"}</p>
                 </div>
                 <div className="min-w-[140px] text-xs text-slate-600">{patient.phone ?? "Téléphone non renseigné"}</div>
-                <div className="min-w-[150px] text-xs text-slate-600">{patient.nextAppointmentAt ?? "Aucun RDV"}</div>
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
                   {patient.hubStatus}
                 </span>
-                <div className="flex items-center gap-1">
-                  <span className="rounded-lg bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">Règl. {patient.reglementsCount}</span>
-                  <span className="rounded-lg bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">Tâches {patient.tasksCount}</span>
-                  <span className="rounded-lg bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700">Emails {patient.emailsCount}</span>
-                </div>
-                <Link href={`/patients/${patient.id}`} className="ml-auto rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] px-3 py-1.5 text-xs font-semibold text-white">
+                <Link
+                  href={`/patients/${patient.id}`}
+                  className="ml-auto rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] px-3 py-1.5 text-xs font-semibold text-white"
+                >
                   Ouvrir
                 </Link>
               </article>
@@ -366,8 +264,22 @@ export function PatientsView({ canImportCsv = false }: PatientsViewProps) {
               {data.total} element(s) - page {data.page} / {data.totalPages}
             </p>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setPage((prev) => prev - 1)} disabled={!canGoPrev} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 disabled:cursor-not-allowed disabled:opacity-50">Precedent</button>
-              <button type="button" onClick={() => setPage((prev) => prev + 1)} disabled={!canGoNext} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 disabled:cursor-not-allowed disabled:opacity-50">Suivant</button>
+              <button
+                type="button"
+                onClick={() => setPage((prev) => prev - 1)}
+                disabled={!canGoPrev}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Precedent
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((prev) => prev + 1)}
+                disabled={!canGoNext}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Suivant
+              </button>
             </div>
           </div>
         </>
@@ -378,86 +290,84 @@ export function PatientsView({ canImportCsv = false }: PatientsViewProps) {
           <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
             <div className="mb-3 flex items-center justify-between">
               <h4 className="text-sm font-semibold text-slate-900">Nouveau patient</h4>
-              <button type="button" onClick={() => setCreateOpen(false)} className="text-xs text-slate-500">Fermer</button>
+              <button type="button" onClick={() => setCreateOpen(false)} className="text-xs text-slate-500">
+                Fermer
+              </button>
             </div>
-            <form onSubmit={handleCreate} className="grid gap-2 md:grid-cols-2">
-              <input value={createForm.firstName} onChange={(e) => setCreateForm((f) => ({ ...f, firstName: e.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Prénom" required />
-              <input value={createForm.lastName} onChange={(e) => setCreateForm((f) => ({ ...f, lastName: e.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Nom" required />
-              <input value={createForm.email ?? ""} onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Email" />
-              <input value={createForm.phone ?? ""} onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Téléphone" />
+            <form onSubmit={handleCreate} className="grid gap-3 md:grid-cols-2">
+              <input
+                value={createForm.firstName}
+                onChange={(e) => setCreateForm((f) => ({ ...f, firstName: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                placeholder="Prénom"
+                required
+              />
+              <input
+                value={createForm.lastName}
+                onChange={(e) => setCreateForm((f) => ({ ...f, lastName: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                placeholder="Nom"
+                required
+              />
+              <input
+                value={createForm.email ?? ""}
+                onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                placeholder="Email"
+              />
+              <input
+                value={createForm.phone ?? ""}
+                onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                placeholder="Téléphone"
+              />
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 md:col-span-2">
+                <p className="text-xs font-medium text-slate-700">Mutuelle</p>
+                <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-slate-700">
+                  <label className="inline-flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={hasMutuelle}
+                      onChange={(e) => {
+                        setHasMutuelle(e.target.checked);
+                        if (!e.target.checked) setCreateForm((f) => ({ ...f, mutuelle: "" }));
+                      }}
+                      className="rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                    />
+                    Oui
+                  </label>
+                  <span className="text-xs text-slate-500">
+                    {hasMutuelle ? "Indiquez le nom de la mutuelle ci-dessous." : "Non — aucune mutuelle renseignée."}
+                  </span>
+                </div>
+                {hasMutuelle ? (
+                  <input
+                    value={createForm.mutuelle ?? ""}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, mutuelle: e.target.value }))}
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                    placeholder="Nom de la mutuelle"
+                  />
+                ) : null}
+              </div>
+
+              <input
+                value={createForm.legalGuardian ?? ""}
+                onChange={(e) => setCreateForm((f) => ({ ...f, legalGuardian: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2 text-sm md:col-span-2"
+                placeholder="Responsable légal (optionnel)"
+              />
+
               <div className="md:col-span-2 flex justify-end">
-                <button type="submit" disabled={creating} className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-medium text-white disabled:opacity-50">{creating ? "Création..." : "Créer"}</button>
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-medium text-white disabled:opacity-50"
+                >
+                  {creating ? "Création..." : "Créer"}
+                </button>
               </div>
             </form>
-          </div>
-        </div>
-      ) : null}
-
-      {canImportCsv && importOpen ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 p-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
-            <div className="mb-3 flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-slate-900">Importer CSV</h4>
-              <button type="button" onClick={() => setImportOpen(false)} className="text-xs text-slate-500">Fermer</button>
-            </div>
-            <p className="mb-2 text-xs text-slate-600">
-              En-têtes minimum : <code className="rounded bg-slate-100 px-1">firstName</code>, <code className="rounded bg-slate-100 px-1">lastName</code>.
-            </p>
-            <form onSubmit={handleImportCsv} className="flex flex-wrap items-end gap-2">
-              <input name="csv" type="file" accept=".csv,text/csv" className="max-w-full text-xs text-slate-700 file:mr-2 file:rounded-lg file:border file:border-slate-200 file:bg-white file:px-2 file:py-1" />
-              <button type="submit" disabled={importingCsv} className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs font-medium text-white disabled:opacity-50">{importingCsv ? "Import..." : "Importer"}</button>
-            </form>
-            {importReport && importReport.lines.some((l) => l.status === "error" || l.status === "skipped") ? (
-              <ul className="mt-2 max-h-40 overflow-y-auto text-xs text-slate-600">
-                {importReport.lines.filter((l) => l.status === "error" || l.status === "skipped").map((l) => (
-                  <li key={`imp-${l.line}-${l.status}`}>Ligne {l.line} ({l.status}) {l.message ? `— ${l.message}` : ""}</li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {filtersOpen ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 p-4">
-          <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
-            <div className="mb-3 flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-slate-900">Filtres avancés</h4>
-              <button type="button" onClick={() => setFiltersOpen(false)} className="text-xs text-slate-500">Fermer</button>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              <label className="flex cursor-pointer items-start gap-2 text-xs text-slate-700">
-                <input type="checkbox" className="mt-0.5 rounded border-slate-300" checked={filters.rdvSoon} onChange={(e) => patchFilters({ rdvSoon: e.target.checked })} />
-                <span>
-                  RDV proche (delai :{" "}
-                  <input type="number" min={1} max={30} disabled={!filters.rdvSoon} value={filters.rdvSoonDays} onChange={(e) => setFilters((prev) => ({ ...prev, rdvSoonDays: Math.min(30, Math.max(1, Number.parseInt(e.target.value, 10) || 7)) }))} className="w-12 rounded border border-slate-200 px-1 py-0.5 text-xs disabled:opacity-50" />{" "}
-                  jours)
-                </span>
-              </label>
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-700"><input type="checkbox" className="rounded border-slate-300" checked={filters.noNextRdv} onChange={(e) => patchFilters({ noNextRdv: e.target.checked })} />Sans prochain RDV</label>
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-700"><input type="checkbox" className="rounded border-slate-300" checked={filters.reglementRetard} onChange={(e) => patchFilters({ reglementRetard: e.target.checked })} />Règlement en retard</label>
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-700"><input type="checkbox" className="rounded border-slate-300" checked={filters.reglementOrange} onChange={(e) => patchFilters({ reglementOrange: e.target.checked })} />Règlement à surveiller</label>
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-700"><input type="checkbox" className="rounded border-slate-300" checked={filters.openTask} onChange={(e) => patchFilters({ openTask: e.target.checked })} />Tâche ouverte liée</label>
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-700"><input type="checkbox" className="rounded border-slate-300" checked={filters.urgentEmail} onChange={(e) => patchFilters({ urgentEmail: e.target.checked })} />Email urgent lié</label>
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-700"><input type="checkbox" className="rounded border-slate-300" checked={filters.missingEmail} onChange={(e) => patchFilters({ missingEmail: e.target.checked })} />Sans email patient</label>
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-700"><input type="checkbox" className="rounded border-slate-300" checked={filters.missingPhone} onChange={(e) => patchFilters({ missingPhone: e.target.checked })} />Sans téléphone patient</label>
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-700"><input type="checkbox" className="rounded border-slate-300" checked={filters.hasMutuelle} onChange={(e) => patchFilters({ hasMutuelle: e.target.checked })} />Mutuelle renseignée</label>
-            </div>
-            <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
-              <button type="button" onClick={resetFilters} className="text-xs font-medium text-slate-600 underline decoration-slate-300 hover:text-slate-900">Réinitialiser</button>
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-slate-600">Tri</label>
-                <select value={sort} onChange={(e) => { setSort(e.target.value as PatientListSort); setPage(1); }} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800">
-                  <option value="name_asc">Nom (A → Z)</option>
-                  <option value="name_desc">Nom (Z → A)</option>
-                  <option value="next_rdv_asc">Prochain RDV (plus proche)</option>
-                  <option value="next_rdv_desc">Prochain RDV (plus éloigné)</option>
-                  <option value="created_desc">Création (plus récent)</option>
-                  <option value="created_asc">Création (plus ancien)</option>
-                </select>
-                <button type="button" onClick={() => setFiltersOpen(false)} className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white">Appliquer</button>
-              </div>
-            </div>
           </div>
         </div>
       ) : null}

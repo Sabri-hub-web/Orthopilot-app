@@ -4,64 +4,21 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
   ArrowLeft,
-  BadgeCheck,
-  CalendarClock,
-  CheckCircle2,
   Clock3,
   CreditCard,
-  Download,
-  FileText,
-  History,
   Mail,
   MessageSquare,
-  MoreHorizontal,
   Phone,
-  Plus,
-  Send,
-  Shield,
   User,
-  Wallet,
-  X,
 } from "lucide-react";
 import { errorMessageFromResponse } from "@/lib/validation/client-errors";
 import {
   PatientFormPayload,
   PatientHubResponse,
   PatientHubStatusApi,
-  ReglementFormPayload,
-  ReglementStatusApi,
   UsersListItem,
 } from "@/types/domain";
 import { PATIENT_HUB_STATUS_VALUES, patientHubStatusLabelMap } from "@/lib/patients";
-import { REGLEMENT_STATUS_VALUES, reglementStatusLabelMap } from "@/lib/reglements";
-
-const reglementStatusOptions = REGLEMENT_STATUS_VALUES.map((value) => ({
-  value,
-  label: reglementStatusLabelMap[value],
-}));
-
-const defaultReglementForm: ReglementFormPayload = {
-  patientId: "",
-  amountDue: 0,
-  dueDate: "",
-  status: "EN_ATTENTE",
-  comment: "",
-};
-
-function paymentHealth(reglements: PatientHubResponse["reglements"]): {
-  label: "À jour" | "À surveiller" | "Retard critique";
-  className: string;
-} {
-  const nonPaid = reglements.filter((r) => r.status !== "Regle");
-  const worst = nonPaid.reduce((acc, r) => Math.max(acc, r.daysLate), 0);
-  if (nonPaid.length === 0 || worst <= 30) {
-    return { label: "À jour", className: "bg-emerald-50 text-emerald-700 border-emerald-200" };
-  }
-  if (worst <= 60) {
-    return { label: "À surveiller", className: "bg-orange-50 text-orange-700 border-orange-200" };
-  }
-  return { label: "Retard critique", className: "bg-red-50 text-red-700 border-red-200" };
-}
 
 const hubStatusOptions = PATIENT_HUB_STATUS_VALUES.map((value) => ({
   value,
@@ -117,7 +74,6 @@ interface PatientHubViewProps {
   patientId: string;
 }
 
-type HubTab = "overview" | "reglements" | "rendezvous" | "documents" | "commentaires";
 type CommentFilter = "active" | "done" | "all";
 
 export function PatientHubView({ patientId }: PatientHubViewProps) {
@@ -127,26 +83,18 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<PatientFormPayload | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<HubTab>("overview");
   const [commentDraft, setCommentDraft] = useState("");
-  const [docNameDraft, setDocNameDraft] = useState("");
   const [commentLoading, setCommentLoading] = useState(false);
-  const [docLoading, setDocLoading] = useState(false);
   const [commentRecipientId, setCommentRecipientId] = useState("");
   const [commentFilter, setCommentFilter] = useState<CommentFilter>("active");
   const [users, setUsers] = useState<UsersListItem[]>([]);
-  const [reglementModalOpen, setReglementModalOpen] = useState(false);
-  const [reglementForm, setReglementForm] = useState<ReglementFormPayload>(defaultReglementForm);
-  const [reglementSubmitting, setReglementSubmitting] = useState(false);
   const [fromReglements, setFromReglements] = useState(false);
+  const [hasMutuelle, setHasMutuelle] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab");
     const from = params.get("from");
-    if (tab && ["overview", "reglements", "rendezvous", "documents", "commentaires"].includes(tab)) {
-      setActiveTab(tab as HubTab);
-    }
     setFromReglements(from === "reglements" || tab === "reglements");
   }, []);
 
@@ -175,6 +123,7 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
       internalComment: payload.patient.internalComment,
       hubStatus: statusValue,
     });
+    setHasMutuelle(Boolean(payload.patient.mutuelle));
   }, [patientId]);
 
   useEffect(() => {
@@ -215,6 +164,7 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
       setSaving(true);
       setSuccess(null);
       setError(null);
+      const mutuelleName = (form.mutuelle ?? "").trim();
       const body = {
         firstName: form.firstName,
         lastName: form.lastName,
@@ -222,7 +172,7 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
         phone: form.phone === "" ? null : form.phone,
         legalGuardian: form.legalGuardian === "" ? null : form.legalGuardian,
         nextAppointmentAt: form.nextAppointmentAt === "" ? null : form.nextAppointmentAt,
-        mutuelle: form.mutuelle === "" ? null : form.mutuelle,
+        mutuelle: hasMutuelle && mutuelleName ? mutuelleName : null,
         internalComment: form.internalComment === "" ? null : form.internalComment,
         hubStatus: form.hubStatus,
       };
@@ -304,110 +254,6 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
     }
   }
 
-  async function handleAddDocumentPlaceholder(event: React.FormEvent) {
-    event.preventDefault();
-    if (!docNameDraft.trim()) return;
-    try {
-      setDocLoading(true);
-      const response = await fetch(`/api/patients/${patientId}/documents`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: docNameDraft.trim(),
-          mimeType: "application/octet-stream",
-          sizeBytes: 0,
-        }),
-      });
-      if (!response.ok) {
-        setError(await errorMessageFromResponse(response));
-        return;
-      }
-      const created = await response.json();
-      setHub((prev) =>
-        prev
-          ? {
-              ...prev,
-              documents: [created, ...prev.documents],
-            }
-          : prev,
-      );
-      setDocNameDraft("");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur ajout document.");
-    } finally {
-      setDocLoading(false);
-    }
-  }
-
-  function openAddReglement() {
-    setReglementForm({ ...defaultReglementForm, patientId, dueDate: new Date().toISOString().slice(0, 10) });
-    setReglementModalOpen(true);
-  }
-
-  async function handleCreateReglement(event: React.FormEvent) {
-    event.preventDefault();
-    try {
-      setReglementSubmitting(true);
-      setError(null);
-      const response = await fetch("/api/reglements", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          patientId,
-          amountDue: reglementForm.amountDue,
-          dueDate: reglementForm.dueDate,
-          status: reglementForm.status,
-          comment: reglementForm.comment === "" ? null : reglementForm.comment,
-        }),
-      });
-      if (!response.ok) {
-        setError(await errorMessageFromResponse(response));
-        return;
-      }
-      await loadHub();
-      setReglementModalOpen(false);
-      setSuccess("Règlement ajouté.");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur ajout règlement.");
-    } finally {
-      setReglementSubmitting(false);
-    }
-  }
-
-  async function handleReglementRelance(reglementId: string) {
-    try {
-      setError(null);
-      const response = await fetch(`/api/reglements/${reglementId}/relance`, { method: "POST" });
-      if (!response.ok) {
-        setError(await errorMessageFromResponse(response));
-        return;
-      }
-      await loadHub();
-      setSuccess("Relance enregistrée.");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur relance.");
-    }
-  }
-
-  async function handleMarkRegle(reglementId: string) {
-    try {
-      setError(null);
-      const response = await fetch(`/api/reglements/${reglementId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "REGLE" }),
-      });
-      if (!response.ok) {
-        setError(await errorMessageFromResponse(response));
-        return;
-      }
-      await loadHub();
-      setSuccess("Règlement marqué comme réglé.");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur mise à jour règlement.");
-    }
-  }
-
   if (loading) {
     return <p className="text-sm text-slate-500">Chargement de la fiche patient...</p>;
   }
@@ -421,43 +267,16 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
   }
 
   const status = patientStatusUiLabel(hub.patient.hubStatus);
-  const reglementsTotal = hub.reglements.reduce((acc, r) => acc + Number(r.amountDue || 0), 0);
-  const reglementsRegles = hub.reglements
-    .filter((r) => r.status === "Regle")
-    .reduce((acc, r) => acc + Number(r.amountDue || 0), 0);
-  const progress = reglementsTotal > 0 ? Math.round((reglementsRegles / reglementsTotal) * 100) : 0;
   const now = new Date();
   const semesterStart = new Date(now.getFullYear(), now.getMonth() < 6 ? 0 : 6, 1);
   const semesterEnd = new Date(now.getFullYear(), now.getMonth() < 6 ? 5 : 11, 30);
-  const prochainRdv = hub.patient.nextAppointmentAt
-    ? new Date(hub.patient.nextAppointmentAt).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" })
-    : "Aucun rendez-vous planifié";
-  const enRetardCount = hub.reglements.filter((r) => r.status === "En retard").length;
-  const reglementsPayesCount = hub.reglements.filter((r) => r.status === "Regle").length;
-  const totalReglements = Math.max(1, hub.reglements.length);
-  const retardRatio = enRetardCount / totalReglements;
-  const reglementHealth =
-    enRetardCount === 0
-      ? "Payé"
-      : retardRatio > 0.5
-        ? "Retard > 2 mois"
-        : "Retard 1 mois";
-  const reglementBadge =
-    enRetardCount === 0
-      ? `${reglementsPayesCount} payé(s)`
-      : retardRatio > 0.5
-        ? "Retard critique"
-        : "Retard modéré";
-  const reglementTone =
-    enRetardCount === 0 ? "text-emerald-700" : retardRatio > 0.5 ? "text-red-700" : "text-amber-700";
   const firstLog = hub.logs[0];
-  const tabs: { id: HubTab; label: string }[] = [
-    { id: "overview", label: "Vue d'ensemble" },
-    { id: "reglements", label: "Règlements" },
-    { id: "rendezvous", label: "Rendez-vous" },
-    { id: "documents", label: "Documents" },
-    { id: "commentaires", label: "Commentaires" },
-  ];
+  const recentReglements = [...hub.reglements]
+    .sort((a, b) => b.dueDate.localeCompare(a.dueDate))
+    .slice(0, 8);
+  const filteredComments = hub.comments.filter((comment) =>
+    commentFilter === "all" ? true : commentFilter === "done" ? comment.isDone : !comment.isDone,
+  );
 
   return (
     <div className="space-y-4 pb-4">
@@ -509,619 +328,229 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
                   <Mail className="h-3.5 w-3.5 text-slate-400" />
                   {hub.patient.email ?? "Email non renseigné"}
                 </span>
-                <span className="inline-flex items-center gap-1">
-                  <User className="h-3.5 w-3.5 text-slate-400" />
-                  {hub.patient.legalGuardian ?? "Responsable légal non renseigné"}
-                </span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="submit"
-              form="patient-hub-form"
-              disabled={saving}
-              className="rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] px-3 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-50"
-            >
-              {saving ? "Enregistrement..." : "Modifier les informations"}
-            </button>
-            <button
-              type="button"
-              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-50"
-              title="Actions"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
-          </div>
+          <button
+            type="submit"
+            form="patient-hub-form"
+            disabled={saving}
+            className="rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] px-3 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-50"
+          >
+            {saving ? "Enregistrement..." : "Enregistrer"}
+          </button>
         </div>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        {[
-          {
-            title: "Prochain rendez-vous",
-            value: prochainRdv,
-            sub: hub.patient.nextAppointmentAt ? "Planning à confirmer" : "Aucun RDV à venir",
-            icon: CalendarClock,
-          },
-          {
-            title: "Statut règlement",
-            value: reglementBadge,
-            sub: reglementHealth,
-            icon: CreditCard,
-            valueClass: reglementTone,
-          },
-          {
-            title: "Montant total traitement",
-            value: euro(reglementsTotal),
-            sub: `Échéancier sur ${Math.max(1, hub.reglements.length)} mois`,
-            icon: Shield,
-          },
-          {
-            title: "Montant réglé",
-            value: euro(reglementsRegles),
-            sub: `${progress}% du total`,
-            icon: CheckCircle2,
-            valueClass: progress >= 90 ? "text-emerald-700" : progress >= 50 ? "text-amber-700" : "text-red-700",
-          },
-          {
-            title: "Semestre en cours",
-            value: `${semesterStart.toLocaleDateString("fr-FR")} - ${semesterEnd.toLocaleDateString("fr-FR")}`,
-            sub: `Semestre ${now.getMonth() < 6 ? "1" : "2"}`,
-            icon: Clock3,
-          },
-        ].map((kpi) => (
-          <article key={kpi.title} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-[11px] font-medium text-slate-500">{kpi.title}</p>
-              <span className="rounded-xl bg-violet-50 p-1.5 text-violet-600">
-                <kpi.icon className="h-3.5 w-3.5" />
-              </span>
+      <section className="max-w-md">
+        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[11px] font-medium text-slate-500">Semestre en cours</p>
+            <span className="rounded-xl bg-violet-50 p-1.5 text-violet-600">
+              <Clock3 className="h-3.5 w-3.5" />
+            </span>
+          </div>
+          <p className="mt-2 text-sm font-semibold leading-snug text-slate-900">
+            {semesterStart.toLocaleDateString("fr-FR")} - {semesterEnd.toLocaleDateString("fr-FR")}
+          </p>
+          <p className="mt-1 text-[11px] text-slate-500">Semestre {now.getMonth() < 6 ? "1" : "2"}</p>
+        </article>
+      </section>
+
+      <form id="patient-hub-form" onSubmit={handleSave} className="grid gap-3 xl:grid-cols-3">
+        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-1">
+          <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+            <User className="h-4 w-4 text-violet-600" />
+            Coordonnées / Infos
+          </h3>
+          <div className="mt-3 grid gap-2">
+            <input
+              value={form.firstName}
+              onChange={(e) => setForm((f) => (f ? { ...f, firstName: e.target.value } : f))}
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              placeholder="Prénom"
+              required
+            />
+            <input
+              value={form.lastName}
+              onChange={(e) => setForm((f) => (f ? { ...f, lastName: e.target.value } : f))}
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              placeholder="Nom"
+              required
+            />
+            <input
+              value={form.phone ?? ""}
+              onChange={(e) => setForm((f) => (f ? { ...f, phone: e.target.value } : f))}
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              placeholder="Téléphone"
+            />
+            <input
+              value={form.email ?? ""}
+              onChange={(e) => setForm((f) => (f ? { ...f, email: e.target.value } : f))}
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              placeholder="Email"
+            />
+
+            <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2">
+              <p className="text-xs font-medium text-slate-700">Mutuelle</p>
+              <label className="mt-1.5 inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={hasMutuelle}
+                  onChange={(e) => {
+                    setHasMutuelle(e.target.checked);
+                    if (!e.target.checked) setForm((f) => (f ? { ...f, mutuelle: "" } : f));
+                  }}
+                  className="rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                />
+                Oui
+              </label>
+              {hasMutuelle ? (
+                <input
+                  value={form.mutuelle ?? ""}
+                  onChange={(e) => setForm((f) => (f ? { ...f, mutuelle: e.target.value } : f))}
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  placeholder="Nom de la mutuelle"
+                />
+              ) : (
+                <p className="mt-1 text-[11px] text-slate-500">Non renseignée</p>
+              )}
             </div>
-            <p className={`mt-2 text-sm font-semibold leading-snug ${kpi.valueClass ?? "text-slate-900"}`}>{kpi.value}</p>
-            <p className="mt-1 text-[11px] text-slate-500">{kpi.sub}</p>
-          </article>
-        ))}
-      </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-        <div className="flex flex-wrap items-center gap-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-                activeTab === tab.id
-                  ? "border-b-2 border-violet-600 text-violet-700"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
+            <input
+              value={form.legalGuardian ?? ""}
+              onChange={(e) => setForm((f) => (f ? { ...f, legalGuardian: e.target.value } : f))}
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              placeholder="Responsable légal"
+            />
+            <select
+              value={form.hubStatus ?? "ACTIF"}
+              onChange={(e) =>
+                setForm((f) => (f ? { ...f, hubStatus: e.target.value as PatientHubStatusApi } : f))
+              }
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
             >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <form id="patient-hub-form" onSubmit={handleSave}>
-        {activeTab === "overview" ? (
-          <div className="grid gap-3 xl:grid-cols-[1.2fr_1fr_1fr_1.1fr]">
-            <section className="space-y-3 xl:col-span-3">
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-2">
-                  <h3 className="text-sm font-semibold text-slate-900">Informations générales</h3>
-                  <div className="mt-3 grid gap-2 md:grid-cols-2">
-                    <input value={form.firstName} onChange={(e) => setForm((f) => (f ? { ...f, firstName: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Prénom" required />
-                    <input value={form.lastName} onChange={(e) => setForm((f) => (f ? { ...f, lastName: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Nom" required />
-                    <input value={form.phone ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, phone: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Téléphone" />
-                    <input value={form.email ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, email: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Email" />
-                    <input value={form.mutuelle ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, mutuelle: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Mutuelle" />
-                    <input value={form.legalGuardian ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, legalGuardian: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Responsable légal" />
-                    <input type="datetime-local" value={form.nextAppointmentAt ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, nextAppointmentAt: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-                    <select value={form.hubStatus ?? "ACTIF"} onChange={(e) => setForm((f) => (f ? { ...f, hubStatus: e.target.value as PatientHubStatusApi } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
-                      {hubStatusOptions.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
-                    <textarea value={form.internalComment ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, internalComment: e.target.value } : f))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm md:col-span-2" rows={3} placeholder="Notes importantes" />
-                  </div>
-                </article>
-
-                <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-slate-900">Derniers commentaires</h3>
-                    <button type="button" onClick={() => setActiveTab("commentaires")} className="text-xs font-medium text-violet-700 hover:underline">Voir tout</button>
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {hub.comments.slice(0, 3).map((comment) => (
-                      <div key={comment.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs">
-                        <p className="font-medium text-slate-800">{comment.authorName}</p>
-                        <p className="text-[11px] text-slate-500">{formatLogDate(comment.createdAt)}</p>
-                        <p className="mt-1 whitespace-pre-wrap text-slate-700">{comment.content}</p>
-                      </div>
-                    ))}
-                    {hub.comments.length === 0 ? <p className="text-xs text-slate-500">Aucun commentaire.</p> : null}
-                  </div>
-                </article>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-slate-900">Derniers règlements</h3>
-                    <button type="button" onClick={() => setActiveTab("reglements")} className="text-xs font-medium text-violet-700 hover:underline">Voir tout</button>
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {hub.reglements.slice(0, 5).map((r) => (
-                      <div key={r.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 p-2">
-                        <div>
-                          <p className="text-xs font-medium text-slate-800">{r.dueDate}</p>
-                          <p className="text-[11px] text-slate-500">{r.status}</p>
-                        </div>
-                        <span className="text-xs font-semibold text-slate-800">{euro(r.amountDue)}</span>
-                      </div>
-                    ))}
-                    {hub.reglements.length === 0 ? <p className="text-xs text-slate-500">Aucun règlement lié.</p> : null}
-                  </div>
-                </article>
-
-                <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-slate-900">Derniers documents</h3>
-                    <button type="button" onClick={() => setActiveTab("documents")} className="text-xs font-medium text-violet-700 hover:underline">Voir tout</button>
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {hub.documents.slice(0, 5).map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between rounded-xl border border-slate-100 p-2">
-                        <div className="min-w-0">
-                          <p className="truncate text-xs font-medium text-slate-800">{doc.name}</p>
-                          <p className="text-[11px] text-slate-500">{formatLogDate(doc.createdAt)}</p>
-                        </div>
-                        <button type="button" disabled={!doc.downloadUrl} className="rounded-lg border border-slate-200 p-1.5 text-slate-500 disabled:cursor-not-allowed disabled:opacity-50">
-                          <Download className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                    {hub.documents.length === 0 ? <p className="text-xs text-slate-500">Aucun document récent.</p> : null}
-                  </div>
-                </article>
-              </div>
-            </section>
-
-          </div>
-        ) : null}
-
-        {activeTab === "reglements"
-          ? (() => {
-              const regs = hub.reglements;
-              const total = regs.reduce((acc, r) => acc + Number(r.amountDue || 0), 0);
-              const paid = regs
-                .filter((r) => r.status === "Regle")
-                .reduce((acc, r) => acc + Number(r.amountDue || 0), 0);
-              const remaining = Math.max(0, total - paid);
-              const health = paymentHealth(regs);
-              const nonPaidSorted = regs
-                .filter((r) => r.status !== "Regle")
-                .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-              const target = nonPaidSorted[0] ?? null;
-              const relanceLogs = hub.logs.filter((l) => /relance/i.test(l.message));
-              return (
-                <div className="space-y-3">
-                  {/* Bandeau financier + actions */}
-                  <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
-                        <Wallet className="h-4 w-4 text-violet-600" />
-                        Suivi financier
-                        <span className={`ml-1 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${health.className}`}>
-                          {health.label}
-                        </span>
-                      </h3>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={openAddReglement}
-                          className="inline-flex h-8 items-center gap-1 rounded-lg bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] px-3 text-xs font-semibold text-white shadow-sm"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          Ajouter un règlement
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => target && handleReglementRelance(target.id)}
-                          disabled={!target}
-                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 text-xs font-medium text-amber-800 disabled:opacity-40"
-                        >
-                          <Send className="h-3.5 w-3.5" />
-                          Ajouter une relance
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => target && handleMarkRegle(target.id)}
-                          disabled={!target}
-                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-medium text-emerald-700 disabled:opacity-40"
-                        >
-                          <BadgeCheck className="h-3.5 w-3.5" />
-                          Marquer comme réglé
-                        </button>
-                      </div>
-                    </div>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                      <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                        <p className="text-[11px] text-slate-500">Montant total</p>
-                        <p className="text-lg font-bold text-slate-900">{euro(total)}</p>
-                      </div>
-                      <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
-                        <p className="text-[11px] text-emerald-600">Montant réglé</p>
-                        <p className="text-lg font-bold text-emerald-700">{euro(paid)}</p>
-                      </div>
-                      <div className="rounded-xl border border-red-100 bg-red-50 p-3">
-                        <p className="text-[11px] text-red-600">Reste à payer</p>
-                        <p className="text-lg font-bold text-red-700">{euro(remaining)}</p>
-                      </div>
-                    </div>
-                  </article>
-
-                  <div className="grid gap-3 lg:grid-cols-2">
-                    {/* Historique des paiements */}
-                    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                      <h3 className="text-sm font-semibold text-slate-900">Historique des paiements</h3>
-                      <div className="mt-3 space-y-2">
-                        {regs.map((r) => {
-                          const statusValue =
-                            reglementStatusOptions.find((o) => o.label === r.status)?.value ?? "EN_ATTENTE";
-                          return (
-                            <div key={r.id} className="rounded-xl border border-slate-100 p-3">
-                              <div className="flex items-center justify-between gap-2">
-                                <div>
-                                  <p className="text-sm font-medium text-slate-800">{frDate(r.dueDate)}</p>
-                                  <p className="text-xs text-slate-500">{r.status}</p>
-                                </div>
-                                <span className="text-sm font-semibold text-slate-900">{euro(r.amountDue)}</span>
-                              </div>
-                              {statusValue !== "REGLE" ? (
-                                <div className="mt-2 flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleReglementRelance(r.id)}
-                                    className="inline-flex h-7 items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2 text-[11px] font-medium text-amber-800"
-                                  >
-                                    <Send className="h-3 w-3" />
-                                    Relance
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleMarkRegle(r.id)}
-                                    className="inline-flex h-7 items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 text-[11px] font-medium text-emerald-700"
-                                  >
-                                    <BadgeCheck className="h-3 w-3" />
-                                    Réglé
-                                  </button>
-                                </div>
-                              ) : null}
-                            </div>
-                          );
-                        })}
-                        {regs.length === 0 ? <p className="text-xs text-slate-500">Aucun règlement.</p> : null}
-                      </div>
-                    </article>
-
-                    {/* Historique des relances */}
-                    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
-                        <History className="h-4 w-4 text-violet-600" />
-                        Historique des relances
-                      </h3>
-                      {relanceLogs.length === 0 ? (
-                        <p className="mt-3 text-xs text-slate-500">Aucune relance enregistrée.</p>
-                      ) : (
-                        <ol className="mt-3 space-y-3 border-l border-slate-200 pl-4">
-                          {relanceLogs.slice(0, 12).map((log) => (
-                            <li key={log.id} className="relative">
-                              <span className="absolute -left-[1.30rem] top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500" />
-                              <p className="text-[11px] font-medium text-slate-400">{formatLogDate(log.createdAt)}</p>
-                              <p className="text-sm text-slate-700">{log.message}</p>
-                            </li>
-                          ))}
-                        </ol>
-                      )}
-                    </article>
-                  </div>
-
-                  <div className="grid gap-3 lg:grid-cols-2">
-                    {/* Commentaires internes */}
-                    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                      <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-900">
-                        <MessageSquare className="h-4 w-4 text-violet-600" />
-                        Commentaires internes
-                      </h3>
-                      <div className="mb-3 flex gap-2">
-                        <input
-                          value={commentDraft}
-                          onChange={(e) => setCommentDraft(e.target.value)}
-                          placeholder="Ajouter un commentaire…"
-                          className="h-9 flex-1 rounded-xl border border-slate-200 px-3 text-sm"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleAddComment()}
-                          disabled={commentLoading || !commentDraft.trim()}
-                          className="rounded-xl bg-violet-600 px-3 text-xs font-semibold text-white disabled:opacity-50"
-                        >
-                          Ajouter
-                        </button>
-                      </div>
-                      <div className="space-y-2">
-                        {hub.comments.filter((c) => !c.isDone).slice(0, 5).map((c) => (
-                          <div key={c.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-sm font-medium text-slate-800">{c.authorName}</p>
-                              <p className="text-[11px] text-slate-400">{formatLogDate(c.createdAt)}</p>
-                            </div>
-                            <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{c.content}</p>
-                            <label className="mt-2 inline-flex cursor-pointer items-center gap-2 text-[11px] text-slate-600">
-                              <input
-                                type="checkbox"
-                                checked={c.isDone}
-                                onChange={(e) => handleToggleCommentDone(c.id, e.target.checked)}
-                              />
-                              Marquer comme traité
-                            </label>
-                          </div>
-                        ))}
-                        {hub.comments.filter((c) => !c.isDone).length === 0 ? (
-                          <p className="text-xs text-slate-500">Aucun commentaire actif.</p>
-                        ) : null}
-                      </div>
-                    </article>
-
-                    {/* Documents financiers */}
-                    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                      <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-900">
-                        <FileText className="h-4 w-4 text-violet-600" />
-                        Documents financiers
-                      </h3>
-                      <div className="space-y-2">
-                        {hub.documents.map((doc) => (
-                          <div key={doc.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 p-3">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-medium text-slate-800">{doc.name}</p>
-                              <p className="text-[11px] text-slate-500">{formatLogDate(doc.createdAt)}</p>
-                            </div>
-                            {doc.downloadUrl ? (
-                              <a href={doc.downloadUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-slate-200 p-1.5 text-slate-500">
-                                <Download className="h-3.5 w-3.5" />
-                              </a>
-                            ) : (
-                              <button type="button" disabled className="rounded-lg border border-slate-200 p-1.5 text-slate-400" title="Téléchargement bientôt disponible">
-                                <Download className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                        {hub.documents.length === 0 ? (
-                          <p className="text-xs text-slate-500">Aucun document financier.</p>
-                        ) : null}
-                      </div>
-                    </article>
-                  </div>
-                </div>
-              );
-            })()
-          : null}
-
-        {activeTab === "rendezvous" ? (
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900">Rendez-vous</h3>
-            <p className="mt-3 text-sm text-slate-700">
-              Prochain rendez-vous : {hub.patient.nextAppointmentAt ? formatLogDate(hub.patient.nextAppointmentAt) : "Aucun rendez-vous"}
-            </p>
-          </article>
-        ) : null}
-
-        {activeTab === "commentaires" ? (
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-900">
-              <MessageSquare className="h-4 w-4 text-violet-600" />
-              Commentaires
-            </h3>
-            <form onSubmit={handleAddComment} className="mb-4 grid gap-2 md:grid-cols-[1fr_220px_auto]">
-              <input
-                value={commentDraft}
-                onChange={(e) => setCommentDraft(e.target.value)}
-                placeholder="Ajouter un commentaire patient..."
-                className="h-10 flex-1 rounded-xl border border-slate-200 px-3 text-sm"
-              />
-              <select
-                value={commentRecipientId}
-                onChange={(e) => setCommentRecipientId(e.target.value)}
-                className="h-10 rounded-xl border border-slate-200 px-3 text-sm"
-              >
-                <option value="">Destinataire (optionnel)</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.fullName}
-                  </option>
-                ))}
-              </select>
-              <button type="submit" disabled={commentLoading || !commentDraft.trim()} className="rounded-xl bg-violet-600 px-3 text-xs font-semibold text-white disabled:opacity-50">
-                Ajouter
-              </button>
-            </form>
-            <div className="mb-3 flex items-center gap-2">
-              {[
-                { id: "active" as const, label: "Actifs" },
-                { id: "done" as const, label: "Terminés" },
-                { id: "all" as const, label: "Tous" },
-              ].map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setCommentFilter(f.id)}
-                  className={`rounded-full border px-2.5 py-1 text-xs ${commentFilter === f.id ? "border-violet-200 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600"}`}
-                >
-                  {f.label}
-                </button>
+              {hubStatusOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
               ))}
-            </div>
-            <div className="space-y-2">
-              {hub.comments
-                .filter((comment) =>
-                  commentFilter === "all" ? true : commentFilter === "done" ? comment.isDone : !comment.isDone,
-                )
-                .map((comment) => (
-                <div key={comment.id} className={`rounded-xl border border-slate-100 p-3 ${comment.isDone ? "bg-slate-50/60 opacity-80" : "bg-slate-50"}`}>
-                  <p className="text-sm font-medium text-slate-800">{comment.authorName}</p>
-                  {comment.recipientName ? (
-                    <p className="text-xs text-slate-500">→ {comment.recipientName}</p>
+            </select>
+          </div>
+        </article>
+
+        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-1">
+          <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+            <CreditCard className="h-4 w-4 text-violet-600" />
+            Historique règlements
+          </h3>
+          <div className="mt-3 space-y-2">
+            {recentReglements.map((r) => (
+              <div
+                key={r.id}
+                className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-slate-800">{frDate(r.dueDate)}</p>
+                  <p className="truncate text-[11px] text-slate-500">{r.status}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-xs font-semibold text-slate-900">{euro(r.amountDue)}</p>
+                  {r.daysLate > 0 && r.status !== "Regle" ? (
+                    <p className="text-[10px] font-medium text-rose-600">+{r.daysLate} j</p>
                   ) : null}
-                  <p className="text-xs text-slate-500">{formatLogDate(comment.createdAt)}</p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{comment.content}</p>
-                  <label className="mt-2 inline-flex cursor-pointer items-center gap-2 text-xs text-slate-600">
-                    <input
-                      type="checkbox"
-                      checked={comment.isDone}
-                      onChange={(e) => handleToggleCommentDone(comment.id, e.target.checked)}
-                    />
-                    Marquer comme lu / terminé
-                  </label>
                 </div>
-              ))}
-              {hub.comments.length === 0 ? <p className="text-xs text-slate-500">Aucun commentaire.</p> : null}
-            </div>
-          </article>
-        ) : null}
-
-        {activeTab === "documents" ? (
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-900">
-              <FileText className="h-4 w-4 text-violet-600" />
-              Documents
-            </h3>
-            <p className="mb-3 text-xs text-slate-500">Ajout de document bientôt disponible.</p>
-            <form onSubmit={handleAddDocumentPlaceholder} className="mb-4 flex gap-2">
-              <input
-                value={docNameDraft}
-                onChange={(e) => setDocNameDraft(e.target.value)}
-                placeholder="Nom du document (préparation upload)"
-                className="h-10 flex-1 rounded-xl border border-slate-200 px-3 text-sm"
-              />
-              <button type="submit" disabled={docLoading || !docNameDraft.trim()} className="rounded-xl bg-violet-600 px-3 text-xs font-semibold text-white disabled:opacity-50">
-                Ajouter
-              </button>
-            </form>
-            <div className="space-y-2">
-              {hub.documents.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 p-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-800">{doc.name}</p>
-                    <p className="text-xs text-slate-500">
-                      {formatLogDate(doc.createdAt)}{doc.uploadedByName ? ` · ${doc.uploadedByName}` : ""}
-                    </p>
-                  </div>
-                  {doc.downloadUrl ? (
-                    <a href={doc.downloadUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-slate-200 p-1.5 text-slate-500">
-                      <Download className="h-3.5 w-3.5" />
-                    </a>
-                  ) : (
-                    <button type="button" disabled className="rounded-lg border border-slate-200 p-1.5 text-slate-400" title="Téléchargement bientôt disponible">
-                      <Download className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
-              {hub.documents.length === 0 ? <p className="text-xs text-slate-500">Aucun document.</p> : null}
-            </div>
-          </article>
-        ) : null}
-      </form>
-
-      {reglementModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-xl">
-            <header className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <CreditCard className="h-4 w-4 text-violet-600" />
-                Nouveau règlement
-              </h3>
-              <button
-                type="button"
-                onClick={() => setReglementModalOpen(false)}
-                className="rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:bg-slate-50"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </header>
-            <form onSubmit={handleCreateReglement} className="grid gap-3 p-4 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-xs text-slate-500">
-                Montant (€)
-                <input
-                  type="number"
-                  min={0.01}
-                  step={0.01}
-                  value={reglementForm.amountDue || ""}
-                  onChange={(e) =>
-                    setReglementForm((p) => ({ ...p, amountDue: Number.parseFloat(e.target.value) || 0 }))
-                  }
-                  className="h-9 rounded-xl border border-slate-200 px-3 text-sm text-slate-800"
-                  required
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-slate-500">
-                Échéance
-                <input
-                  type="date"
-                  value={reglementForm.dueDate}
-                  onChange={(e) => setReglementForm((p) => ({ ...p, dueDate: e.target.value }))}
-                  className="h-9 rounded-xl border border-slate-200 px-3 text-sm text-slate-800"
-                  required
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-slate-500 sm:col-span-2">
-                Statut
-                <select
-                  value={reglementForm.status}
-                  onChange={(e) =>
-                    setReglementForm((p) => ({ ...p, status: e.target.value as ReglementStatusApi }))
-                  }
-                  className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800"
-                >
-                  {reglementStatusOptions.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-slate-500 sm:col-span-2">
-                Commentaire interne
-                <textarea
-                  value={reglementForm.comment ?? ""}
-                  onChange={(e) => setReglementForm((p) => ({ ...p, comment: e.target.value }))}
-                  rows={2}
-                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
-                />
-              </label>
-              <div className="flex items-center justify-end gap-2 sm:col-span-2">
-                <button
-                  type="button"
-                  onClick={() => setReglementModalOpen(false)}
-                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={reglementSubmitting}
-                  className="rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50"
-                >
-                  {reglementSubmitting ? "Enregistrement…" : "Créer"}
-                </button>
               </div>
-            </form>
+            ))}
+            {recentReglements.length === 0 ? (
+              <p className="text-xs text-slate-500">Aucun règlement enregistré.</p>
+            ) : null}
           </div>
-        </div>
-      ) : null}
+        </article>
+
+        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-1">
+          <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+            <MessageSquare className="h-4 w-4 text-violet-600" />
+            Commentaires
+          </h3>
+          <div className="mb-3 grid gap-2">
+            <input
+              value={commentDraft}
+              onChange={(e) => setCommentDraft(e.target.value)}
+              placeholder="Ajouter un commentaire…"
+              className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm"
+            />
+            <select
+              value={commentRecipientId}
+              onChange={(e) => setCommentRecipientId(e.target.value)}
+              className="h-10 rounded-xl border border-slate-200 px-3 text-sm"
+            >
+              <option value="">Destinataire (optionnel)</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.fullName}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => void handleAddComment()}
+              disabled={commentLoading || !commentDraft.trim()}
+              className="rounded-xl bg-violet-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+            >
+              Ajouter
+            </button>
+          </div>
+          <div className="mb-3 flex items-center gap-2">
+            {[
+              { id: "active" as const, label: "Actifs" },
+              { id: "done" as const, label: "Terminés" },
+              { id: "all" as const, label: "Tous" },
+            ].map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setCommentFilter(f.id)}
+                className={`rounded-full border px-2.5 py-1 text-xs ${
+                  commentFilter === f.id
+                    ? "border-violet-200 bg-violet-50 text-violet-700"
+                    : "border-slate-200 text-slate-600"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <div className="max-h-[22rem] space-y-2 overflow-y-auto">
+            {filteredComments.map((comment) => (
+              <div
+                key={comment.id}
+                className={`rounded-xl border border-slate-100 p-3 ${
+                  comment.isDone ? "bg-slate-50/60 opacity-80" : "bg-slate-50"
+                }`}
+              >
+                <p className="text-sm font-medium text-slate-800">{comment.authorName}</p>
+                {comment.recipientName ? (
+                  <p className="text-xs text-slate-500">→ {comment.recipientName}</p>
+                ) : null}
+                <p className="text-xs text-slate-500">{formatLogDate(comment.createdAt)}</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{comment.content}</p>
+                <label className="mt-2 inline-flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={comment.isDone}
+                    onChange={(e) => handleToggleCommentDone(comment.id, e.target.checked)}
+                  />
+                  Marquer comme lu / terminé
+                </label>
+              </div>
+            ))}
+            {filteredComments.length === 0 ? (
+              <p className="text-xs text-slate-500">Aucun commentaire.</p>
+            ) : null}
+          </div>
+        </article>
+      </form>
     </div>
   );
 }

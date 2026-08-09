@@ -35,6 +35,8 @@ function toPatientListItem(item: {
   lastName: string;
   email: string | null;
   phone: string | null;
+  legalGuardian: string | null;
+  mutuelle: string | null;
   nextAppointmentAt: Date | null;
   hubStatus: PatientHubStatus;
   _count: {
@@ -50,6 +52,8 @@ function toPatientListItem(item: {
     fullName: patientFullName(item.firstName, item.lastName),
     email: item.email,
     phone: item.phone,
+    legalGuardian: item.legalGuardian,
+    mutuelle: item.mutuelle,
     reglementsCount: item._count.reglements,
     tasksCount: item._count.tasks,
     emailsCount: item._count.emails,
@@ -173,6 +177,8 @@ export async function getPatientsList(query: PatientsListQuery) {
         lastName: true,
         email: true,
         phone: true,
+        legalGuardian: true,
+        mutuelle: true,
         nextAppointmentAt: true,
         hubStatus: true,
         _count: {

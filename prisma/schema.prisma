@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -17,19 +15,6 @@ enum ReglementStatus {
   RELANCE_ENVOYEE
   PARTIEL
   REGLE
-}
-
-enum EmailCategory {
-  URGENT
-  ADMINISTRATIF
-  SUIVI_CLINIQUE
-}
-
-enum EmailStatus {
-  A_TRAITER
-  EN_COURS
-  TRAITE
-  ARCHIVE
 }
 
 enum TaskPriority {
@@ -68,219 +53,98 @@ enum PresenceStatus {
   ABSENT
 }
 
-enum CalendarEventType {
-  CONSULTATION
-  RDV_PATIENT
-  REUNION
-  TACHE
-  PAUSE
-  AUTRE
-}
-
 model User {
-  id           String    @id @default(cuid())
-  fullName     String
-  email        String    @unique
-  passwordHash String    @default("")
-  role         UserRole  @default(SECRETAIRE)
+  id             String         @id @default(cuid())
+  fullName       String
+  email          String         @unique
+  passwordHash   String         @default("")
+  role           UserRole       @default(SECRETAIRE)
   presenceStatus PresenceStatus @default(DISPONIBLE)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
-  assignedTasks Task[]
-  assignedEmails Email[]
-  sessions       Session[]
-  notifications  Notification[]
-  calendarEventsAssigned CalendarEvent[] @relation("CalendarEventAssignee")
-  calendarEventsCreated  CalendarEvent[] @relation("CalendarEventCreator")
-  messagesSent     InternalMessage[] @relation("MessageSent")
-  messagesReceived InternalMessage[] @relation("MessageReceived")
-  gmailAccount     GmailAccount?
-  patientCommentsAuthored  PatientComment[] @relation("PatientCommentAuthor")
-  patientCommentsReceived  PatientComment[] @relation("PatientCommentRecipient")
-  patientDocuments PatientDocument[]
-}
-
-model GmailAccount {
-  id              String    @id @default(cuid())
-  userId          String    @unique
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  gmailEmail      String
-  accessTokenEnc  String
-  refreshTokenEnc String
-  expiresAt       DateTime?
-  lastSyncAt      DateTime?
-  lastSyncCount   Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  assignedTasks           Task[]
+  sessions                Session[]
+  messagesSent            InternalMessage[] @relation("MessageSent")
+  messagesReceived        InternalMessage[] @relation("MessageReceived")
+  patientCommentsAuthored PatientComment[]  @relation("PatientCommentAuthor")
+  patientCommentsReceived PatientComment[]  @relation("PatientCommentRecipient")
 }
 
 model Patient {
-  id                 String           @id @default(cuid())
-  firstName          String
-  lastName           String
-  email              String?
-  phone              String?
-  legalGuardian      String?
-  nextAppointmentAt  DateTime?
-  mutuelle           String?
-  internalComment    String?
-  hubStatus          PatientHubStatus @default(ACTIF)
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  id                String           @id @default(cuid())
+  firstName         String
+  lastName          String
+  email             String?
+  phone             String?
+  legalGuardian     String?
+  nextAppointmentAt DateTime?
+  mutuelle          String?
+  internalComment   String?
+  hubStatus         PatientHubStatus @default(ACTIF)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
-  reglements   Reglement[]
-  emails       Email[]
-  tasks        Task[]
-  activityLogs ActivityLog[]
-  calendarEvents CalendarEvent[]
-  comments      PatientComment[]
-  documents     PatientDocument[]
+  reglements Reglement[]
+  tasks      Task[]
+  comments   PatientComment[]
 }
 
 model PatientComment {
-  id        String   @id @default(cuid())
-  patientId String
-  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  patientId   String
+  patient     Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
   authorId    String?
-  author      User?    @relation("PatientCommentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  author      User?     @relation("PatientCommentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
   recipientId String?
-  recipient   User?    @relation("PatientCommentRecipient", fields: [recipientId], references: [id], onDelete: SetNull)
-  content   String
-  isDone    Boolean  @default(false)
-  doneAt    DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([patientId, createdAt])
-}
-
-model PatientDocument {
-  id           String   @id @default(cuid())
-  patientId    String
-  patient      Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  uploadedById String?
-  uploadedBy   User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
-  name         String
-  mimeType     String?
-  sizeBytes    Int      @default(0)
-  storagePath  String?
-  downloadUrl  String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  recipient   User?     @relation("PatientCommentRecipient", fields: [recipientId], references: [id], onDelete: SetNull)
+  content     String
+  isDone      Boolean   @default(false)
+  doneAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([patientId, createdAt])
 }
 
 model Reglement {
-  id             String          @id @default(cuid())
-  amountDue      Float
-  dueDate        DateTime
-  status         ReglementStatus
-  comment        String?
-  relanceCount   Int             @default(0)
-  lastRelanceAt  DateTime?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  patientId      String
-  patient        Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
-}
-
-enum EmailImportSource {
-  MANUAL
-  GMAIL
-}
-
-model Email {
-  id             String             @id @default(cuid())
-  sender         String
-  subject        String
-  receivedAt     DateTime
-  category       EmailCategory
-  categoryManual Boolean            @default(false)
-  status         EmailStatus        @default(A_TRAITER)
-  comment        String?
-  gmailMessageId String?            @unique
-  gmailThreadId  String?
-  snippet        String?
-  bodyText       String?
-  hasAttachments Boolean            @default(false)
-  aiSummary      String?
-  aiCategory     String?
-  aiPriority     String?
-  aiGeneratedAt  DateTime?
-  importedFrom   EmailImportSource  @default(MANUAL)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @default(now()) @updatedAt
-  patientId      String?
-  patient        Patient?           @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  assigneeId     String?
-  assignedUser   User?              @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
-  attachments    EmailAttachment[]
-}
-
-model EmailAttachment {
-  id                String   @id @default(cuid())
-  emailId           String
-  email             Email    @relation(fields: [emailId], references: [id], onDelete: Cascade)
-  fileName          String
-  mimeType          String
-  sizeBytes         Int      @default(0)
-  gmailAttachmentId String?
-  gmailMessageId    String?
-  createdAt         DateTime @default(now())
-
-  @@index([emailId])
+  id            String          @id @default(cuid())
+  amountDue     Float
+  dueDate       DateTime
+  status        ReglementStatus
+  comment       String?
+  relanceCount  Int             @default(0)
+  lastRelanceAt DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  patientId     String
+  patient       Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
 }
 
 model Task {
-  id          String       @id @default(cuid())
-  title       String
-  comment     String?
-  dueDate     DateTime
-  priority    TaskPriority
-  status      TaskStatus
-  assignee    String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  patientId   String?
-  patient     Patient?     @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  assigneeId  String?
+  id           String       @id @default(cuid())
+  title        String
+  comment      String?
+  dueDate      DateTime
+  priority     TaskPriority
+  status       TaskStatus
+  assignee     String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  patientId    String?
+  patient      Patient?     @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  assigneeId   String?
   assignedUser User?        @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
 }
 
-model ActivityLog {
-  id        String   @id @default(cuid())
-  actor     String
-  message   String
-  createdAt DateTime @default(now())
-  patientId String?
-  patient   Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
-}
-
 model Session {
-  id          String   @id @default(cuid())
-  tokenHash   String   @unique
-  userId      String
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
-  lastSeenAt  DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Notification {
-  id                String   @id @default(cuid())
-  userId            String
-  title             String
-  message           String
-  type              String
-  isRead            Boolean  @default(false)
-  createdAt         DateTime @default(now())
-  relatedEntityType String?
-  relatedEntityId   String?
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, isRead, createdAt])
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  userId     String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model InternalMessage {
@@ -292,41 +156,8 @@ model InternalMessage {
   createdAt   DateTime  @default(now())
   sender      User      @relation("MessageSent", fields: [senderId], references: [id], onDelete: Cascade)
   recipient   User      @relation("MessageReceived", fields: [recipientId], references: [id], onDelete: Cascade)
-  attachments InternalMessageAttachment[]
 
   @@index([recipientId, createdAt])
   @@index([senderId, createdAt])
   @@index([recipientId, readAt])
-}
-
-model InternalMessageAttachment {
-  id          String          @id @default(cuid())
-  messageId   String
-  fileName    String
-  mimeType    String
-  sizeBytes   Int
-  storageKey  String
-  createdAt   DateTime        @default(now())
-  message     InternalMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
-
-  @@index([messageId])
-}
-
-model CalendarEvent {
-  id          String            @id @default(cuid())
-  title       String
-  description String?
-  startAt     DateTime
-  endAt       DateTime
-  type        CalendarEventType @default(AUTRE)
-  patientId   String?
-  patient     Patient?          @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  assigneeId  String?
-  assignee    User?             @relation("CalendarEventAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  createdById String?
-  createdBy   User?             @relation("CalendarEventCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-
-  @@index([startAt])
 }

@@ -1,4 +1,4 @@
-import type { CalendarEventType } from "@prisma/client";
+import type { CalendarEventTypeApi } from "@/types/domain";
 
 export const CALENDAR_EVENT_TYPES = [
   "CONSULTATION",
@@ -7,9 +7,9 @@ export const CALENDAR_EVENT_TYPES = [
   "TACHE",
   "PAUSE",
   "AUTRE",
-] as const satisfies readonly CalendarEventType[];
+] as const satisfies readonly CalendarEventTypeApi[];
 
-export const calendarEventTypeLabelMap: Record<CalendarEventType, string> = {
+export const calendarEventTypeLabelMap: Record<CalendarEventTypeApi, string> = {
   CONSULTATION: "Consultation",
   RDV_PATIENT: "Rendez-vous patient",
   REUNION: "Reunion",
@@ -18,6 +18,6 @@ export const calendarEventTypeLabelMap: Record<CalendarEventType, string> = {
   AUTRE: "Autre",
 };
 
-export function calendarEventTypeLabel(type: CalendarEventType): string {
+export function calendarEventTypeLabel(type: CalendarEventTypeApi): string {
   return calendarEventTypeLabelMap[type];
 }

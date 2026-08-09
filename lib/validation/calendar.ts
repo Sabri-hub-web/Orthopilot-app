@@ -1,10 +1,12 @@
-import { CalendarEventType } from "@prisma/client";
 import { z } from "zod";
+import { CALENDAR_EVENT_TYPES } from "@/lib/calendar";
 
 const optionalId = z.preprocess(
   (v) => (v === "" || v === undefined ? null : v),
   z.union([z.string().min(1), z.null()]),
 );
+
+const calendarEventTypeSchema = z.enum(CALENDAR_EVENT_TYPES);
 
 export const calendarFeedQuerySchema = z.object({
   from: z.string().min(1),
@@ -20,7 +22,7 @@ export const calendarEventCreateSchema = z
     ),
     startAt: z.string().min(1),
     endAt: z.string().min(1),
-    type: z.nativeEnum(CalendarEventType),
+    type: calendarEventTypeSchema,
     patientId: optionalId.optional(),
     assigneeId: optionalId.optional(),
   })
@@ -42,7 +44,7 @@ export const calendarEventUpdateSchema = z
     ),
     startAt: z.string().optional(),
     endAt: z.string().optional(),
-    type: z.nativeEnum(CalendarEventType).optional(),
+    type: calendarEventTypeSchema.optional(),
     patientId: optionalId.optional(),
     assigneeId: optionalId.optional(),
   })

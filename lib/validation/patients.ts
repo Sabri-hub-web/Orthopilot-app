@@ -7,17 +7,72 @@ const nameField = z
   .transform((s) => s.trim())
   .pipe(z.string().min(1, "Champ requis.").max(120, "Maximum 120 caracteres."));
 
-export const patientCreateSchema = z.object({
-  firstName: nameField,
-  lastName: nameField,
-  email: optionalContactEmail,
-  phone: optionalPhoneFrSoft,
-  legalGuardian: z.preprocess(trimToNull, z.union([z.null(), z.string().max(200)])),
-  nextAppointmentAt: optionalDateTimeFlexible,
-  mutuelle: z.preprocess(trimToNull, z.union([z.null(), z.string().max(120)])),
-  internalComment: z.preprocess(trimToNull, z.union([z.null(), z.string().max(4000)])),
-  hubStatus: z.enum(PATIENT_HUB_STATUS_VALUES).optional(),
-});
+/** Alias FR du formulaire (nom/prenom/…) → champs Prisma / API. */
+function normalizePatientCreateBody(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const body = raw as Record<string, unknown>;
+
+  const firstName = body.firstName ?? body.prenom ?? body.Prenom;
+  const lastName = body.lastName ?? body.nom ?? body.Nom;
+  const email = body.email ?? body.Email;
+  const phone = body.phone ?? body.telephone ?? body.Telephone;
+  const legalGuardian =
+    body.legalGuardian ?? body.responsableLegal ?? body.responsable_legal;
+  const nextAppointmentAt = body.nextAppointmentAt ?? body.prochainRdv;
+  const internalComment = body.internalComment ?? body.commentaireInterne;
+  const hubStatus = body.hubStatus ?? body.statut;
+
+  const mutuelleFlag = body.mutuelle;
+  const mutuelleNom = body.mutuelleNom ?? body.mutuelle_name ?? body.nomMutuelle;
+  let mutuelle = body.mutuelle;
+  if (typeof mutuelleFlag === "boolean") {
+    mutuelle = mutuelleFlag ? mutuelleNom : null;
+  } else if (
+    typeof mutuelleFlag === "string" &&
+    ["oui", "non", "true", "false", "1", "0"].includes(mutuelleFlag.trim().toLowerCase())
+  ) {
+    const yes = ["oui", "true", "1"].includes(mutuelleFlag.trim().toLowerCase());
+    mutuelle = yes ? mutuelleNom : null;
+  } else if (mutuelleNom !== undefined && (mutuelle === undefined || mutuelle === null || mutuelle === "")) {
+    mutuelle = mutuelleNom;
+  }
+
+  return {
+    firstName,
+    lastName,
+    email,
+    phone,
+    legalGuardian,
+    nextAppointmentAt,
+    mutuelle,
+    internalComment,
+    hubStatus,
+  };
+}
+
+export const patientCreateSchema = z.preprocess(
+  normalizePatientCreateBody,
+  z.object({
+    firstName: nameField,
+    lastName: nameField,
+    email: optionalContactEmail.optional().default(null),
+    phone: optionalPhoneFrSoft.optional().default(null),
+    legalGuardian: z
+      .preprocess(trimToNull, z.union([z.null(), z.string().max(200)]))
+      .optional()
+      .default(null),
+    nextAppointmentAt: optionalDateTimeFlexible.optional().default(null),
+    mutuelle: z
+      .preprocess(trimToNull, z.union([z.null(), z.string().max(120)]))
+      .optional()
+      .default(null),
+    internalComment: z
+      .preprocess(trimToNull, z.union([z.null(), z.string().max(4000)]))
+      .optional()
+      .default(null),
+    hubStatus: z.enum(PATIENT_HUB_STATUS_VALUES).optional(),
+  }),
+);
 
 export const patientUpdateSchema = z
   .object({

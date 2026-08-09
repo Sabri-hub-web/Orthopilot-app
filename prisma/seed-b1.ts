@@ -13,10 +13,9 @@ function daysFromDemo(days: number, hour = 9, minute = 30): Date {
 }
 
 async function main() {
-  await prisma.notification.deleteMany();
-  await prisma.activityLog.deleteMany();
+  await prisma.internalMessage.deleteMany();
+  await prisma.patientComment.deleteMany();
   await prisma.task.deleteMany();
-  await prisma.email.deleteMany();
   await prisma.reglement.deleteMany();
   await prisma.session.deleteMany();
   await prisma.user.deleteMany();
@@ -483,73 +482,6 @@ async function main() {
     ],
   });
 
-  await prisma.email.createMany({
-    data: [
-      {
-        patientId: byName("Lea", "Fournier").id,
-        sender: "Lea Fournier <lea.fournier.parent@example.com>",
-        subject: "Douleur apres pose appareil",
-        receivedAt: new Date("2026-05-11T07:30:00.000Z"),
-        category: "URGENT",
-        status: "A_TRAITER",
-        assigneeId: julie.id,
-      },
-      {
-        patientId: byName("Zoe", "Renard").id,
-        sender: "Zoe Renard <zoe.renard.parent@example.com>",
-        subject: "Question alignement fil de nuit",
-        receivedAt: new Date("2026-05-11T08:10:00.000Z"),
-        category: "URGENT",
-        status: "EN_COURS",
-        assigneeId: sonia.id,
-      },
-      {
-        patientId: byName("Noah", "Petit").id,
-        sender: "Noah Petit <noah.petit.parent@example.com>",
-        subject: "Urgent : echelonnement impaye",
-        receivedAt: new Date("2026-05-10T17:45:00.000Z"),
-        category: "URGENT",
-        status: "A_TRAITER",
-        assigneeId: naomi.id,
-      },
-      {
-        patientId: byName("Mathis", "Garcia").id,
-        sender: "mathis.garcia.parent@example.com",
-        subject: "Radio panoramique envoyee",
-        receivedAt: new Date("2026-05-11T09:20:00.000Z"),
-        category: "SUIVI_CLINIQUE",
-        status: "A_TRAITER",
-        assigneeId: julie.id,
-      },
-      {
-        patientId: byName("Aya", "Mansouri").id,
-        sender: "Harmonie Mutuelle <infos@harmonie.example.com>",
-        subject: "Demande attestation mutuelle",
-        receivedAt: new Date("2026-05-09T14:00:00.000Z"),
-        category: "ADMINISTRATIF",
-        status: "EN_COURS",
-        assigneeId: julie.id,
-      },
-      {
-        patientId: byName("Lucas", "Martin").id,
-        sender: "parent.lucas@example.com",
-        subject: "Confirmation horaire RDV",
-        receivedAt: new Date("2026-05-11T11:00:00.000Z"),
-        category: "ADMINISTRATIF",
-        status: "TRAITE",
-        assigneeId: julie.id,
-      },
-      {
-        sender: "secretariat.ecole@example.com",
-        subject: "Attestation scolaire — dossier general",
-        receivedAt: new Date("2026-05-08T10:00:00.000Z"),
-        category: "ADMINISTRATIF",
-        status: "A_TRAITER",
-        assigneeId: sonia.id,
-      },
-    ],
-  });
-
   await prisma.task.createMany({
     data: [
       {
@@ -600,26 +532,6 @@ async function main() {
         status: "A_FAIRE",
         assignee: sonia.fullName,
         assigneeId: sonia.id,
-      },
-    ],
-  });
-
-  await prisma.activityLog.createMany({
-    data: [
-      {
-        actor: "Julie",
-        message: "Seed demo — patients fictifs OrthoPilot (C.4 filtres).",
-        patientId: byName("Lucas", "Martin").id,
-      },
-      {
-        actor: "Naomi",
-        message: "Donnees de demonstration uniquement — aucune donnee reelle.",
-        patientId: byName("Emma", "Dubois").id,
-      },
-      {
-        actor: "Sonia",
-        message: "Email urgent classe pour Lea Fournier.",
-        patientId: byName("Lea", "Fournier").id,
       },
     ],
   });

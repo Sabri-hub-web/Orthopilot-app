@@ -1,22 +1,6 @@
 import { roleLabel } from "@/lib/auth/roles";
 import { prisma } from "@/server/db/client";
 import { writeActivityLog } from "@/server/activity-log";
-import { MESSAGE_ATTACHMENT_MAX_BYTES } from "@/lib/messages-ui";
-import {
-  classifyAttachmentError,
-  logAttachmentFailure,
-} from "@/lib/message-attachment-errors";
-import {
-  deleteMessageAttachmentFile,
-  getMessageStorageBackend,
-  getStorageEnvDiagnostics,
-} from "@/server/storage/message-attachments-storage";
-import {
-  persistMessageAttachments,
-  type ParsedMessageFile,
-  validateMessageFiles,
-} from "@/lib/message-attachments";
-import { createNotification } from "@/services/notifications-service";
 import type {
   ConversationSummary,
   InternalMessageLine,
@@ -24,14 +8,11 @@ import type {
   RecipientOption,
 } from "@/types/domain";
 
-function previewBody(body: string, hasAttachments: boolean, max = 120): string {
+function previewBody(body: string, max = 120): string {
   const t = body.trim();
-  if (t.length > 0) {
-    if (t.length <= max) return t;
-    return `${t.slice(0, max)}…`;
-  }
-  if (hasAttachments) return "📎 Pièce jointe";
-  return "";
+  if (t.length === 0) return "";
+  if (t.length <= max) return t;
+  return `${t.slice(0, max)}…`;
 }
 
 export async function listRecipients(excludeUserId: string): Promise<{ items: RecipientOption[] }> {
@@ -51,7 +32,6 @@ export async function listRecipients(excludeUserId: string): Promise<{ items: Re
 }
 
 export async function getConversations(userId: string): Promise<{ conversations: ConversationSummary[] }> {
-  // Fenêtre récente limitée pour éviter un full-scan de toute la table messages.
   const rows = await prisma.internalMessage.findMany({
     where: {
       OR: [{ senderId: userId }, { recipientId: userId }],
@@ -63,7 +43,6 @@ export async function getConversations(userId: string): Promise<{ conversations:
       recipientId: true,
       sender: { select: { id: true, fullName: true } },
       recipient: { select: { id: true, fullName: true } },
-      attachments: { select: { id: true }, take: 1 },
     },
     orderBy: { createdAt: "desc" },
     take: 100,
@@ -88,7 +67,7 @@ export async function getConversations(userId: string): Promise<{ conversations:
         peerId: peer.id,
         peerName: peer.fullName,
         lastMessageAt: row.createdAt.toISOString(),
-        lastPreview: previewBody(row.body, row.attachments.length > 0, 100),
+        lastPreview: previewBody(row.body, 100),
         unreadCount: unreadMap.get(peer.id) ?? 0,
       });
     }
@@ -129,17 +108,6 @@ export async function getThread(
       body: true,
       readAt: true,
       createdAt: true,
-      attachments: {
-        select: {
-          id: true,
-          fileName: true,
-          mimeType: true,
-          sizeBytes: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: "asc" },
-        take: 5,
-      },
     },
   });
   const rows = [...rowsDesc].reverse();
@@ -152,13 +120,7 @@ export async function getThread(
     readAt: m.readAt?.toISOString() ?? null,
     createdAt: m.createdAt.toISOString(),
     isMine: m.senderId === userId,
-    attachments: m.attachments.map((a) => ({
-      id: a.id,
-      fileName: a.fileName,
-      mimeType: a.mimeType,
-      sizeBytes: a.sizeBytes,
-      createdAt: a.createdAt.toISOString(),
-    })),
+    attachments: [],
   }));
 
   return {
@@ -172,7 +134,7 @@ export async function sendInternalMessage(
   senderName: string,
   recipientId: string,
   body: string,
-  files: ParsedMessageFile[] = [],
+  files: { fileName: string }[] = [],
 ): Promise<
   | { ok: true; id: string; message: InternalMessageLine }
   | { ok: false; reason: "SELF" | "NOT_FOUND" | "VALIDATION"; message?: string }
@@ -180,12 +142,17 @@ export async function sendInternalMessage(
   if (recipientId === senderId) return { ok: false, reason: "SELF" };
 
   const trimmedBody = body.trim();
-  if (!trimmedBody && files.length === 0) {
-    return { ok: false, reason: "VALIDATION", message: "Message ou pièce jointe requis." };
+  if (!trimmedBody) {
+    return { ok: false, reason: "VALIDATION", message: "Message requis." };
   }
 
-  const fileError = validateMessageFiles(files, MESSAGE_ATTACHMENT_MAX_BYTES);
-  if (fileError) return { ok: false, reason: "VALIDATION", message: fileError };
+  if (files.length > 0) {
+    return {
+      ok: false,
+      reason: "VALIDATION",
+      message: "Les pièces jointes ne sont plus disponibles.",
+    };
+  }
 
   const recipient = await prisma.user.findUnique({
     where: { id: recipientId },
@@ -193,85 +160,12 @@ export async function sendInternalMessage(
   });
   if (!recipient) return { ok: false, reason: "NOT_FOUND" };
 
-  const msg = await prisma.internalMessage.create({
+  const created = await prisma.internalMessage.create({
     data: {
       senderId,
       recipientId,
       body: trimmedBody,
     },
-    select: { id: true },
-  });
-
-  if (files.length > 0) {
-    const storageBackend = getMessageStorageBackend();
-    const savedKeys: string[] = [];
-
-    try {
-      console.info("[messages/attachments] Début enregistrement", {
-        messageId: msg.id,
-        fileCount: files.length,
-        storageBackend,
-        env: getStorageEnvDiagnostics(),
-      });
-
-      const saved = await persistMessageAttachments(msg.id, files);
-      savedKeys.push(...saved.map((s) => s.storageKey));
-
-      await prisma.internalMessageAttachment.createMany({
-        data: saved.map((s) => ({
-          messageId: msg.id,
-          fileName: s.fileName,
-          mimeType: s.mimeType,
-          sizeBytes: s.sizeBytes,
-          storageKey: s.storageKey,
-        })),
-      });
-
-      console.info("[messages/attachments] Enregistrement OK", {
-        messageId: msg.id,
-        attachmentCount: saved.length,
-        storageBackend,
-      });
-    } catch (err) {
-      for (const key of savedKeys) {
-        await deleteMessageAttachmentFile(key);
-      }
-      await prisma.internalMessage.delete({ where: { id: msg.id } }).catch(() => undefined);
-
-      const phase =
-        savedKeys.length > 0 ? ("db_insert" as const) : ("storage_upload" as const);
-      const info = classifyAttachmentError(err, storageBackend, phase);
-      logAttachmentFailure({ messageId: msg.id, senderId, recipientId }, info);
-
-      return {
-        ok: false,
-        reason: "VALIDATION",
-        message:
-          info.phase === "db_insert" && info.code === "P2021"
-            ? "Table pièces jointes absente en base. Contactez l'administrateur (migration InternalMessageAttachment)."
-            : "Impossible d'enregistrer la pièce jointe. Vérifiez le stockage Supabase ou la migration DB.",
-      };
-    }
-  }
-
-  const notifPreview = previewBody(trimmedBody, files.length > 0, 160);
-
-  await writeActivityLog({
-    actor: senderName,
-    message: `Message interne envoye vers ${recipient.fullName} (contenu non journalise).`,
-  });
-
-  await createNotification({
-    userId: recipientId,
-    title: `Message de ${senderName}`,
-    message: notifPreview,
-    type: "INTERNAL_MESSAGE",
-    relatedEntityType: "InternalMessage",
-    relatedEntityId: msg.id,
-  });
-
-  const created = await prisma.internalMessage.findUnique({
-    where: { id: msg.id },
     select: {
       id: true,
       senderId: true,
@@ -279,20 +173,13 @@ export async function sendInternalMessage(
       body: true,
       readAt: true,
       createdAt: true,
-      attachments: {
-        select: {
-          id: true,
-          fileName: true,
-          mimeType: true,
-          sizeBytes: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: "asc" },
-      },
     },
   });
 
-  if (!created) return { ok: false, reason: "NOT_FOUND" };
+  await writeActivityLog({
+    actor: senderName,
+    message: `Message interne envoye vers ${recipient.fullName} (contenu non journalise).`,
+  });
 
   const message: InternalMessageLine = {
     id: created.id,
@@ -302,21 +189,15 @@ export async function sendInternalMessage(
     readAt: created.readAt?.toISOString() ?? null,
     createdAt: created.createdAt.toISOString(),
     isMine: true,
-    attachments: created.attachments.map((a) => ({
-      id: a.id,
-      fileName: a.fileName,
-      mimeType: a.mimeType,
-      sizeBytes: a.sizeBytes,
-      createdAt: a.createdAt.toISOString(),
-    })),
+    attachments: [],
   };
 
-  return { ok: true, id: msg.id, message };
+  return { ok: true, id: created.id, message };
 }
 
 export async function getMessageAttachmentForUser(
-  userId: string,
-  attachmentId: string,
+  _userId: string,
+  _attachmentId: string,
 ): Promise<
   | {
       ok: true;
@@ -326,26 +207,7 @@ export async function getMessageAttachmentForUser(
     }
   | { ok: false; reason: "NOT_FOUND" | "FORBIDDEN" }
 > {
-  const att = await prisma.internalMessageAttachment.findUnique({
-    where: { id: attachmentId },
-    include: {
-      message: { select: { senderId: true, recipientId: true } },
-    },
-  });
-
-  if (!att) return { ok: false, reason: "NOT_FOUND" };
-
-  const { senderId, recipientId } = att.message;
-  if (senderId !== userId && recipientId !== userId) {
-    return { ok: false, reason: "FORBIDDEN" };
-  }
-
-  return {
-    ok: true,
-    fileName: att.fileName,
-    mimeType: att.mimeType,
-    storageKey: att.storageKey,
-  };
+  return { ok: false, reason: "NOT_FOUND" };
 }
 
 export async function markPeerMessagesRead(userId: string, peerId: string): Promise<{ updated: number }> {

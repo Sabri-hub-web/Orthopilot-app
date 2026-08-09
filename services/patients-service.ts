@@ -1,6 +1,5 @@
 import {
   PatientCommentLine,
-  PatientDocumentLine,
   PatientFormPayload,
   PatientHubResponse,
   PatientListItem,
@@ -38,7 +37,6 @@ function toPatientListItem(item: {
   _count: {
     reglements: number;
     tasks: number;
-    emails: number;
   };
 }): PatientListItem {
   return {
@@ -52,7 +50,7 @@ function toPatientListItem(item: {
     mutuelle: item.mutuelle,
     reglementsCount: item._count.reglements,
     tasksCount: item._count.tasks,
-    emailsCount: item._count.emails,
+    emailsCount: 0,
     nextAppointmentAt: item.nextAppointmentAt ? formatDateTimeLocal(item.nextAppointmentAt) : null,
     hubStatus: hubStatusLabel(item.hubStatus),
   };
@@ -132,10 +130,6 @@ function buildPatientsListWhere(query: PatientsListQuery): Prisma.PatientWhereIn
     });
   }
 
-  if (query.urgentEmail) {
-    and.push({ emails: { some: { category: "URGENT" } } });
-  }
-
   if (query.missingEmail) {
     and.push({
       OR: [{ email: null }, { email: "" }],
@@ -190,7 +184,7 @@ export async function getPatientsList(query: PatientsListQuery) {
     items: rows.map((item) =>
       toPatientListItem({
         ...item,
-        _count: { reglements: 0, tasks: 0, emails: 0 },
+        _count: { reglements: 0, tasks: 0 },
       }),
     ),
     total,
@@ -244,22 +238,9 @@ export async function getPatientHub(patientId: string): Promise<PatientHubRespon
           recipient: { select: { id: true, fullName: true } },
         },
       },
-      calendarEvents: {
-        where: { startAt: { gte: new Date() } },
-        orderBy: { startAt: "asc" },
-        take: 1,
-        select: { startAt: true },
-      },
     },
   });
   if (!patient) return null;
-
-  const logs = await prisma.activityLog.findMany({
-    where: { patientId },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    select: { id: true, actor: true, message: true, createdAt: true },
-  });
 
   const patientName = { firstName: patient.firstName, lastName: patient.lastName };
   const reglements: PaymentFollowUp[] = patient.reglements.map((r) =>
@@ -281,9 +262,6 @@ export async function getPatientHub(patientId: string): Promise<PatientHubRespon
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
   }));
-  const nextAppointmentFromCalendar = patient.calendarEvents[0]?.startAt ?? null;
-  const nextAppointmentAt = nextAppointmentFromCalendar ?? patient.nextAppointmentAt;
-
   return {
     patient: {
       id: patient.id,
@@ -293,7 +271,9 @@ export async function getPatientHub(patientId: string): Promise<PatientHubRespon
       email: patient.email,
       phone: patient.phone,
       legalGuardian: patient.legalGuardian,
-      nextAppointmentAt: nextAppointmentAt ? nextAppointmentAt.toISOString() : null,
+      nextAppointmentAt: patient.nextAppointmentAt
+        ? patient.nextAppointmentAt.toISOString()
+        : null,
       mutuelle: patient.mutuelle,
       internalComment: patient.internalComment,
       hubStatus: hubStatusLabel(patient.hubStatus),
@@ -303,12 +283,7 @@ export async function getPatientHub(patientId: string): Promise<PatientHubRespon
     emails: [],
     comments,
     documents: [],
-    logs: logs.map((log) => ({
-      id: log.id,
-      actor: log.actor,
-      message: log.message,
-      createdAt: log.createdAt.toISOString(),
-    })),
+    logs: [],
   };
 }
 
@@ -391,65 +366,30 @@ export async function updatePatientCommentStatus(
   } satisfies PatientCommentLine;
 }
 
-export async function addPatientDocumentPlaceholder(
-  patientId: string,
-  input: { name: string; mimeType?: string | null; sizeBytes?: number; storagePath?: string | null; downloadUrl?: string | null },
-  author?: { id: string; fullName: string },
-) {
-  const created = await prisma.patientDocument.create({
-    data: {
-      patientId,
-      uploadedById: author?.id ?? null,
-      name: input.name,
-      mimeType: input.mimeType ?? null,
-      sizeBytes: input.sizeBytes ?? 0,
-      storagePath: input.storagePath ?? null,
-      downloadUrl: input.downloadUrl ?? null,
-    },
-    include: { uploadedBy: { select: { id: true, fullName: true } } },
-  });
-
-  await writeActivityLog({
-    actor: author?.fullName ?? "Systeme",
-    message: `Document ajouté: ${created.name}`,
-    patientId,
-  });
-
-  return {
-    id: created.id,
-    name: created.name,
-    mimeType: created.mimeType ?? null,
-    sizeBytes: created.sizeBytes,
-    storagePath: created.storagePath ?? null,
-    downloadUrl: created.downloadUrl ?? null,
-    uploadedById: created.uploadedById ?? null,
-    uploadedByName: created.uploadedBy?.fullName ?? null,
-    createdAt: created.createdAt.toISOString(),
-  } satisfies PatientDocumentLine;
-}
-
 export async function createPatient(payload: PatientFormPayload) {
-  const created = await prisma.patient.create({
+  // Schéma Patient simplifié uniquement (pas d'ActivityLog / documents / relations nestées).
+  return prisma.patient.create({
     data: {
-      firstName: payload.firstName,
-      lastName: payload.lastName,
-      email: payload.email ?? null,
-      phone: payload.phone ?? null,
-      legalGuardian: payload.legalGuardian ?? null,
-      nextAppointmentAt: payload.nextAppointmentAt ? new Date(payload.nextAppointmentAt) : null,
-      mutuelle: payload.mutuelle ?? null,
-      internalComment: payload.internalComment ?? null,
+      firstName: payload.firstName.trim(),
+      lastName: payload.lastName.trim(),
+      email: payload.email?.trim() ? payload.email.trim() : null,
+      phone: payload.phone?.trim() ? payload.phone.trim() : null,
+      legalGuardian: payload.legalGuardian?.trim() ? payload.legalGuardian.trim() : null,
+      nextAppointmentAt: payload.nextAppointmentAt
+        ? new Date(payload.nextAppointmentAt)
+        : null,
+      mutuelle: payload.mutuelle?.trim() ? payload.mutuelle.trim() : null,
+      internalComment: payload.internalComment?.trim()
+        ? payload.internalComment.trim()
+        : null,
       hubStatus: payload.hubStatus ?? "ACTIF",
     },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+    },
   });
-
-  await writeActivityLog({
-    actor: "Systeme",
-    message: `Creation patient: ${patientFullName(created.firstName, created.lastName)}`,
-    patientId: created.id,
-  });
-
-  return created;
 }
 
 export async function updatePatient(patientId: string, payload: Partial<PatientFormPayload>) {

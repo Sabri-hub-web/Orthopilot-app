@@ -1,6 +1,6 @@
 import { prisma } from "@/server/db/client";
 import { taskPriorityLabelMap, taskStatusLabelMap } from "@/lib/tasks";
-import { reglementStatusLabelMap } from "@/lib/reglements";
+import { reglementSemestreLabel, reglementStatusLabelMap } from "@/lib/reglements";
 
 function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -24,6 +24,7 @@ export async function getDashboardData() {
         amountDue: true,
         dueDate: true,
         status: true,
+        semestre: true,
         comment: true,
         relanceCount: true,
         lastRelanceAt: true,
@@ -62,6 +63,8 @@ export async function getDashboardData() {
     dueDate: formatDate(payment.dueDate),
     daysLate: getDaysLate(payment.dueDate),
     status: reglementStatusLabelMap[payment.status],
+    semestre: payment.semestre,
+    semestreLabel: reglementSemestreLabel(payment.semestre),
     comment: payment.comment,
     relanceCount: payment.relanceCount,
     lastRelanceAt: payment.lastRelanceAt ? payment.lastRelanceAt.toISOString() : null,

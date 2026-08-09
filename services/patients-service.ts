@@ -217,6 +217,7 @@ export async function getPatientHub(patientId: string): Promise<PatientHubRespon
           amountDue: true,
           dueDate: true,
           status: true,
+          semestre: true,
           comment: true,
           relanceCount: true,
           lastRelanceAt: true,
@@ -439,4 +440,16 @@ export async function updatePatient(patientId: string, payload: Partial<PatientF
   }
 
   return updated;
+}
+
+/** Supprime le patient ; règlements et commentaires partent en cascade (tâches : patientId → null). */
+export async function deletePatient(patientId: string) {
+  const existing = await prisma.patient.findUnique({
+    where: { id: patientId },
+    select: { id: true, firstName: true, lastName: true },
+  });
+  if (!existing) return null;
+
+  await prisma.patient.delete({ where: { id: patientId } });
+  return existing;
 }

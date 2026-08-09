@@ -31,11 +31,17 @@ import {
   PatientListItem,
   PaymentFollowUp,
   ReglementFormPayload,
+  ReglementSemestreApi,
   ReglementsListResponse,
   ReglementStatusApi,
   UsersListItem,
 } from "@/types/domain";
-import { REGLEMENT_STATUS_VALUES, reglementStatusLabelMap } from "@/lib/reglements";
+import {
+  REGLEMENT_SEMESTRE_VALUES,
+  REGLEMENT_STATUS_VALUES,
+  reglementSemestreLabelMap,
+  reglementStatusLabelMap,
+} from "@/lib/reglements";
 
 const PAGE_SIZE = 8;
 
@@ -50,11 +56,17 @@ const statusOptions = REGLEMENT_STATUS_VALUES.map((value) => ({
   label: reglementStatusLabelMap[value],
 }));
 
+const semestreOptions = REGLEMENT_SEMESTRE_VALUES.map((value) => ({
+  value,
+  label: reglementSemestreLabelMap[value],
+}));
+
 const defaultForm: ReglementFormPayload = {
   patientId: "",
   amountDue: 0,
   dueDate: "",
   status: "EN_ATTENTE",
+  semestre: "SEMESTRE_1",
   comment: "",
 };
 
@@ -132,19 +144,6 @@ function frDateTime(iso: string | null): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
-}
-
-function addMonths(iso: string, months: number): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  d.setMonth(d.getMonth() + months);
-  return d.toISOString().slice(0, 10);
-}
-
-function semesterKey(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return `S${d.getMonth() < 6 ? 1 : 2} ${d.getFullYear()}`;
 }
 
 function relanceLabel(count: number): string {
@@ -257,12 +256,6 @@ export function ReglementsView() {
     return map;
   }, [patients]);
 
-  const semesterOptions = useMemo(() => {
-    const set = new Set<string>();
-    for (const item of items) set.add(semesterKey(item.dueDate));
-    return Array.from(set).sort();
-  }, [items]);
-
   // KPI counts
   const kpi = useMemo(() => {
     const nonPaid = items.filter((i) => i.status !== "Regle");
@@ -292,7 +285,7 @@ export function ReglementsView() {
     return items.filter((item) => {
       if (q && !item.patientName.toLowerCase().includes(q)) return false;
       if (statusFilter && item.status !== statusFilter) return false;
-      if (semesterFilter && semesterKey(item.dueDate) !== semesterFilter) return false;
+      if (semesterFilter && item.semestre !== semesterFilter) return false;
       if (relanceFilter === "none" && item.relanceCount > 0) return false;
       if (relanceFilter === "has" && item.relanceCount === 0) return false;
       if (min !== null && !Number.isNaN(min) && item.amountDue < min) return false;
@@ -403,6 +396,7 @@ export function ReglementsView() {
       amountDue: item.amountDue,
       dueDate: item.dueDate,
       status: statusValue,
+      semestre: item.semestre ?? "HORS_SEMESTRE",
       comment: item.comment ?? "",
     });
     setModalOpen(true);
@@ -420,6 +414,7 @@ export function ReglementsView() {
         amountDue: form.amountDue,
         dueDate: form.dueDate,
         status: form.status,
+        semestre: form.semestre,
         comment: form.comment === "" ? null : form.comment,
       };
       const res = await fetch(url, {
@@ -500,14 +495,13 @@ export function ReglementsView() {
     const header = [
       "Patient",
       "Montant (€)",
-      "Semestre / Échéance",
+      "Semestre / Période",
+      "Échéance",
       "Prochain RDV",
       "Statut",
       "Jours de retard",
     ];
     const lines = filtered.map((item) => {
-      const start = item.dueDate;
-      const end = addMonths(item.dueDate, 6);
       const rdv = patientRdvMap.get(item.patientId) ?? null;
       const amount = new Intl.NumberFormat("fr-FR", {
         minimumFractionDigits: 2,
@@ -516,7 +510,8 @@ export function ReglementsView() {
       return [
         item.patientName,
         amount,
-        `${frDate(start)} → ${frDate(end)}`,
+        item.semestreLabel,
+        frDate(item.dueDate),
         frDate(rdv),
         item.status,
         String(item.daysLate),
@@ -681,9 +676,9 @@ export function ReglementsView() {
             className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-violet-300"
           >
             <option value="">Tous les semestres</option>
-            {semesterOptions.map((s) => (
-              <option key={s} value={s}>
-                {s}
+            {semestreOptions.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
               </option>
             ))}
           </select>
@@ -836,8 +831,8 @@ export function ReglementsView() {
 
                       <div className="flex items-center justify-between md:block">
                         <span className="text-[10px] uppercase text-slate-400 md:hidden">Semestre</span>
-                        <span className="text-xs text-slate-600">
-                          {frDate(item.dueDate)} → {frDate(addMonths(item.dueDate, 6))}
+                        <span className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700">
+                          {item.semestreLabel}
                         </span>
                       </div>
 
@@ -977,16 +972,16 @@ export function ReglementsView() {
                         Semestre
                       </h4>
                       <dl className="space-y-1.5 rounded-xl border border-slate-100 p-3 text-sm">
-                        <div className="flex justify-between">
-                          <dt className="text-slate-500">Date début</dt>
-                          <dd className="font-medium text-slate-800">{frDate(selected.dueDate)}</dd>
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-slate-500">Phase / période</dt>
+                          <dd>
+                            <span className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700">
+                              {selected.semestreLabel}
+                            </span>
+                          </dd>
                         </div>
                         <div className="flex justify-between">
-                          <dt className="text-slate-500">Date fin</dt>
-                          <dd className="font-medium text-slate-800">{frDate(addMonths(selected.dueDate, 6))}</dd>
-                        </div>
-                        <div className="flex justify-between">
-                          <dt className="text-slate-500">Date attendue paiement</dt>
+                          <dt className="text-slate-500">Échéance</dt>
                           <dd className="font-medium text-slate-800">{frDate(selected.dueDate)}</dd>
                         </div>
                       </dl>
@@ -1223,6 +1218,23 @@ export function ReglementsView() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-xs text-slate-500">
+                Semestre / Période
+                <select
+                  value={form.semestre}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, semestre: e.target.value as ReglementSemestreApi }))
+                  }
+                  className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800"
+                  required
+                >
+                  {semestreOptions.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-slate-500">
                 Échéance
                 <input
                   type="date"
@@ -1232,7 +1244,7 @@ export function ReglementsView() {
                   required
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-slate-500 sm:col-span-2">
+              <label className="flex flex-col gap-1 text-xs text-slate-500">
                 Statut
                 <select
                   value={form.status}

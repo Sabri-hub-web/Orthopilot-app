@@ -17,6 +17,15 @@ enum ReglementStatus {
   REGLE
 }
 
+enum ReglementSemestre {
+  SEMESTRE_1
+  SEMESTRE_2
+  SEMESTRE_3
+  SEMESTRE_4
+  CONTENTION
+  HORS_SEMESTRE
+}
+
 enum TaskPriority {
   FAIBLE
   NORMALE
@@ -108,17 +117,18 @@ model PatientComment {
 }
 
 model Reglement {
-  id            String          @id @default(cuid())
+  id            String            @id @default(cuid())
   amountDue     Float
   dueDate       DateTime
   status        ReglementStatus
+  semestre      ReglementSemestre @default(HORS_SEMESTRE)
   comment       String?
-  relanceCount  Int             @default(0)
+  relanceCount  Int               @default(0)
   lastRelanceAt DateTime?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
   patientId     String
-  patient       Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient       Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
 }
 
 model Task {

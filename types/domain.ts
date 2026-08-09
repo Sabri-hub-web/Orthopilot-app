@@ -15,6 +15,14 @@ export type ReglementStatusApi =
   | "PARTIEL"
   | "REGLE";
 
+export type ReglementSemestreApi =
+  | "SEMESTRE_1"
+  | "SEMESTRE_2"
+  | "SEMESTRE_3"
+  | "SEMESTRE_4"
+  | "CONTENTION"
+  | "HORS_SEMESTRE";
+
 export interface PaymentFollowUp {
   id: string;
   patientId: string;
@@ -23,6 +31,8 @@ export interface PaymentFollowUp {
   dueDate: string;
   daysLate: number;
   status: "En attente" | "En retard" | "Relance envoyee" | "Partiel" | "Regle";
+  semestre: ReglementSemestreApi;
+  semestreLabel: string;
   comment: string | null;
   relanceCount: number;
   lastRelanceAt: string | null;
@@ -33,6 +43,7 @@ export interface ReglementFormPayload {
   amountDue: number;
   dueDate: string;
   status: ReglementStatusApi;
+  semestre: ReglementSemestreApi;
   comment?: string | null;
 }
 

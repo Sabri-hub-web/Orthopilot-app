@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   ArrowLeft,
@@ -9,7 +10,9 @@ import {
   Mail,
   MessageSquare,
   Phone,
+  Trash2,
   User,
+  X,
 } from "lucide-react";
 import { errorMessageFromResponse } from "@/lib/validation/client-errors";
 import {
@@ -77,6 +80,7 @@ interface PatientHubViewProps {
 type CommentFilter = "active" | "done" | "all";
 
 export function PatientHubView({ patientId }: PatientHubViewProps) {
+  const router = useRouter();
   const [hub, setHub] = useState<PatientHubResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +94,8 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
   const [users, setUsers] = useState<UsersListItem[]>([]);
   const [fromReglements, setFromReglements] = useState(false);
   const [hasMutuelle, setHasMutuelle] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -254,6 +260,26 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
     }
   }
 
+  async function handleConfirmDelete() {
+    try {
+      setDeleting(true);
+      setError(null);
+      const response = await fetch(`/api/patients/${patientId}`, { method: "DELETE" });
+      if (!response.ok) {
+        setError(await errorMessageFromResponse(response));
+        setDeleteOpen(false);
+        return;
+      }
+      router.push("/patients");
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur suppression patient.");
+      setDeleteOpen(false);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   if (loading) {
     return <p className="text-sm text-slate-500">Chargement de la fiche patient...</p>;
   }
@@ -333,14 +359,24 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
               </div>
             </div>
           </div>
-          <button
-            type="submit"
-            form="patient-hub-form"
-            disabled={saving}
-            className="rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] px-3 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-50"
-          >
-            {saving ? "Enregistrement..." : "Enregistrer"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100"
+            >
+              <Trash2 className="h-3.5 w-3.5" aria-hidden />
+              Supprimer le patient
+            </button>
+            <button
+              type="submit"
+              form="patient-hub-form"
+              disabled={saving}
+              className="rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] px-3 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-50"
+            >
+              {saving ? "Enregistrement..." : "Enregistrer"}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -454,7 +490,9 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
               >
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-slate-800">{frDate(r.dueDate)}</p>
-                  <p className="truncate text-[11px] text-slate-500">{r.status}</p>
+                  <p className="truncate text-[11px] text-slate-500">
+                    {r.semestreLabel} · {r.status}
+                  </p>
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="text-xs font-semibold text-slate-900">{euro(r.amountDue)}</p>
@@ -553,6 +591,57 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
           </div>
         </article>
       </form>
+
+      {deleteOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-patient-title"
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl"
+          >
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <h3 id="delete-patient-title" className="text-sm font-semibold text-slate-900">
+                Supprimer le patient
+              </h3>
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(false)}
+                disabled={deleting}
+                className="rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:bg-slate-50 disabled:opacity-50"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            </div>
+            <p className="text-sm text-slate-600">
+              Êtes-vous sûr de vouloir supprimer la fiche de ce patient ?
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              Cette action est définitive : règlements et commentaires liés seront également
+              supprimés.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(false)}
+                disabled={deleting}
+                className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmDelete()}
+                disabled={deleting}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                {deleting ? "Suppression…" : "Supprimer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { PaymentFollowUp, ReglementFormPayload } from "@/types/domain";
 import { prisma } from "@/server/db/client";
-import { reglementStatusLabelMap } from "@/lib/reglements";
+import { reglementSemestreLabel, reglementStatusLabelMap } from "@/lib/reglements";
 import { writeActivityLog } from "@/server/activity-log";
-import type { ReglementStatus } from "@prisma/client";
+import type { ReglementSemestre, ReglementStatus } from "@prisma/client";
 import { createNotificationsForRoles } from "@/services/notifications-service";
 
 type ReglementRow = {
@@ -11,6 +11,7 @@ type ReglementRow = {
   amountDue: number;
   dueDate: Date;
   status: ReglementStatus;
+  semestre: ReglementSemestre;
   comment: string | null;
   relanceCount: number;
   lastRelanceAt: Date | null;
@@ -39,6 +40,8 @@ export function toPaymentFollowUp(item: ReglementRow): PaymentFollowUp {
     dueDate: formatDate(item.dueDate),
     daysLate: getDaysLate(item.dueDate),
     status: reglementStatusLabelMap[item.status],
+    semestre: item.semestre,
+    semestreLabel: reglementSemestreLabel(item.semestre),
     comment: item.comment,
     relanceCount: item.relanceCount,
     lastRelanceAt: item.lastRelanceAt ? item.lastRelanceAt.toISOString() : null,
@@ -53,6 +56,20 @@ const reglementInclude = {
   patient: { select: { firstName: true, lastName: true } },
 } as const;
 
+const reglementSelect = {
+  id: true,
+  patientId: true,
+  amountDue: true,
+  dueDate: true,
+  status: true,
+  semestre: true,
+  comment: true,
+  relanceCount: true,
+  lastRelanceAt: true,
+  createdAt: true,
+  patient: { select: { firstName: true, lastName: true } },
+} as const;
+
 export async function getReglementsList(page: number, pageSize: number) {
   const skip = (page - 1) * pageSize;
   const take = Math.min(Math.max(pageSize, 1), 100);
@@ -60,18 +77,7 @@ export async function getReglementsList(page: number, pageSize: number) {
   const [total, rows] = await Promise.all([
     prisma.reglement.count(),
     prisma.reglement.findMany({
-      select: {
-        id: true,
-        patientId: true,
-        amountDue: true,
-        dueDate: true,
-        status: true,
-        comment: true,
-        relanceCount: true,
-        lastRelanceAt: true,
-        createdAt: true,
-        patient: { select: { firstName: true, lastName: true } },
-      },
+      select: reglementSelect,
       orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
       skip,
       take,
@@ -94,13 +100,14 @@ export async function createReglement(payload: ReglementFormPayload) {
       amountDue: payload.amountDue,
       dueDate: new Date(payload.dueDate),
       status: payload.status,
+      semestre: payload.semestre,
       comment: payload.comment ?? null,
     },
     include: reglementInclude,
   });
 
   await createReglementLog(
-    `Creation reglement: ${patientLabel(created.patient)} — ${created.amountDue} EUR — echeance ${formatDate(created.dueDate)}`,
+    `Creation reglement: ${patientLabel(created.patient)} — ${created.amountDue} EUR — ${reglementSemestreLabel(created.semestre)} — echeance ${formatDate(created.dueDate)}`,
     created.patientId,
   );
 
@@ -131,13 +138,14 @@ export async function updateReglement(reglementId: string, payload: Partial<Regl
       amountDue: payload.amountDue,
       dueDate: payload.dueDate ? new Date(payload.dueDate) : undefined,
       status: payload.status,
+      semestre: payload.semestre,
       comment: payload.comment,
     },
     include: reglementInclude,
   });
 
   await createReglementLog(
-    `Modification reglement: ${patientLabel(updated.patient)} — ${updated.amountDue} EUR`,
+    `Modification reglement: ${patientLabel(updated.patient)} — ${updated.amountDue} EUR — ${reglementSemestreLabel(updated.semestre)}`,
     updated.patientId,
   );
 

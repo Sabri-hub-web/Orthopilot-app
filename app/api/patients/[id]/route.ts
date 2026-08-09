@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { hasPermission } from "@/lib/auth/permissions";
-import { requireApiUser } from "@/lib/auth/api-guard";
-import { getPatientHub, updatePatient } from "@/services/patients-service";
+import { requireApiPermission, requireApiUser } from "@/lib/auth/api-guard";
+import { deletePatient, getPatientHub, updatePatient } from "@/services/patients-service";
 import { patientUpdateSchema } from "@/lib/validation/patients";
 import { parseJsonBody, validationErrorResponse } from "@/lib/validation/http";
 import type { PatientFormPayload } from "@/types/domain";
@@ -51,5 +51,26 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     console.error("PATCH /api/patients/:id failed", error);
     return NextResponse.json({ message: "Impossible de modifier le patient." }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = await requireApiPermission(request, "patients:delete");
+    if (auth.response) return auth.response;
+
+    const { id } = await params;
+    const deleted = await deletePatient(id);
+    if (!deleted) {
+      return NextResponse.json({ message: "Patient introuvable." }, { status: 404 });
+    }
+
+    return NextResponse.json(
+      { id: deleted.id, fullName: `${deleted.firstName} ${deleted.lastName}` },
+      { status: 200 },
+    );
+  } catch (error) {
+    console.error("Erreur suppression patient:", error);
+    return NextResponse.json({ message: "Impossible de supprimer le patient." }, { status: 500 });
   }
 }

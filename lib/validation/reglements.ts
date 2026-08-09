@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { REGLEMENT_STATUS_VALUES } from "@/lib/reglements";
+import { REGLEMENT_SEMESTRE_VALUES, REGLEMENT_STATUS_VALUES } from "@/lib/reglements";
 import { amountDuePositive, dateDueFlexible, trimToNull } from "@/lib/validation/common";
 
 export const reglementCreateSchema = z.object({
@@ -7,6 +7,7 @@ export const reglementCreateSchema = z.object({
   amountDue: amountDuePositive,
   dueDate: dateDueFlexible,
   status: z.enum(REGLEMENT_STATUS_VALUES),
+  semestre: z.enum(REGLEMENT_SEMESTRE_VALUES),
   comment: z.preprocess(trimToNull, z.union([z.null(), z.string().max(2000)])).optional(),
 });
 
@@ -16,6 +17,7 @@ export const reglementUpdateSchema = z
     amountDue: amountDuePositive.optional(),
     dueDate: dateDueFlexible.optional(),
     status: z.enum(REGLEMENT_STATUS_VALUES).optional(),
+    semestre: z.enum(REGLEMENT_SEMESTRE_VALUES).optional(),
     comment: z.preprocess(trimToNull, z.union([z.null(), z.string().max(2000)])).optional(),
   })
   .refine((payload) => Object.keys(payload).length > 0, {

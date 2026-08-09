@@ -5,6 +5,7 @@ export type AppPermission =
   | "patients:view"
   | "patients:create"
   | "patients:update"
+  | "patients:delete"
   | "patients:import"
   | "patients:comment"
   | "tasks:view"
@@ -28,6 +29,7 @@ const rolePermissions: Record<AuthUser["role"], Set<AppPermission>> = {
     "patients:view",
     "patients:create",
     "patients:update",
+    "patients:delete",
     "patients:import",
     "patients:comment",
     "tasks:view",
@@ -50,6 +52,7 @@ const rolePermissions: Record<AuthUser["role"], Set<AppPermission>> = {
     "patients:view",
     "patients:create",
     "patients:update",
+    "patients:delete",
     "patients:import",
     "patients:comment",
     "tasks:view",
@@ -72,6 +75,7 @@ const rolePermissions: Record<AuthUser["role"], Set<AppPermission>> = {
     "patients:view",
     "patients:create",
     "patients:update",
+    "patients:delete",
     "patients:import",
     "patients:comment",
     "tasks:view",

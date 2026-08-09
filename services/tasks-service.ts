@@ -45,19 +45,32 @@ async function createTaskLog(message: string, patientId?: string | null) {
   await writeActivityLog({ actor: "Systeme", message, patientId });
 }
 
+const taskListSelect = {
+  id: true,
+  title: true,
+  comment: true,
+  assigneeId: true,
+  assignee: true,
+  patientId: true,
+  dueDate: true,
+  priority: true,
+  status: true,
+  createdAt: true,
+  assignedUser: { select: { fullName: true } },
+  patient: { select: { firstName: true, lastName: true } },
+} as const;
+
 export async function getTasksList(page: number, pageSize: number) {
   const skip = (page - 1) * pageSize;
+  const take = Math.min(Math.max(pageSize, 1), 100);
 
   const [total, rows] = await Promise.all([
     prisma.task.count(),
     prisma.task.findMany({
-      include: {
-        assignedUser: { select: { fullName: true } },
-        patient: { select: { firstName: true, lastName: true } },
-      },
+      select: taskListSelect,
       orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
       skip,
-      take: pageSize,
+      take,
     }),
   ]);
 
@@ -65,8 +78,8 @@ export async function getTasksList(page: number, pageSize: number) {
     items: rows.map(toInternalTask),
     total,
     page,
-    pageSize,
-    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    pageSize: take,
+    totalPages: Math.max(1, Math.ceil(total / take)),
   };
 }
 

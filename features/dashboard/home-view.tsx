@@ -59,6 +59,7 @@ export function HomeView({ greetingName }: { greetingName: string }) {
           <Link
             key={href}
             href={href}
+            prefetch
             className={`group flex flex-col rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none ${ring}`}
           >
             <span

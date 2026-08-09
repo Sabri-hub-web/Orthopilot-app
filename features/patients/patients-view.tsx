@@ -251,6 +251,7 @@ export function PatientsView() {
                 </span>
                 <Link
                   href={`/patients/${patient.id}`}
+                  prefetch
                   className="ml-auto rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] px-3 py-1.5 text-xs font-semibold text-white"
                 >
                   Ouvrir

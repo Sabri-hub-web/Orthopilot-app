@@ -173,6 +173,7 @@ export function Sidebar({
                       <li key={href}>
                         <Link
                           href={href}
+                          prefetch
                           onClick={() => onMobileClose()}
                           title={label}
                           className={`group flex items-center gap-2 rounded-lg py-1.5 pr-1.5 text-[12px] font-medium transition duration-200 ${
@@ -217,6 +218,7 @@ export function Sidebar({
             <div className="mt-1.5 flex gap-1.5">
               <Link
                 href="/settings"
+                prefetch
                 onClick={() => onMobileClose()}
                 className="flex-1 rounded-md border border-white/10 py-1.5 text-center text-[10px] font-semibold text-slate-200 transition hover:bg-white/10"
               >

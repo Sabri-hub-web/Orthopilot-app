@@ -62,14 +62,13 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
           attachments: m.attachments ?? [],
         })),
       });
-      await fetch("/api/messages/read-peer", {
+      void fetch("/api/messages/read-peer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ peerId: id }),
       });
-      await loadConversations();
     },
-    [loadConversations],
+    [],
   );
 
   useEffect(() => {

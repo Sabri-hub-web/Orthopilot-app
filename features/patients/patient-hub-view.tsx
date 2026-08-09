@@ -284,6 +284,7 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
         {fromReglements ? (
           <Link
             href="/reglements"
+            prefetch
             className="inline-flex items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-semibold text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-100"
           >
             <ArrowLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
@@ -292,6 +293,7 @@ export function PatientHubView({ patientId }: PatientHubViewProps) {
         ) : null}
         <Link
           href="/patients"
+          prefetch
           className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
         >
           Retour à la liste patients

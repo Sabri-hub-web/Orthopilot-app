@@ -108,7 +108,7 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
     async function loadOptions() {
       try {
         const [patientsRes, usersRes] = await Promise.all([
-          fetch("/api/patients?page=1&pageSize=50", { cache: "no-store" }),
+          fetch("/api/patients?page=1&pageSize=100", { cache: "no-store" }),
           fetch("/api/users", { cache: "no-store" }),
         ]);
         if (patientsRes.ok) {
@@ -208,6 +208,7 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
       <div className="space-y-3">
         <Link
           href="/tasks"
+          prefetch
           className="inline-flex items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-semibold text-violet-700"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -225,6 +226,7 @@ export function TaskDetailView({ taskId }: { taskId: string }) {
       <div>
         <Link
           href="/tasks"
+          prefetch
           className="inline-flex items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-semibold text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-100"
         >
           <ArrowLeft className="h-4 w-4" strokeWidth={2} aria-hidden />

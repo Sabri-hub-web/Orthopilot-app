@@ -39,6 +39,7 @@ export async function listRecipients(excludeUserId: string): Promise<{ items: Re
     where: { id: { not: excludeUserId } },
     select: { id: true, fullName: true, role: true },
     orderBy: { fullName: "asc" },
+    take: 100,
   });
   return {
     items: users.map((u) => ({
@@ -50,16 +51,22 @@ export async function listRecipients(excludeUserId: string): Promise<{ items: Re
 }
 
 export async function getConversations(userId: string): Promise<{ conversations: ConversationSummary[] }> {
+  // Fenêtre récente limitée pour éviter un full-scan de toute la table messages.
   const rows = await prisma.internalMessage.findMany({
     where: {
       OR: [{ senderId: userId }, { recipientId: userId }],
     },
-    include: {
+    select: {
+      body: true,
+      createdAt: true,
+      senderId: true,
+      recipientId: true,
       sender: { select: { id: true, fullName: true } },
       recipient: { select: { id: true, fullName: true } },
       attachments: { select: { id: true }, take: 1 },
     },
     orderBy: { createdAt: "desc" },
+    take: 100,
   });
 
   const unreadAgg = await prisma.internalMessage.groupBy({
@@ -106,14 +113,15 @@ export async function getThread(
   });
   if (!peer) return null;
 
-  const rows = await prisma.internalMessage.findMany({
+  const rowsDesc = await prisma.internalMessage.findMany({
     where: {
       OR: [
         { senderId: userId, recipientId: peerId },
         { senderId: peerId, recipientId: userId },
       ],
     },
-    orderBy: { createdAt: "asc" },
+    orderBy: { createdAt: "desc" },
+    take: 100,
     select: {
       id: true,
       senderId: true,
@@ -130,9 +138,11 @@ export async function getThread(
           createdAt: true,
         },
         orderBy: { createdAt: "asc" },
+        take: 5,
       },
     },
   });
+  const rows = [...rowsDesc].reverse();
 
   const messages: InternalMessageLine[] = rows.map((m) => ({
     id: m.id,

@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const page = parsePositiveInt(searchParams.get("page"), 1);
     const pageSizeRaw = parsePositiveInt(searchParams.get("pageSize"), 8);
-    const pageSize = Math.min(pageSizeRaw, 50);
+    const pageSize = Math.min(pageSizeRaw, 100);
 
     const data = await getReglementsList(page, pageSize);
     return NextResponse.json(data, { status: 200 });

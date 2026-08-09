@@ -49,18 +49,32 @@ async function createReglementLog(message: string, patientId: string) {
   await writeActivityLog({ actor: "Systeme", message, patientId });
 }
 
-const reglementInclude = { patient: true } as const;
+const reglementInclude = {
+  patient: { select: { firstName: true, lastName: true } },
+} as const;
 
 export async function getReglementsList(page: number, pageSize: number) {
   const skip = (page - 1) * pageSize;
+  const take = Math.min(Math.max(pageSize, 1), 100);
 
   const [total, rows] = await Promise.all([
     prisma.reglement.count(),
     prisma.reglement.findMany({
-      include: reglementInclude,
-      orderBy: { dueDate: "asc" },
+      select: {
+        id: true,
+        patientId: true,
+        amountDue: true,
+        dueDate: true,
+        status: true,
+        comment: true,
+        relanceCount: true,
+        lastRelanceAt: true,
+        createdAt: true,
+        patient: { select: { firstName: true, lastName: true } },
+      },
+      orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
       skip,
-      take: pageSize,
+      take,
     }),
   ]);
 
@@ -68,8 +82,8 @@ export async function getReglementsList(page: number, pageSize: number) {
     items: rows.map(toPaymentFollowUp),
     total,
     page,
-    pageSize,
-    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    pageSize: take,
+    totalPages: Math.max(1, Math.ceil(total / take)),
   };
 }
 

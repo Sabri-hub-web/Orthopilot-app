@@ -197,7 +197,7 @@ export function ReglementsView() {
     let currentPage = 1;
     let totalPages = 1;
     do {
-      const res = await fetch(`/api/reglements?page=${currentPage}&pageSize=50`, { cache: "no-store" });
+      const res = await fetch(`/api/reglements?page=${currentPage}&pageSize=100`, { cache: "no-store" });
       if (!res.ok) throw new Error("Echec du chargement des règlements.");
       const payload: ReglementsListResponse = await res.json();
       collected.push(...payload.items);
@@ -212,7 +212,7 @@ export function ReglementsView() {
     let currentPage = 1;
     let totalPages = 1;
     do {
-      const res = await fetch(`/api/patients?page=${currentPage}&pageSize=50`, { cache: "no-store" });
+      const res = await fetch(`/api/patients?page=${currentPage}&pageSize=100`, { cache: "no-store" });
       if (!res.ok) break;
       const payload = await res.json();
       collected.push(...(payload.items ?? []));
@@ -863,6 +863,7 @@ export function ReglementsView() {
                       <div className="flex justify-end">
                         <Link
                           href={`/patients/${item.patientId}?tab=reglements&from=reglements`}
+                          prefetch
                           onClick={(e) => e.stopPropagation()}
                           className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
                           title="Ouvrir la fiche patient"

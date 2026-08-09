@@ -1,12 +1,10 @@
 import {
-  InternalTask,
   PatientCommentLine,
   PatientDocumentLine,
   PatientFormPayload,
   PatientHubResponse,
   PatientListItem,
   PaymentFollowUp,
-  PriorityEmail,
 } from "@/types/domain";
 import { prisma } from "@/server/db/client";
 import { patientHubStatusLabelMap } from "@/lib/patients";
@@ -14,8 +12,6 @@ import type { PatientHubStatus, Prisma } from "@prisma/client";
 import type { PatientsListQuery } from "@/lib/validation/patients";
 import { writeActivityLog } from "@/server/activity-log";
 import { toPaymentFollowUp } from "@/services/reglements-service";
-import { toInternalTask } from "@/services/tasks-service";
-import { toPriorityEmail } from "@/services/emails-service";
 
 function formatDateTimeLocal(date: Date): string {
   return date.toISOString().slice(0, 16).replace("T", " ");
@@ -163,7 +159,8 @@ function buildPatientsListWhere(query: PatientsListQuery): Prisma.PatientWhereIn
 }
 
 export async function getPatientsList(query: PatientsListQuery) {
-  const { page, pageSize, sort } = query;
+  const { page, sort } = query;
+  const pageSize = Math.min(Math.max(query.pageSize, 1), 100);
   const skip = (page - 1) * pageSize;
   const where = buildPatientsListWhere(query);
 
@@ -181,13 +178,7 @@ export async function getPatientsList(query: PatientsListQuery) {
         mutuelle: true,
         nextAppointmentAt: true,
         hubStatus: true,
-        _count: {
-          select: {
-            reglements: true,
-            tasks: true,
-            emails: true,
-          },
-        },
+        createdAt: true,
       },
       orderBy: patientListOrderBy(sort),
       skip,
@@ -196,7 +187,12 @@ export async function getPatientsList(query: PatientsListQuery) {
   ]);
 
   return {
-    items: rows.map(toPatientListItem),
+    items: rows.map((item) =>
+      toPatientListItem({
+        ...item,
+        _count: { reglements: 0, tasks: 0, emails: 0 },
+      }),
+    ),
     total,
     page,
     pageSize,
@@ -207,35 +203,46 @@ export async function getPatientsList(query: PatientsListQuery) {
 export async function getPatientHub(patientId: string): Promise<PatientHubResponse | null> {
   const patient = await prisma.patient.findUnique({
     where: { id: patientId },
-    include: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      phone: true,
+      legalGuardian: true,
+      nextAppointmentAt: true,
+      mutuelle: true,
+      internalComment: true,
+      hubStatus: true,
       reglements: {
-        orderBy: { dueDate: "asc" },
-        include: { patient: true },
-      },
-      tasks: {
-        orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
-        include: {
-          assignedUser: { select: { fullName: true } },
-          patient: { select: { firstName: true, lastName: true } },
-        },
-      },
-      emails: {
-        orderBy: { receivedAt: "desc" },
-        include: {
-          patient: { select: { firstName: true, lastName: true } },
-          assignedUser: { select: { fullName: true } },
+        orderBy: [{ dueDate: "desc" }, { createdAt: "desc" }],
+        take: 100,
+        select: {
+          id: true,
+          patientId: true,
+          amountDue: true,
+          dueDate: true,
+          status: true,
+          comment: true,
+          relanceCount: true,
+          lastRelanceAt: true,
         },
       },
       comments: {
         orderBy: { createdAt: "desc" },
-        include: {
+        take: 100,
+        select: {
+          id: true,
+          authorId: true,
+          recipientId: true,
+          content: true,
+          isDone: true,
+          doneAt: true,
+          createdAt: true,
+          updatedAt: true,
           author: { select: { id: true, fullName: true } },
           recipient: { select: { id: true, fullName: true } },
         },
-      },
-      documents: {
-        orderBy: { createdAt: "desc" },
-        include: { uploadedBy: { select: { id: true, fullName: true } } },
       },
       calendarEvents: {
         where: { startAt: { gte: new Date() } },
@@ -250,20 +257,18 @@ export async function getPatientHub(patientId: string): Promise<PatientHubRespon
   const logs = await prisma.activityLog.findMany({
     where: { patientId },
     orderBy: { createdAt: "desc" },
-    take: 100,
+    take: 50,
     select: { id: true, actor: true, message: true, createdAt: true },
   });
 
+  const patientName = { firstName: patient.firstName, lastName: patient.lastName };
   const reglements: PaymentFollowUp[] = patient.reglements.map((r) =>
     toPaymentFollowUp({
       ...r,
-      patient: r.patient,
+      patient: patientName,
     }),
   );
 
-  const tasks: InternalTask[] = patient.tasks.map((t) => toInternalTask(t));
-
-  const emails: PriorityEmail[] = patient.emails.map((e) => toPriorityEmail(e));
   const comments: PatientCommentLine[] = patient.comments.map((c) => ({
     id: c.id,
     authorId: c.authorId ?? null,
@@ -275,17 +280,6 @@ export async function getPatientHub(patientId: string): Promise<PatientHubRespon
     doneAt: c.doneAt ? c.doneAt.toISOString() : null,
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
-  }));
-  const documents: PatientDocumentLine[] = patient.documents.map((d) => ({
-    id: d.id,
-    name: d.name,
-    mimeType: d.mimeType ?? null,
-    sizeBytes: d.sizeBytes,
-    storagePath: d.storagePath ?? null,
-    downloadUrl: d.downloadUrl ?? null,
-    uploadedById: d.uploadedById ?? null,
-    uploadedByName: d.uploadedBy?.fullName ?? null,
-    createdAt: d.createdAt.toISOString(),
   }));
   const nextAppointmentFromCalendar = patient.calendarEvents[0]?.startAt ?? null;
   const nextAppointmentAt = nextAppointmentFromCalendar ?? patient.nextAppointmentAt;
@@ -305,10 +299,10 @@ export async function getPatientHub(patientId: string): Promise<PatientHubRespon
       hubStatus: hubStatusLabel(patient.hubStatus),
     },
     reglements,
-    tasks,
-    emails,
+    tasks: [],
+    emails: [],
     comments,
-    documents,
+    documents: [],
     logs: logs.map((log) => ({
       id: log.id,
       actor: log.actor,

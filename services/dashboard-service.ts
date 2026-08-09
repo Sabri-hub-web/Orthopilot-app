@@ -18,12 +18,32 @@ function formatTaskDueDate(date: Date): string {
 export async function getDashboardData() {
   const [paymentsRaw, tasksRaw, patientTotal, attentionAdminCount] = await Promise.all([
     prisma.reglement.findMany({
-      include: { patient: true },
+      select: {
+        id: true,
+        patientId: true,
+        amountDue: true,
+        dueDate: true,
+        status: true,
+        comment: true,
+        relanceCount: true,
+        lastRelanceAt: true,
+        patient: { select: { firstName: true, lastName: true } },
+      },
       orderBy: { dueDate: "asc" },
       take: 12,
     }),
     prisma.task.findMany({
-      include: {
+      select: {
+        id: true,
+        title: true,
+        comment: true,
+        assigneeId: true,
+        assignee: true,
+        patientId: true,
+        dueDate: true,
+        priority: true,
+        status: true,
+        createdAt: true,
         assignedUser: { select: { fullName: true } },
         patient: { select: { firstName: true, lastName: true } },
       },

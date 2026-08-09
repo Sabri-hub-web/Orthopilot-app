@@ -112,7 +112,7 @@ export function TasksView() {
     let currentPage = 1;
     let totalPages = 1;
     do {
-      const res = await fetch(`/api/tasks?page=${currentPage}&pageSize=50`, { cache: "no-store" });
+      const res = await fetch(`/api/tasks?page=${currentPage}&pageSize=100`, { cache: "no-store" });
       if (!res.ok) throw new Error("Echec du chargement des tâches.");
       const payload: TasksListResponse = await res.json();
       collected.push(...payload.items);
@@ -141,7 +141,7 @@ export function TasksView() {
     async function loadOptions() {
       try {
         const [patientsRes, usersRes] = await Promise.all([
-          fetch("/api/patients?page=1&pageSize=50", { cache: "no-store" }),
+          fetch("/api/patients?page=1&pageSize=100", { cache: "no-store" }),
           fetch("/api/users", { cache: "no-store" }),
         ]);
         if (patientsRes.ok) {

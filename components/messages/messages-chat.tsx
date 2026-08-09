@@ -1,19 +1,13 @@
 "use client";
 
-import {
-  CheckCheck,
-  Info,
-  MoreHorizontal,
-  Phone,
-  Video,
-} from "lucide-react";
+import { CheckCheck } from "lucide-react";
 import {
   formatBubbleTime,
   groupMessagesByDay,
   initialsFromName,
   presenceStatusLabel,
 } from "@/lib/messages-ui";
-import { MessagesComposer, type PendingMessageFile } from "@/components/messages/messages-composer";
+import { MessagesComposer } from "@/components/messages/messages-composer";
 import { MessagesRecipientSearch } from "@/components/messages/messages-recipient-search";
 import { MessagesMessageAttachments } from "@/components/messages/messages-message-attachments";
 import type { FormEvent, RefObject } from "react";
@@ -27,8 +21,6 @@ interface MessagesChatProps {
   loading: boolean;
   sending: boolean;
   draft: string;
-  pendingFiles: PendingMessageFile[];
-  fileInputRef: RefObject<HTMLInputElement | null>;
   presence?: PresenceTeamMember;
   recipients: RecipientOption[];
   recipientsLoading?: boolean;
@@ -36,9 +28,6 @@ interface MessagesChatProps {
   onRecipientChange: (peerId: string) => void;
   onDraftChange: (v: string) => void;
   onSend: (e: FormEvent) => void;
-  onPickFiles: () => void;
-  onFilesSelected: (files: FileList | null) => void;
-  onRemoveFile: (id: string) => void;
   messagesEndRef?: RefObject<HTMLDivElement | null>;
 }
 
@@ -60,8 +49,6 @@ export function MessagesChat({
   loading,
   sending,
   draft,
-  pendingFiles,
-  fileInputRef,
   presence,
   recipients,
   recipientsLoading,
@@ -69,9 +56,6 @@ export function MessagesChat({
   onRecipientChange,
   onDraftChange,
   onSend,
-  onPickFiles,
-  onFilesSelected,
-  onRemoveFile,
   messagesEndRef,
 }: MessagesChatProps) {
   const online = presence?.isOnline && presence.presenceStatus === "DISPONIBLE";
@@ -95,18 +79,6 @@ export function MessagesChat({
             <p className={`text-xs ${online ? "font-medium text-emerald-600" : "text-slate-400"}`}>
               {statusLabel}
             </p>
-          </div>
-          <div className="flex items-center gap-0.5">
-            {[Phone, Video, Info, MoreHorizontal].map((Icon, i) => (
-              <button
-                key={i}
-                type="button"
-                disabled
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-50 disabled:opacity-45"
-              >
-                <Icon className="h-4 w-4" />
-              </button>
-            ))}
           </div>
         </header>
       ) : null}
@@ -199,13 +171,8 @@ export function MessagesChat({
         value={draft}
         sending={sending}
         disabled={!peerId}
-        pendingFiles={pendingFiles}
-        fileInputRef={fileInputRef}
         onChange={onDraftChange}
         onSubmit={onSend}
-        onPickFiles={onPickFiles}
-        onFilesSelected={onFilesSelected}
-        onRemoveFile={onRemoveFile}
       />
     </div>
   );

@@ -15,12 +15,12 @@ interface MessagesSidebarProps {
   conversations: ConversationSummary[];
   loading: boolean;
   activePeerId: string | null;
-  tab: MessagesListTab;
+  tab?: MessagesListTab;
   searchQuery: string;
   presenceMap: Map<string, PresenceTeamMember>;
   recipients: RecipientOption[];
   recipientsLoading?: boolean;
-  onTabChange: (tab: MessagesListTab) => void;
+  onTabChange?: (tab: MessagesListTab) => void;
   onSearchChange: (q: string) => void;
   onSelect: (peerId: string) => void;
   onRecipientChange: (peerId: string) => void;
@@ -30,24 +30,17 @@ export function MessagesSidebar({
   conversations,
   loading,
   activePeerId,
-  tab,
   searchQuery,
   presenceMap,
   recipients,
   recipientsLoading,
-  onTabChange,
   onSearchChange,
   onSelect,
   onRecipientChange,
 }: MessagesSidebarProps) {
-  const unreadTotal = conversations.reduce((n, c) => n + c.unreadCount, 0);
-
   const filtered = conversations.filter((c) => {
     const q = searchQuery.trim().toLowerCase();
-    const matchSearch =
-      !q || c.peerName.toLowerCase().includes(q) || c.lastPreview.toLowerCase().includes(q);
-    const matchTab = tab === "all" || c.unreadCount > 0;
-    return matchSearch && matchTab;
+    return !q || c.peerName.toLowerCase().includes(q) || c.lastPreview.toLowerCase().includes(q);
   });
 
   return (
@@ -70,35 +63,6 @@ export function MessagesSidebar({
             placeholder="Rechercher un message ou un utilisateur…"
             className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-8 pr-2 text-xs text-slate-800 outline-none focus:border-[#5D5CDE]/40 focus:ring-2 focus:ring-[#5D5CDE]/12"
           />
-        </div>
-        <div className="flex gap-5 border-b border-slate-100 text-xs font-medium">
-          <button
-            type="button"
-            onClick={() => onTabChange("all")}
-            className={`border-b-2 pb-2 transition ${
-              tab === "all"
-                ? "border-[#5D5CDE] text-[#5D5CDE]"
-                : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            Conversations
-          </button>
-          <button
-            type="button"
-            onClick={() => onTabChange("unread")}
-            className={`border-b-2 pb-2 transition ${
-              tab === "unread"
-                ? "border-[#5D5CDE] text-[#5D5CDE]"
-                : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            Non lus
-            {unreadTotal > 0 ? (
-              <span className="ml-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 py-px text-[9px] font-bold text-white">
-                {unreadTotal > 99 ? "99+" : unreadTotal}
-              </span>
-            ) : null}
-          </button>
         </div>
       </header>
 
@@ -148,11 +112,6 @@ export function MessagesSidebar({
                         {c.lastPreview}
                       </span>
                     </span>
-                    {c.unreadCount > 0 ? (
-                      <span className="mt-1.5 flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
-                        {c.unreadCount > 9 ? "9+" : c.unreadCount}
-                      </span>
-                    ) : null}
                   </button>
                 </li>
               );

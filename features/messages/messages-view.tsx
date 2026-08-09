@@ -1,16 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { PendingMessageFile } from "@/components/messages/messages-composer";
 import { MessagesChat } from "@/components/messages/messages-chat";
 import { MessagesLayout } from "@/components/messages/messages-layout";
-import { MessagesSidebar, type MessagesListTab } from "@/components/messages/messages-sidebar";
-import {
-  MESSAGE_ATTACHMENT_MAX_BYTES,
-  MESSAGE_ATTACHMENT_MAX_FILES,
-  mergeMessageRecipients,
-  presenceByUserId,
-} from "@/lib/messages-ui";
+import { MessagesSidebar } from "@/components/messages/messages-sidebar";
+import { mergeMessageRecipients, presenceByUserId } from "@/lib/messages-ui";
 import { errorMessageFromResponse } from "@/lib/validation/client-errors";
 import type {
   ConversationSummary,
@@ -34,15 +28,12 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
   const [thread, setThread] = useState<MessagesThreadResponse | null>(null);
   const [body, setBody] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [listTab, setListTab] = useState<MessagesListTab>("all");
   const [loadingList, setLoadingList] = useState(true);
   const [loadingRecipients, setLoadingRecipients] = useState(true);
   const [loadingThread, setLoadingThread] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pendingFiles, setPendingFiles] = useState<PendingMessageFile[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const presenceMap = useMemo(() => presenceByUserId(presenceMembers), [presenceMembers]);
 
@@ -57,14 +48,6 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
     const data: ConversationsResponse = await res.json();
     setConversations(data.conversations);
     return data.conversations;
-  }, []);
-
-  const loadRecipients = useCallback(async () => {
-    const res = await fetch("/api/messages/recipients", { cache: "no-store" });
-    if (!res.ok) throw new Error("Recipients");
-    const data: { items: RecipientOption[] } = await res.json();
-    setRecipientsRaw(data.items ?? []);
-    return data.items ?? [];
   }, []);
 
   const loadThread = useCallback(
@@ -168,44 +151,11 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [thread?.messages.length]);
 
-  function clearPendingFiles() {
-    setPendingFiles((prev) => {
-      for (const p of prev) {
-        if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
-      }
-      return [];
-    });
-  }
-
-  function handleFilesSelected(files: FileList | null) {
-    if (!files?.length) return;
-    const next: PendingMessageFile[] = [];
-    const room = MESSAGE_ATTACHMENT_MAX_FILES - pendingFiles.length;
-    for (let i = 0; i < files.length && next.length < room; i++) {
-      const file = files[i]!;
-      if (file.size > MESSAGE_ATTACHMENT_MAX_BYTES) {
-        setError(`« ${file.name} » dépasse 10 Mo.`);
-        continue;
-      }
-      const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined;
-      next.push({ id: `${file.name}-${Date.now()}-${i}`, file, previewUrl });
-    }
-    if (next.length) setPendingFiles((prev) => [...prev, ...next]);
-  }
-
-  function handleRemoveFile(id: string) {
-    setPendingFiles((prev) => {
-      const item = prev.find((p) => p.id === id);
-      if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
-      return prev.filter((p) => p.id !== id);
-    });
-  }
-
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     if (!peerId) return;
     const trimmed = body.trim();
-    if (!trimmed && pendingFiles.length === 0) return;
+    if (!trimmed) return;
 
     const peerLabel =
       thread?.peer.fullName ?? recipients.find((r) => r.id === peerId)?.fullName ?? "Collègue";
@@ -214,7 +164,7 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
       id: tempId,
       senderId: currentUserId,
       recipientId: peerId,
-      body: trimmed || (pendingFiles.length > 0 ? "" : ""),
+      body: trimmed,
       readAt: null,
       createdAt: new Date().toISOString(),
       isMine: true,
@@ -229,26 +179,15 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
     setSending(true);
     setError(null);
     try {
-      const res =
-        pendingFiles.length > 0
-          ? await (() => {
-              const fd = new FormData();
-              fd.append("recipientId", peerId);
-              fd.append("body", trimmed);
-              for (const pf of pendingFiles) fd.append("files", pf.file);
-              return fetch("/api/messages", { method: "POST", body: fd });
-            })()
-          : await fetch("/api/messages", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ recipientId: peerId, body: trimmed }),
-            });
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipientId: peerId, body: trimmed }),
+      });
 
       if (!res.ok) {
         setThread((prev) =>
-          prev
-            ? { ...prev, messages: prev.messages.filter((m) => m.id !== tempId) }
-            : prev,
+          prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== tempId) } : prev,
         );
         setError(await errorMessageFromResponse(res));
         return;
@@ -256,7 +195,6 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
 
       const data: { id: string; message?: InternalMessageLine } = await res.json();
       setBody("");
-      clearPendingFiles();
 
       if (data.message) {
         setThread((prev) => {
@@ -264,7 +202,10 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
           const rest = (prev?.messages ?? []).filter((m) => m.id !== tempId);
           return {
             peer,
-            messages: [...rest, { ...data.message!, isMine: true, attachments: data.message!.attachments ?? [] }],
+            messages: [
+              ...rest,
+              { ...data.message!, isMine: true, attachments: data.message!.attachments ?? [] },
+            ],
           };
         });
       } else {
@@ -285,7 +226,6 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
   function pickPeer(id: string) {
     setPeerId(id);
     setThread(null);
-    clearPendingFiles();
   }
 
   const activePresence = peerId ? presenceMap.get(peerId) : undefined;
@@ -301,12 +241,10 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
           conversations={conversations}
           loading={loadingList}
           activePeerId={peerId}
-          tab={listTab}
           searchQuery={searchQuery}
           presenceMap={presenceMap}
           recipients={recipients}
           recipientsLoading={loadingRecipients}
-          onTabChange={setListTab}
           onSearchChange={setSearchQuery}
           onSelect={pickPeer}
           onRecipientChange={pickPeer}
@@ -321,8 +259,6 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
           loading={loadingThread}
           sending={sending}
           draft={body}
-          pendingFiles={pendingFiles}
-          fileInputRef={fileInputRef}
           presence={activePresence}
           recipients={recipients}
           recipientsLoading={loadingRecipients}
@@ -330,9 +266,6 @@ export function MessagesView({ currentUserId, currentUserName }: MessagesViewPro
           onRecipientChange={pickPeer}
           onDraftChange={setBody}
           onSend={handleSend}
-          onPickFiles={() => fileInputRef.current?.click()}
-          onFilesSelected={handleFilesSelected}
-          onRemoveFile={handleRemoveFile}
           messagesEndRef={bottomRef}
         />
       }

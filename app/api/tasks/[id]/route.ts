@@ -1,10 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { requireApiPermission } from "@/lib/auth/api-guard";
-import { deleteTask, updateTask } from "@/services/tasks-service";
+import { deleteTask, getTaskById, updateTask } from "@/services/tasks-service";
 import { taskUpdateSchema } from "@/lib/validation/tasks";
 import { parseJsonBody, validationErrorResponse } from "@/lib/validation/http";
 import type { TaskFormPayload } from "@/types/domain";
+
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = await requireApiPermission(request, "tasks:view");
+    if (auth.response) return auth.response;
+    const { id } = await params;
+    const task = await getTaskById(id);
+    if (!task) {
+      return NextResponse.json({ message: "Tache introuvable." }, { status: 404 });
+    }
+    return NextResponse.json(task, { status: 200 });
+  } catch (error) {
+    console.error("GET /api/tasks/:id failed", error);
+    return NextResponse.json({ message: "Impossible de charger la tache." }, { status: 500 });
+  }
+}
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

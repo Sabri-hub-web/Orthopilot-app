@@ -70,6 +70,18 @@ export async function getTasksList(page: number, pageSize: number) {
   };
 }
 
+export async function getTaskById(taskId: string): Promise<InternalTask | null> {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: {
+      assignedUser: { select: { fullName: true } },
+      patient: { select: { firstName: true, lastName: true } },
+    },
+  });
+  if (!task) return null;
+  return toInternalTask(task);
+}
+
 export async function createTask(payload: TaskFormPayload) {
   const assignee =
     payload.assigneeId

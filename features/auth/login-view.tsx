@@ -154,13 +154,22 @@ export function LoginView() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    if (loading) return;
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      setError("Email et mot de passe requis.");
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        credentials: "same-origin",
+        body: JSON.stringify({ email: trimmedEmail, password }),
       });
 
       if (!response.ok) {
@@ -171,7 +180,7 @@ export function LoginView() {
       try {
         if (rememberMe) {
           localStorage.setItem(REMEMBER_FLAG_KEY, "1");
-          localStorage.setItem(REMEMBER_EMAIL_KEY, email.trim());
+          localStorage.setItem(REMEMBER_EMAIL_KEY, trimmedEmail);
         } else {
           localStorage.removeItem(REMEMBER_FLAG_KEY);
           localStorage.removeItem(REMEMBER_EMAIL_KEY);
@@ -183,7 +192,12 @@ export function LoginView() {
       router.replace("/");
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur inconnue.");
+      console.error("[login] Erreur réseau / client:", e);
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Impossible de joindre le serveur. Vérifiez votre connexion.",
+      );
     } finally {
       setLoading(false);
     }
@@ -221,9 +235,38 @@ export function LoginView() {
           className="pointer-events-none absolute left-1/2 top-28 h-72 w-72 -translate-x-1/2 rounded-full bg-sky-300/35 blur-3xl"
           aria-hidden
         />
-        {/* Plante floutée (fond) */}
+        {/* Décor végétal CSS (sans asset PNG local manquant) */}
         <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden" aria-hidden>
-          <div className="absolute -bottom-6 -right-12 left-[-15%] top-[18%] scale-110 bg-[url('/login-plant-bg.png')] bg-contain bg-[right_bottom] bg-no-repeat opacity-[0.42] mix-blend-soft-light [filter:blur(2px)] sm:opacity-[0.48] sm:[filter:blur(3px)]" />
+          <svg
+            className="absolute -bottom-8 -right-10 h-[70%] w-[85%] opacity-40 mix-blend-soft-light sm:opacity-50"
+            viewBox="0 0 400 480"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <ellipse cx="260" cy="420" rx="90" ry="28" fill="white" fillOpacity="0.15" />
+            <path
+              d="M250 420 C248 300 230 220 210 120"
+              stroke="white"
+              strokeOpacity="0.35"
+              strokeWidth="8"
+              strokeLinecap="round"
+            />
+            <path
+              d="M210 180 C150 150 120 100 140 60 C180 90 210 130 230 170"
+              fill="white"
+              fillOpacity="0.28"
+            />
+            <path
+              d="M220 250 C280 210 330 180 350 140 C300 160 250 210 225 255"
+              fill="white"
+              fillOpacity="0.22"
+            />
+            <path
+              d="M205 320 C140 300 90 270 70 220 C130 250 180 290 215 330"
+              fill="white"
+              fillOpacity="0.2"
+            />
+          </svg>
         </div>
         {/* Grille de points — coin haut droit */}
         <div
@@ -325,13 +368,16 @@ export function LoginView() {
                   />
                   <input
                     id="login-email"
-                    type="email"
-                    autoComplete="email"
+                    type="text"
+                    inputMode="email"
+                    autoComplete="username"
+                    spellCheck={false}
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     className="w-full rounded-xl border border-slate-200/90 bg-white/90 py-3 pl-11 pr-3 text-sm text-slate-900 shadow-inner shadow-slate-900/5 outline-none ring-0 transition-[border-color,box-shadow] placeholder:text-slate-400 focus:border-indigo-400 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)]"
-                    placeholder="Votre email"
+                    placeholder="ex. julie@cabinet.local"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -354,6 +400,7 @@ export function LoginView() {
                     className="w-full rounded-xl border border-slate-200/90 bg-white/90 py-3 pl-11 pr-12 text-sm text-slate-900 shadow-inner shadow-slate-900/5 outline-none transition-[border-color,box-shadow] placeholder:text-slate-400 focus:border-indigo-400 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)]"
                     placeholder="Votre mot de passe"
                     required
+                    disabled={loading}
                   />
                   <button
                     type="button"

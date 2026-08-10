@@ -1,6 +1,7 @@
 import type { ZodIssue } from "zod";
 
 export type ApiErrorBody = {
+  error?: string;
   message?: string;
   issues?: ZodIssue[];
 };
@@ -10,9 +11,9 @@ export async function errorMessageFromResponse(response: Response): Promise<stri
   try {
     const data = (await response.json()) as ApiErrorBody;
     const base =
-      typeof data.message === "string" && data.message.length > 0
-        ? data.message
-        : `Erreur ${response.status}`;
+      (typeof data.error === "string" && data.error.length > 0 && data.error) ||
+      (typeof data.message === "string" && data.message.length > 0 && data.message) ||
+      `Erreur ${response.status}`;
 
     if (data.issues && data.issues.length > 0) {
       const detail = data.issues

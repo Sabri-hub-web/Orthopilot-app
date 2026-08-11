@@ -12,11 +12,8 @@ interface DashboardLayoutProps {
   currentUserName: string;
   currentUserRole: string;
   currentUserRoleKey: AuthUser["role"];
-  /** Page calendrier : hauteur fixe, pas de scroll ni footer */
   fillViewport?: boolean;
-  /** Topbar réduite (calendrier plein écran) */
   topbarCompact?: boolean;
-  /** Contenu plein cadre sans padding (messages) */
   contentFlush?: boolean;
 }
 
@@ -52,9 +49,7 @@ export function DashboardLayout({
           currentUserRole={currentUserRole}
         />
         <section
-          className={`flex min-w-0 flex-1 flex-col transition-[padding] duration-300 ${
-            notificationsOpen ? "lg:pr-80" : "pr-0"
-          } ${fillViewport ? "h-full overflow-hidden" : "min-h-screen"}`}
+          className={`flex min-w-0 flex-1 flex-col ${fillViewport ? "h-full overflow-hidden" : "min-h-screen"}`}
         >
           <Topbar
             title={title}
@@ -65,6 +60,13 @@ export function DashboardLayout({
             currentUserName={currentUserName}
             currentUserRole={currentUserRole}
             onOpenMobileNav={() => setMobileNavOpen(true)}
+            notificationsPanel={
+              <NotificationsPanel
+                open={notificationsOpen}
+                onClose={() => setNotificationsOpen(false)}
+                onUnreadCountChange={setUnreadNotificationsCount}
+              />
+            }
           />
           <main
             className={`flex min-h-0 flex-1 flex-col overflow-x-hidden ${
@@ -83,11 +85,6 @@ export function DashboardLayout({
             </footer>
           )}
         </section>
-        <NotificationsPanel
-          open={notificationsOpen}
-          onClose={() => setNotificationsOpen(false)}
-          onUnreadCountChange={setUnreadNotificationsCount}
-        />
       </section>
     </section>
   );

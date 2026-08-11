@@ -18,6 +18,7 @@ import {
   MessageSquare,
   Pencil,
   Plus,
+  RefreshCw,
   Search,
   Send,
   Trash2,
@@ -156,6 +157,7 @@ export function ReglementsView() {
   const [patients, setPatients] = useState<PatientListItem[]>([]);
   const [users, setUsers] = useState<UsersListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -378,6 +380,19 @@ export function ReglementsView() {
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur mise à jour commentaire.");
+    }
+  }
+
+  async function handleRefresh() {
+    try {
+      setRefreshing(true);
+      setError(null);
+      await Promise.all([loadReglements(), loadPatients()]);
+      setSuccess("Liste règlements actualisée.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Impossible de rafraîchir.");
+    } finally {
+      setRefreshing(false);
     }
   }
 
@@ -703,6 +718,17 @@ export function ReglementsView() {
             <Filter className="h-3.5 w-3.5" />
             Filtres avancés
             <ChevronDown className={`h-3.5 w-3.5 transition ${showAdvanced ? "rotate-180" : ""}`} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleRefresh()}
+            disabled={refreshing || loading}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+            title="Rafraîchir la liste"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Actualisation…" : "Rafraîchir"}
           </button>
 
           <button

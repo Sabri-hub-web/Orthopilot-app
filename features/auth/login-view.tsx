@@ -404,12 +404,20 @@ export function LoginView() {
                   />
                   <button
                     type="button"
-                    tabIndex={-1}
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setShowPassword((v) => !v);
+                    }}
+                    className="absolute right-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
                     aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                    aria-pressed={showPassword}
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
                   </button>
                 </div>
               </div>

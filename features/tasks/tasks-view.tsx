@@ -6,6 +6,7 @@ import {
   CalendarClock,
   ListTodo,
   Plus,
+  RefreshCw,
   Search,
   User,
   X,
@@ -90,6 +91,7 @@ export function TasksView() {
   const [patients, setPatients] = useState<PatientListItem[]>([]);
   const [users, setUsers] = useState<UsersListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -121,6 +123,19 @@ export function TasksView() {
     } while (currentPage <= totalPages);
     setTasks(collected);
   }, []);
+
+  async function handleRefresh() {
+    try {
+      setRefreshing(true);
+      setError(null);
+      await loadTasks();
+      setSuccess("Liste tâches actualisée.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Impossible de rafraîchir.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   useEffect(() => {
     async function run() {
@@ -247,6 +262,16 @@ export function TasksView() {
               className="h-9 w-56 rounded-xl border border-slate-200 bg-white pl-8 pr-2 text-sm text-slate-800 outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-500/15"
             />
           </div>
+          <button
+            type="button"
+            onClick={() => void handleRefresh()}
+            disabled={refreshing || loading}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+            title="Rafraîchir la liste"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Actualisation…" : "Rafraîchir"}
+          </button>
           <button
             type="button"
             onClick={() => openCreate()}

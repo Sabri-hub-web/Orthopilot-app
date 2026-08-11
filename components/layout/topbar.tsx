@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Bell, ChevronRight, Menu, Search } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
@@ -33,6 +34,7 @@ interface TopbarProps {
   notificationsOpen: boolean;
   onToggleNotifications: () => void;
   unreadNotificationsCount: number;
+  notificationsPanel?: ReactNode;
   currentUserName: string;
   currentUserRole: string;
   onOpenMobileNav: () => void;
@@ -44,6 +46,7 @@ export function Topbar({
   notificationsOpen,
   onToggleNotifications,
   unreadNotificationsCount,
+  notificationsPanel,
   currentUserName,
   currentUserRole,
   onOpenMobileNav,
@@ -133,26 +136,26 @@ export function Topbar({
 
         <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:gap-2">
           <PresenceMeSelect compact />
-          <button
-            type="button"
-            onClick={onToggleNotifications}
-            className={`relative flex items-center justify-center rounded-lg border border-slate-200/90 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 ${
-              compact ? "h-7 w-7" : "h-8 w-8"
-            }`}
-            aria-label="Notifications"
-          >
-            <Bell className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} strokeWidth={1.75} />
-            {unreadNotificationsCount > 0 ? (
-              <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[9px] font-bold text-white">
-                {unreadNotificationsCount > 99 ? "99+" : unreadNotificationsCount}
-              </span>
-            ) : null}
-          </button>
-          {!compact && notificationsOpen ? (
-            <span className="hidden rounded-full bg-sky-50 px-1.5 py-0.5 text-[9px] font-semibold text-sky-700 xl:inline">
-              Panneau ouvert
-            </span>
-          ) : null}
+          <div className="relative">
+            <button
+              type="button"
+              data-notifications-bell
+              onClick={onToggleNotifications}
+              className={`relative flex items-center justify-center rounded-lg border border-slate-200/90 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 ${
+                compact ? "h-7 w-7" : "h-8 w-8"
+              } ${notificationsOpen ? "border-violet-300 bg-violet-50 text-violet-700" : ""}`}
+              aria-label="Notifications"
+              aria-expanded={notificationsOpen}
+            >
+              <Bell className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} strokeWidth={1.75} />
+              {unreadNotificationsCount > 0 ? (
+                <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[9px] font-bold text-white">
+                  {unreadNotificationsCount > 99 ? "99+" : unreadNotificationsCount}
+                </span>
+              ) : null}
+            </button>
+            {notificationsPanel}
+          </div>
           <div
             className={`hidden max-w-[9rem] flex-col rounded-lg border border-slate-200/90 bg-white text-right shadow-sm sm:flex ${
               compact ? "px-1.5 py-0.5" : "px-2 py-1"

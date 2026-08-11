@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Download, Plus } from "lucide-react";
+import { Download, Plus, RefreshCw } from "lucide-react";
 import { errorMessageFromResponse } from "@/lib/validation/client-errors";
 import type { PatientFormPayload, PatientListItem, PatientsListResponse } from "@/types/domain";
 
@@ -27,6 +27,7 @@ export function PatientsView() {
   const [creating, setCreating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -74,6 +75,19 @@ export function PatientsView() {
     }
     run();
   }, [loadPatients]);
+
+  async function handleRefresh() {
+    try {
+      setRefreshing(true);
+      setError(null);
+      await loadPatients();
+      setSuccess("Liste patients actualisée.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Impossible de rafraîchir.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   async function fetchAllPatients(): Promise<PatientListItem[]> {
     const all: PatientListItem[] = [];
@@ -200,6 +214,18 @@ export function PatientsView() {
           placeholder="Rechercher un patient, email, téléphone…"
         />
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleRefresh()}
+            disabled={refreshing || loading}
+            className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 disabled:opacity-50"
+            title="Rafraîchir la liste"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Actualisation…" : "Rafraîchir"}
+            </span>
+          </button>
           <button
             type="button"
             onClick={() => setCreateOpen(true)}
